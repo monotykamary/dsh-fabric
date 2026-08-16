@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { FabricActorId, FabricStateKey } from '@dsh-fabric/protocol'
 import { StorageFabricMesh } from '../src/provider.ts'
-import type { FabricMesh } from '../src/index.ts'
+import type { FabricMeshWorkspace } from '../src/index.ts'
 
 class MemoryTable<V> {
   readonly values = new Map<string, V>()
@@ -22,7 +22,7 @@ class MemoryTable<V> {
   }
 }
 
-async function setup(options: { writeGate?: Promise<void>; onClose?(): void } = {}): Promise<{ ctx: Context; mesh: FabricMesh; dispose(): Promise<void> }> {
+async function setup(options: { writeGate?: Promise<void>; onClose?(): void } = {}): Promise<{ ctx: Context; mesh: FabricMeshWorkspace; service: StorageFabricMesh; dispose(): Promise<void> }> {
   const tables = new Map<string, MemoryTable<unknown>>()
   const domain = {
     name: 'dsh_fabric_mesh',
@@ -36,10 +36,29 @@ async function setup(options: { writeGate?: Promise<void>; onClose?(): void } = 
   const ctx = new Context()
   ctx.provide('storageDomain', { open: async () => domain } as never)
   const fiber = await ctx.plugin(StorageFabricMesh)
-  return { ctx, mesh: ctx.fabricMesh, dispose: () => fiber.dispose() }
+  return { ctx, mesh: ctx.fabricMesh.forWorkspace('workspace:test'), service: ctx.fabricMesh as StorageFabricMesh, dispose: () => fiber.dispose() }
 }
 
 describe('StorageFabricMesh', () => {
+  it('isolates duplicate ids across workspaces while sharing within one workspace', async () => {
+    const { service, dispose } = await setup()
+    const alpha = service.forWorkspace('workspace:alpha')
+    const alphaAgain = service.forWorkspace('workspace:alpha')
+    const beta = service.forWorkspace('workspace:beta')
+    await alpha.createActor('Alpha builder', FabricActorId('builder'))
+    await beta.createActor('Beta builder', FabricActorId('builder'))
+    await alpha.compareAndSwap(FabricStateKey('status'), 0, { workspace: 'alpha' })
+    await beta.compareAndSwap(FabricStateKey('status'), 0, { workspace: 'beta' })
+
+    expect(alphaAgain.actor(FabricActorId('builder')).label).toBe('Alpha builder')
+    expect(beta.actor(FabricActorId('builder')).label).toBe('Beta builder')
+    expect(alpha.snapshot().totals).toMatchObject({ actors: 1, states: 1 })
+    expect(beta.snapshot().totals).toMatchObject({ actors: 1, states: 1 })
+    expect(alpha.getState(FabricStateKey('status'))?.value).toEqual({ workspace: 'alpha' })
+    expect(beta.getState(FabricStateKey('status'))?.value).toEqual({ workspace: 'beta' })
+    await dispose()
+  })
+
   it('performs revisioned compare-and-swap and rejects stale writers', async () => {
     const { mesh, dispose } = await setup()
     const key = FabricStateKey('world')

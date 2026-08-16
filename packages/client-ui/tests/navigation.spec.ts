@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
-import { createFabricControls } from '../src/client/index.ts'
+import { createFabricControls } from '../src/client/navigation.ts'
 
 describe('Fabric client navigation', () => {
   it('refreshes projected child catalogs before choosing an authoritative route', async () => {

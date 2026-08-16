@@ -106,13 +106,15 @@ One Consumer exposes durable coordination through a compact action protocol:
 
 Actor claims are deliberately crash-conservative. A claimed command stays claimed after process failure, settlement requires the opaque claim token, and retrying the same settlement returns the stored result rather than executing twice.
 
+Mesh records are isolated by one workspace identity shared by prompt assembly and tool execution: registered workspace membership or canonical path ownership takes precedence, followed by an unregistered path digest and finally a session-only scope when no `cwd` exists.
+
 ## Compaction and continuation
 
 Fabric becomes the only composed compaction backend while preserving DSH's `/compact` command, durable transaction, token meter, and backend-independent invariants.
 
 - Typed messages and lifecycle events compile into bounded **Session Goal**, **Files and Changes**, **Fabric Activity**, **Outstanding Context**, **Earlier Turns**, **Current Status**, and recent-transcript sections.
 - Reasoning blocks are erased; tool calls and results remain paired by exact identity.
-- Only the newest strict, provider-stamped snapshot can seed a later compaction.
+- Each compaction reconstructs cumulative facts from immutable source-event citations instead of recursively trusting prior checkpoint prose; strict snapshots remain bounded diagnostic and detached-caller artifacts. A 100,000-event traversal cap degrades with an explicit omission notice rather than permanently failing `/compact`.
 - Mesh contributes bounded metadata — never arbitrary payloads — so durable identifiers can be rediscovered after compaction.
 - Guidance requires rereading durable state after compaction or `TOOL_OUTCOME_UNKNOWN` instead of trusting conversational memory.
 
@@ -151,7 +153,8 @@ pnpm run check
 
 This is a focused DSH adaptation, not literal pi-fabric parity. Known constraints include:
 
-- DSH `0.1.0-rc.6` cannot reload logs containing Fabric's required external activity event because its persisted-event allowlist is static. Live operation and detached replay work; mesh business state remains durable.
+- New mesh activity uses DSH-native `tool/result.meta` and `tool/code-dispatch` events. Only legacy logs written with the retired required `fabric/activity` event remain incompatible with DSH `0.1.0-rc.6`'s static persisted-event allowlist.
+- Mesh records written before workspace scoping remain stored but are deliberately invisible to workspace-bound reads; automatic migration would guess an ambiguous destination, so any re-key must be an explicit operator action.
 - The current DSH `CodeRunRequest` omits the generated SDK declaration prelude, so QuickJS checks namespace/member existence and normal TypeScript semantics while ToolRuntime remains the authoritative argument/result validator.
 - Actor mailboxes provide durable claim/settle semantics, not an always-resident autonomous actor host.
 - Fabric-owned presets are pinned adaptations of DSH `0.1.0-rc.6` and must be reviewed on host upgrades.

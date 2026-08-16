@@ -5,49 +5,14 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ChatStore } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { FabricHeaderAction } from './FabricHeaderAction.tsx'
 import { en, zh } from './locales.ts'
+import { createFabricControls } from './navigation.ts'
 import { FabricView } from './FabricView.tsx'
 import type { FabricControls } from './types.ts'
 
+export { createFabricControls } from './navigation.ts'
+
 /** Services required by the browser plugin. */
 export const inject = ['slots', 'sessions', 'locale']
-
-interface FabricNavigationContext {
-  readonly currentSessionId: SessionId
-  readonly showChat: () => void
-}
-
-/** Build catalog-aware navigation callbacks for one mounted Fabric surface. */
-export function createFabricControls(
-  sessions: ClientContext['sessions'],
-  navigation?: FabricNavigationContext,
-): FabricControls {
-  const catalogs = new Set<SessionId>()
-  const refreshCatalogs = async (sessionIds: readonly string[]): Promise<void> => {
-    const ids = [...new Set(sessionIds.map(sessionId => sessionId as SessionId))]
-    for (const sessionId of ids) catalogs.add(sessionId)
-    await Promise.allSettled(ids.map(sessionId => sessions.refreshSubagents(sessionId)))
-  }
-  return {
-    async openNode(rawSessionId) {
-      const sessionId = rawSessionId as SessionId
-      if (navigation !== undefined && sessionId === navigation.currentSessionId) {
-        navigation.showChat()
-        return
-      }
-      let address = sessions.subagentAddress(sessionId)
-      if (address === undefined && catalogs.size > 0) {
-        await Promise.allSettled([...catalogs].map(parent => sessions.refreshSubagents(parent)))
-        address = sessions.subagentAddress(sessionId)
-      }
-      if (address !== undefined) {
-        sessions.openSubagent(address)
-      } else if (sessions.list.getSnapshot().ids.includes(sessionId)) {
-        sessions.open(sessionId)
-      }
-    },
-    refreshCatalogs,
-  }
-}
 
 // The conversation owner remains the sole view-state authority; Fabric only mounts its existing handle.
 function conversationChatStore(ctx: ClientContext): ChatStore {
@@ -88,4 +53,5 @@ export function apply(ctx: ClientContext): void {
     locale: 'fabric',
     inject: (_sessionId: SessionId): FabricControls => createFabricControls(ctx.sessions),
   }, FabricHeaderAction))
+
 }

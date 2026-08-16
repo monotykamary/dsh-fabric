@@ -8,6 +8,7 @@ import {
   FABRIC_COMPACTION_PROVIDER,
   readLatestFabricSnapshot,
 } from './compiler.ts'
+import { selectFabricCompactionSource } from './source.ts'
 
 interface SummarizationInput {
   readonly system?: string
@@ -36,17 +37,12 @@ export class FabricCompactionEngine extends BasicCompactionEngine {
     signal?: AbortSignal,
   ): Promise<SummaryResult> {
     signal?.throwIfAborted()
-    const latestTime = agent.session.events.at(-1)?.time
-    const prior = readLatestFabricSnapshot(agent.session)
-    const compiled = compileFabricSummary(input.messages, {
-      ...(prior === undefined ? {} : { prior }),
-      ...(latestTime === undefined ? {} : { lastTimestamp: new Date(latestTime).toISOString() }),
-      activityEvents: agent.session.events.flatMap((event) => {
-        const type = String(event.type)
-        return type === 'fabric/activity' || type.startsWith('tool-workflow/')
-          ? [{ type, seq: event.seq, time: event.time, data: event.data }]
-          : []
-      }),
+    const source = selectFabricCompactionSource(agent.session, input.messages)
+    const compiled = compileFabricSummary(source.messages, {
+      ...(source.lastTime === undefined ? {} : { lastTimestamp: new Date(source.lastTime).toISOString() }),
+      activityEvents: source.activityEvents,
+      budgetMessages: input.messages,
+      ...(source.sourceTruncated ? { sourceTruncated: true } : {}),
     })
     signal?.throwIfAborted()
     return {
@@ -59,6 +55,8 @@ export class FabricCompactionEngine extends BasicCompactionEngine {
 }
 
 export { compileFabricSummary, readLatestFabricSnapshot } from './compiler.ts'
+export { selectFabricCompactionSource } from './source.ts'
+export type { FabricCompactionSource, FabricCompactionSourceOptions } from './source.ts'
 export type {
   CompiledFabricSummary,
   CompileFabricSummaryOptions,

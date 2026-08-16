@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { buildFabricClientModel } from './model.ts'
 import { statusLabel } from './labels.ts'
@@ -14,6 +15,7 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
   const sessions = useSessions(value => value)
   const model = useMemo(() => buildFabricClientModel(sessions, sessionId, Date.now()), [sessionId, sessions])
   const [expanded, setExpanded] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
   const catalogKey = model?.graph.nodes
     .flatMap(node => node.sessionId === undefined ? [] : [node.sessionId])
     .toSorted()
@@ -23,12 +25,28 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
     if (catalogKey !== '') refreshCatalogs(catalogKey.split('\u0000'))
   }, [catalogKey, refreshCatalogs])
 
+  useEffect(() => {
+    if (!expanded) return
+    const dismiss = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setExpanded(false)
+    }
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpanded(false)
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', dismissOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', dismissOnEscape)
+    }
+  }, [expanded])
+
   if (model === null || model.graph.nodes.length <= 1) return null
 
   const running = model.graph.nodes.filter(node => node.status === 'running')
   const related = model.graph.nodes.filter(node => node.sessionId !== sessionId)
   return (
-    <div className={css.headerAction}>
+    <div ref={rootRef} className={css.headerAction}>
       <button
         className={css.headerButton}
         type="button"
@@ -37,7 +55,8 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
         onClick={() => { setExpanded(value => !value) }}
       >
         <span className={running.length > 0 ? css.headerPulse : css.headerIdle} />
-        Fabric · {related.length}
+        <span>Fabric · {related.length}</span>
+        <IconChevronDownOutline14 className={expanded ? css.headerChevronOpen : css.headerChevron} />
       </button>
       {expanded ? (
         <div className={css.headerPopover} role="dialog" aria-label={t('header.popover.aria')}>

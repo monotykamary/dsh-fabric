@@ -1,19 +1,22 @@
 import { Buffer } from 'node:buffer'
+import { createHash } from 'node:crypto'
+import { realpathSync } from 'node:fs'
 import type { Context } from '@deepseek-ai/cordis'
 import type { AssembleContext } from '@deepseek-ai/dsh-system-prompt'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/dsh-workspace'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { snapshotJsonValue } from '@deepseek-ai/dsh-session'
-import type { JsonValue, Session } from '@deepseek-ai/dsh-session'
-import { appendFabricActivity } from '@dsh-fabric/host'
-import type { FabricActivityEventData } from '@dsh-fabric/host'
+import type { JsonValue } from '@deepseek-ai/dsh-session'
 import {
   FabricActorClaimToken,
   FabricActorId,
   FabricActorMessageId,
   FabricStateKey,
   FabricTopicId,
+  fabricMeshResultMeta,
 } from '@dsh-fabric/protocol'
-import type { FabricJsonValue, FabricMeshSnapshot, FabricNodeStatus } from '@dsh-fabric/protocol'
+import type { FabricJsonValue, FabricMeshSnapshot } from '@dsh-fabric/protocol'
 import type {} from './index.ts'
 
 /** Cordis plugin name. */
@@ -97,7 +100,9 @@ export function apply(ctx: Context): void {
   ctx.systemPrompt.context({
     name: 'fabric:mesh-state',
     order: 120,
-    text: context => visible(context) ? renderMeshContext(ctx.fabricMesh.snapshot(PROMPT_CONTEXT_LIMIT)) : '',
+    text: context => visible(context)
+      ? renderMeshContext(ctx.fabricMesh.forWorkspace(resolveWorkspaceIdentity(ctx, context.agent)).snapshot(PROMPT_CONTEXT_LIMIT))
+      : '',
   })
 
   ctx.tools.register(defineTool({
@@ -122,104 +127,52 @@ export function apply(ctx: Context): void {
     output: {
       schema: { type: 'json' },
       render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+      presentationMeta: (args, value) => json(fabricMeshResultMeta(args, value as FabricJsonValue)),
     },
     async execute(args, exec) {
+      if (exec.agent === undefined) throw new Error('fabric_mesh requires a DSH agent workspace')
+      const mesh = ctx.fabricMesh.forWorkspace(resolveWorkspaceIdentity(ctx, exec.agent))
       switch (args.action as Action) {
-        case 'snapshot': return json(ctx.fabricMesh.snapshot(resolveLimit(args.limit)))
-        case 'create_topic': {
-          const topic = await ctx.fabricMesh.createTopic(requiredText(args.label, 'label', MAX_LABEL_BYTES), optionalTopicId(args.id))
-          record(exec.agent?.session, {
-            activity: activity(`topic:${topic.id}:created`, 'topic', 'created', topic.label, 'completed', topic.updatedAt, `topic:${topic.id}`),
-            nodes: [{ id: `topic:${topic.id}`, kind: 'topic', label: topic.label, status: 'idle', updatedAt: topic.updatedAt }],
-            edges: ownerEdge(exec.agent?.id, `topic:${topic.id}`, 'contains', topic.updatedAt),
-          })
-          return json(topic)
-        }
-        case 'publish': {
-          const message = await ctx.fabricMesh.publish(FabricTopicId(requiredText(args.topic_id, 'topic_id')), requiredJson(args.payload, 'payload'))
-          const messageNode = `message:${message.id}`
-          const topic = ctx.fabricMesh.topic(message.topicId)
-          record(exec.agent?.session, {
-            activity: activity(`topic:${message.id}:published`, 'message', 'published', topic.label, 'completed', message.publishedAt, messageNode),
-            nodes: [
-              { id: `topic:${message.topicId}`, kind: 'topic', label: topic.label, status: 'idle', updatedAt: message.publishedAt },
-              { id: messageNode, kind: 'message', label: `Message ${shortId(message.id)}`, status: 'completed', updatedAt: message.publishedAt },
-            ],
-            edges: [{ id: `publish:${message.id}`, source: `topic:${message.topicId}`, target: messageNode, kind: 'publish', updatedAt: message.publishedAt }],
-          })
-          return json(message)
-        }
-        case 'read_topic': return json(ctx.fabricMesh.topicMessages(FabricTopicId(requiredText(args.topic_id, 'topic_id')), resolveLimit(args.limit)))
-        case 'prune_topic': {
-          const topicId = FabricTopicId(requiredText(args.topic_id, 'topic_id'))
-          const result = await ctx.fabricMesh.pruneTopic(topicId, requiredRetention(args.retain))
-          const topic = ctx.fabricMesh.topic(topicId)
-          const nodeId = `topic:${topic.id}`
-          const updatedAt = Date.now()
-          record(exec.agent?.session, {
-            activity: activity(`topic:${topic.id}:pruned:${updatedAt}`, 'topic', 'pruned', topic.label, 'completed', updatedAt, nodeId, `${result.deleted} deleted`),
-            nodes: [{ id: nodeId, kind: 'topic', label: topic.label, status: 'idle', updatedAt, detail: `${result.retained} retained` }],
-            edges: ownerEdge(exec.agent?.id, nodeId, 'contains', updatedAt),
-          })
-          return json(result)
-        }
-        case 'get_state': return json(ctx.fabricMesh.getState(FabricStateKey(requiredText(args.key, 'key'))) ?? null)
-        case 'cas_state': {
-          const key = FabricStateKey(requiredText(args.key, 'key'))
-          const state = await ctx.fabricMesh.compareAndSwap(key, requiredVersion(args.expected_version), requiredJson(args.value, 'value'))
-          const nodeId = `state:${state.key}`
-          record(exec.agent?.session, {
-            activity: activity(`state:${state.key}:${state.version}`, 'state', 'compare-and-swap', String(state.key), 'completed', state.updatedAt, nodeId, `revision ${state.version}`),
-            nodes: [{ id: nodeId, kind: 'state', label: String(state.key), status: 'completed', updatedAt: state.updatedAt, detail: `revision ${state.version}` }],
-            edges: ownerEdge(exec.agent?.id, nodeId, 'state', state.updatedAt),
-          })
-          return json(state)
-        }
-        case 'create_actor': {
-          const actor = await ctx.fabricMesh.createActor(requiredText(args.label, 'label', MAX_LABEL_BYTES), optionalActorId(args.id))
-          const nodeId = `actor:${actor.id}`
-          record(exec.agent?.session, {
-            activity: activity(`actor:${actor.id}:created`, 'actor', 'created', actor.label, 'completed', actor.updatedAt, nodeId),
-            nodes: [{ id: nodeId, kind: 'actor', label: actor.label, status: 'idle', updatedAt: actor.updatedAt }],
-            edges: ownerEdge(exec.agent?.id, nodeId, 'contains', actor.updatedAt),
-          })
-          return json(actor)
-        }
-        case 'send_actor': {
-          const message = await ctx.fabricMesh.sendActor(FabricActorId(requiredText(args.actor_id, 'actor_id')), requiredJson(args.payload, 'payload'))
-          recordActorMessage(exec.agent?.session, exec.agent?.id, message, ctx.fabricMesh.actor(message.actorId), 'pending', 'sent')
-          return json(message)
-        }
-        case 'read_mailbox': return json(ctx.fabricMesh.actorMessages(FabricActorId(requiredText(args.actor_id, 'actor_id')), resolveLimit(args.limit)))
-        case 'prune_mailbox': {
-          const actorId = FabricActorId(requiredText(args.actor_id, 'actor_id'))
-          const result = await ctx.fabricMesh.pruneActor(actorId, requiredRetention(args.retain))
-          const actor = ctx.fabricMesh.actor(actorId)
-          const nodeId = `actor:${actor.id}`
-          const updatedAt = Date.now()
-          record(exec.agent?.session, {
-            activity: activity(`actor:${actor.id}:pruned:${updatedAt}`, 'actor', 'pruned', actor.label, 'completed', updatedAt, nodeId, `${result.deleted} deleted`),
-            nodes: [{ id: nodeId, kind: 'actor', label: actor.label, status: actor.status, updatedAt, detail: `${result.retained} terminal records retained` }],
-            edges: ownerEdge(exec.agent?.id, nodeId, 'contains', updatedAt),
-          })
-          return json(result)
-        }
-        case 'claim_actor_message': {
-          const message = await ctx.fabricMesh.claimActor(FabricActorId(requiredText(args.actor_id, 'actor_id')))
-          if (message !== null) recordActorMessage(exec.agent?.session, exec.agent?.id, message, ctx.fabricMesh.actor(message.actorId), 'running', 'claimed')
-          return json(message)
-        }
+        case 'snapshot': return json(mesh.snapshot(resolveLimit(args.limit)))
+        case 'create_topic': return json(await mesh.createTopic(
+          requiredText(args.label, 'label', MAX_LABEL_BYTES), optionalTopicId(args.id),
+        ))
+        case 'publish': return json(await mesh.publish(
+          FabricTopicId(requiredText(args.topic_id, 'topic_id')), requiredJson(args.payload, 'payload'),
+        ))
+        case 'read_topic': return json(mesh.topicMessages(
+          FabricTopicId(requiredText(args.topic_id, 'topic_id')), resolveLimit(args.limit),
+        ))
+        case 'prune_topic': return json(await mesh.pruneTopic(
+          FabricTopicId(requiredText(args.topic_id, 'topic_id')), requiredRetention(args.retain),
+        ))
+        case 'get_state': return json(mesh.getState(FabricStateKey(requiredText(args.key, 'key'))) ?? null)
+        case 'cas_state': return json(await mesh.compareAndSwap(
+          FabricStateKey(requiredText(args.key, 'key')), requiredVersion(args.expected_version), requiredJson(args.value, 'value'),
+        ))
+        case 'create_actor': return json(await mesh.createActor(
+          requiredText(args.label, 'label', MAX_LABEL_BYTES), optionalActorId(args.id),
+        ))
+        case 'send_actor': return json(await mesh.sendActor(
+          FabricActorId(requiredText(args.actor_id, 'actor_id')), requiredJson(args.payload, 'payload'),
+        ))
+        case 'read_mailbox': return json(mesh.actorMessages(
+          FabricActorId(requiredText(args.actor_id, 'actor_id')), resolveLimit(args.limit),
+        ))
+        case 'prune_mailbox': return json(await mesh.pruneActor(
+          FabricActorId(requiredText(args.actor_id, 'actor_id')), requiredRetention(args.retain),
+        ))
+        case 'claim_actor_message': return json(await mesh.claimActor(
+          FabricActorId(requiredText(args.actor_id, 'actor_id')),
+        ))
         case 'settle_actor_message': {
           const hasError = args.error !== undefined && args.error !== ''
           if (hasError === (args.value !== undefined)) throw new TypeError('settle_actor_message requires exactly one of value or error')
-          const message = await ctx.fabricMesh.settleActor(
+          return json(await mesh.settleActor(
             FabricActorMessageId(requiredText(args.message_id, 'message_id')),
             FabricActorClaimToken(requiredText(args.claim_token, 'claim_token')),
             hasError ? { error: requiredText(args.error, 'error', MAX_ERROR_BYTES) } : { result: requiredJson(args.value, 'value') },
-          )
-          const failed = message.status === 'failed'
-          recordActorMessage(exec.agent?.session, exec.agent?.id, message, ctx.fabricMesh.actor(message.actorId), failed ? 'failed' : 'completed', failed ? 'failed' : 'completed')
-          return json(message)
+          ))
         }
       }
     },
@@ -228,49 +181,28 @@ export function apply(ctx: Context): void {
   }))
 }
 
-function recordActorMessage(
-  session: Parameters<typeof record>[0],
-  sessionId: string | undefined,
-  message: { id: string; actorId: string; updatedAt: number; status: string },
-  actor: { id: string; label: string; status: FabricNodeStatus },
-  status: FabricNodeStatus,
-  actionName: string,
-): void {
-  const actorNode = `actor:${message.actorId}`
-  const messageNode = `message:${message.id}`
-  record(session, {
-    activity: activity(`actor:${message.id}:${actionName}`, 'message', actionName, actor.label, status, message.updatedAt, messageNode),
-    nodes: [
-      { id: actorNode, kind: 'actor', label: actor.label, status: actor.status, updatedAt: message.updatedAt },
-      { id: messageNode, kind: 'message', label: `Message ${shortId(message.id)}`, status, updatedAt: message.updatedAt },
-    ],
-    edges: [
-      ...(sessionId === undefined ? [] : [{ id: `route:${message.id}`, source: '$session', target: actorNode, kind: 'route' as const, updatedAt: message.updatedAt }]),
-      { id: `actor-message:${message.id}`, source: actorNode, target: messageNode, kind: 'message', updatedAt: message.updatedAt },
-    ],
-  })
-}
+/** Resolve one identity synchronously for both prompt assembly and tool execution. */
+export function resolveWorkspaceIdentity(ctx: Context, agent: Agent | undefined): string {
+  if (agent === undefined) return 'diagnostic'
 
-function record(session: Session | undefined, data: FabricActivityEventData): void {
-  if (session === undefined) throw new Error('fabric_mesh mutation requires a calling agent')
-  appendFabricActivity(session, data)
-}
+  const registry = ctx.get('workspaceRegistry')
+  const workspaces = registry?.list() ?? []
+  const bySession = workspaces.find(candidate => candidate.sessionIds.includes(agent.id))
+  if (bySession !== undefined) return 'workspace:' + bySession.id
 
-function ownerEdge(sessionId: string | undefined, target: string, kind: 'contains' | 'state', updatedAt: number) {
-  return sessionId === undefined ? [] : [{ id: `${kind}:${target}`, source: '$session', target, kind, updatedAt }]
-}
-
-function activity(
-  id: string,
-  kind: 'topic' | 'state' | 'actor' | 'message',
-  action: string,
-  label: string,
-  status: FabricNodeStatus,
-  updatedAt: number,
-  nodeId: string,
-  detail?: string,
-) {
-  return { id, kind, action, label, status, updatedAt, nodeId, ...(detail === undefined ? {} : { detail }) }
+  const cwd = agent.session.header.cwd
+  if (cwd !== undefined) {
+    let canonical = cwd
+    try {
+      canonical = realpathSync(cwd)
+    } catch {
+      // A vanished workspace still receives a stable non-secret path digest.
+    }
+    const byPath = workspaces.find(candidate => candidate.path === canonical)
+    if (byPath !== undefined) return 'workspace:' + byPath.id
+    return 'path:' + createHash('sha256').update(canonical).digest('hex')
+  }
+  return 'session:' + agent.id
 }
 
 function json(value: unknown): JsonValue {
@@ -311,5 +243,4 @@ function resolveLimit(value: number | undefined): number {
 
 function optionalTopicId(value: string | undefined) { return value === undefined ? undefined : FabricTopicId(requiredText(value, 'id')) }
 function optionalActorId(value: string | undefined) { return value === undefined ? undefined : FabricActorId(requiredText(value, 'id')) }
-function shortId(value: string): string { return String(value).slice(0, 8) }
 function readAction(action: Action): boolean { return action === 'snapshot' || action === 'read_topic' || action === 'get_state' || action === 'read_mailbox' }

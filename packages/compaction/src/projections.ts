@@ -25,7 +25,7 @@ export interface Sections {
 }
 
 const MAX_LINE = 140;
-const FILE_TOOLS = new Set(["read", "edit", "write", "grep", "find", "ls"]);
+const FILE_TOOLS = new Set(["read", "read_image", "edit", "write", "grep", "glob", "find", "ls"]);
 const MODIFYING_TOOLS = new Set(["edit", "write"]);
 export const MAX_USER_GOAL_LINES = 3;
 export const MAX_USER_GOAL_LINE = 1024;
@@ -97,7 +97,7 @@ const trailingEllipsis = (lines: string[], max: number): string[] => {
 };
 
 const pathOf = (args: Record<string, unknown>): string | undefined => {
-  const value = args.path ?? args.file ?? args.dir;
+  const value = args.file_path ?? args.path ?? args.file ?? args.dir;
   return typeof value === "string" && value.trim() ? value : undefined;
 };
 
@@ -152,6 +152,7 @@ const collectOperations = (events: CompactionEvent[]): StructuralOperation[] => 
         args: call.args,
         outcome: event.isError ? "failed" : "succeeded",
         ...(event.isError && event.text ? { error: event.text } : {}),
+        ...(event.result !== undefined ? { result: event.result } : {}),
         nested: false,
       });
       continue;
@@ -184,7 +185,7 @@ const isBashOperation = (operation: StructuralOperation): boolean =>
 const resultProvesCreation = (result: unknown): boolean => {
   if (!result || typeof result !== "object" || Array.isArray(result)) return false;
   const record = result as Record<string, unknown>;
-  if (record.created === true) return true;
+  if (record.created === true || record.operation === "create") return true;
   const details = record.details;
   return Boolean(details && typeof details === "object" && !Array.isArray(details)
     && (details as Record<string, unknown>).created === true);

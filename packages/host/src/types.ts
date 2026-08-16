@@ -1,22 +1,12 @@
-import type {
-  FabricActivityProjection,
-  FabricActivityRecord,
-  FabricProjectedEdge,
-  FabricProjectedNode,
-} from '@dsh-fabric/protocol'
+import type { FabricActivityEventData, FabricActivityProjection } from '@dsh-fabric/protocol'
 
 export {}
 
-/** Whole activity fact appended after one Fabric-owned operation commits. */
-export interface FabricActivityEventData {
-  activity: FabricActivityRecord
-  nodes?: readonly FabricProjectedNode[]
-  edges?: readonly FabricProjectedEdge[]
-}
+export type { FabricActivityEventData } from '@dsh-fabric/protocol'
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
-    /** A committed Fabric operation and its complete topology updates. */
+    /** Legacy alpha replay shape; new writes use native DSH tool events. */
     'fabric/activity': FabricActivityEventData
   }
 }

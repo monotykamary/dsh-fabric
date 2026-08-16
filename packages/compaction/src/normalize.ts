@@ -1,5 +1,7 @@
 /** DSH message normalization for deterministic Fabric compaction. */
 import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
+import { projectFabricMeshActivity, readFabricMeshResultMeta } from '@dsh-fabric/protocol'
+import type { FabricActivityRecord, FabricJsonValue } from '@dsh-fabric/protocol'
 import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
 import { clipUtf8 } from './bounds.ts'
 
@@ -44,6 +46,7 @@ interface ToolResultEvent extends EventBase {
   toolName: string
   isError: boolean
   text: string
+  result?: FabricTraceJsonValue
 }
 
 interface BashEvent extends EventBase {
@@ -175,7 +178,11 @@ export function normalizeMessages(
             ...(isError && text.length > 0 ? { error: text } : {}),
           }, entryId, sourceEntryId))
         } else {
-          output.push(base({ kind: 'toolResult', toolCallId, toolName, isError, text }, entryId, sourceEntryId))
+          const result = parseRenderedJson(block.content)
+          output.push(base({
+            kind: 'toolResult', toolCallId, toolName, isError, text,
+            ...(result === undefined ? {} : { result }),
+          }, entryId, sourceEntryId))
         }
       }
     }
@@ -191,10 +198,25 @@ function appendSessionActivities(
 ): void {
   const workflows = new Map<string, string>()
   const members = new Map<string, { label: string; phase?: string }>()
+  const codeCalls = new Map<string, { name: string; args: Record<string, unknown>; sourceEntryId: string }>()
+  const settledCodeCalls = new Set<string>()
   const push = (event: CompactionEvent): void => {
     if (seen.has(event.entryId)) return
     seen.add(event.entryId)
     output.push(event)
+  }
+  const pushCodeCall = (source: SessionActivityInput, data: Record<string, unknown>, suffix: string): string | undefined => {
+    const subCallId = stringField(data, 'subCallId')
+    const name = stringField(data, 'name')
+    if (subCallId === undefined || name === undefined) return undefined
+    const sourceEntryId = `session:${source.seq}`
+    const existing = codeCalls.get(subCallId)
+    if (existing === undefined) {
+      const args = parseArguments(data.arguments)
+      codeCalls.set(subCallId, { name, args, sourceEntryId })
+      push(base({ kind: 'toolCall', toolCallId: subCallId, name, args }, `${sourceEntryId}:${suffix}`, sourceEntryId))
+    }
+    return subCallId
   }
 
   for (const source of sourceEvents) {
@@ -202,54 +224,46 @@ function appendSessionActivities(
     const sourceEntryId = `session:${source.seq}`
     if (source.type === 'fabric/activity') {
       const activity = source.data.activity
-      if (!isRecord(activity)
-        || typeof activity.kind !== 'string'
-        || typeof activity.action !== 'string'
-        || typeof activity.label !== 'string'
-        || typeof activity.status !== 'string') continue
-      const entryId = `${sourceEntryId}:fabric`
-      const address = typeof activity.nodeId === 'string' && activity.nodeId !== ''
-        ? clipUtf8(activity.nodeId, MAX_JSON_STRING_BYTES)
-        : entryId
-      if (activity.kind === 'phase') {
+      if (isFabricActivity(activity)) push(projectActivity(source, activity, 'fabric'))
+      continue
+    }
+    if (source.type === 'tool/result') {
+      const activity = readFabricMeshResultMeta(source.data.meta)?.activity
+      if (activity !== undefined) push(projectActivity(source, activity, 'mesh-result'))
+      continue
+    }
+    if (source.type === 'tool/code-dispatch-start') {
+      pushCodeCall(source, source.data, 'code-call')
+      continue
+    }
+    if (source.type === 'tool/code-dispatch') {
+      const subCallId = pushCodeCall(source, source.data, 'code-call-synthesized')
+      if (subCallId === undefined || settledCodeCalls.has(subCallId)) continue
+      settledCodeCalls.add(subCallId)
+      const call = codeCalls.get(subCallId)
+      if (call === undefined) continue
+      const text = clipUtf8(contentTextUnknown(source.data.content), MAX_EVENT_TEXT_BYTES)
+      const isError = source.data.isError === true
+      const result = parseRenderedJson(source.data.content)
+      if (call.name === 'bash' || call.name === 'tool-bash') {
         push(base({
-          kind: 'fabricPhase',
-          subordinal: String(source.seq),
-          address,
-          phase: clipUtf8(activity.label, MAX_EVENT_TEXT_BYTES),
-        }, entryId, sourceEntryId))
-        continue
-      }
-      if (activity.kind === 'workflow') {
+          kind: 'bash',
+          toolCallId: subCallId,
+          command: commandFrom(call.args),
+          isError,
+          exitCode: null,
+          ...(isError && text.length > 0 ? { error: text } : {}),
+        }, `${sourceEntryId}:code-result`, sourceEntryId))
+      } else {
         push(base({
-          kind: 'fabricRun',
-          toolCallId: entryId,
-          subordinal: String(source.seq),
-          address,
-          name: clipUtf8(activity.label, MAX_EVENT_TEXT_BYTES),
-          ...(typeof activity.detail === 'string' ? { description: clipUtf8(activity.detail, MAX_EVENT_TEXT_BYTES) } : {}),
-          outcome: activityOutcome(activity.status),
-          source: 'trace',
-        }, entryId, sourceEntryId))
-        continue
+          kind: 'toolResult', toolCallId: subCallId, toolName: call.name, isError, text,
+          ...(result === undefined ? {} : { result }),
+        }, `${sourceEntryId}:code-result`, sourceEntryId))
       }
-      const argsValue = boundedJson({
-        label: activity.label,
-        ...(typeof activity.nodeId === 'string' ? { nodeId: activity.nodeId } : {}),
-        ...(typeof activity.detail === 'string' ? { detail: activity.detail } : {}),
-      }, { nodes: 0 }, 0)
-      push(base({
-        kind: 'fabricOperation',
-        subordinal: String(source.seq),
-        address,
-        ref: clipUtf8(`fabric.${activity.kind}.${activity.action}`, MAX_JSON_STRING_BYTES),
-        provider: '@dsh-fabric',
-        action: clipUtf8(activity.action, MAX_JSON_STRING_BYTES),
-        tool: meshActivityKind(activity.kind) ? 'fabric_mesh' : 'fabric_activity',
-        args: isRecord(argsValue) ? argsValue as Record<string, FabricTraceJsonValue> : {},
-        outcome: activityOutcome(activity.status),
-        source: 'trace',
-      }, entryId, sourceEntryId))
+      if (call.name === 'fabric_mesh' && !isError && result !== undefined) {
+        const activity = projectFabricMeshActivity(call.args, result, source.time)?.activity
+        if (activity !== undefined) push(projectActivity(source, activity, 'mesh-dispatch'))
+      }
       continue
     }
 
@@ -308,6 +322,87 @@ function appendSessionActivities(
       }, `${sourceEntryId}:workflow-run`, sourceEntryId))
     }
   }
+
+  for (const [subCallId, call] of codeCalls) {
+    if (settledCodeCalls.has(subCallId)) continue
+    push(base({
+      kind: 'toolResult',
+      toolCallId: subCallId,
+      toolName: call.name,
+      isError: true,
+      text: 'Nested tool dispatch has no settlement in the selected durable source.',
+    }, `${call.sourceEntryId}:code-result-missing`, call.sourceEntryId))
+  }
+}
+
+function projectActivity(
+  source: SessionActivityInput,
+  activity: FabricActivityRecord,
+  suffix: string,
+): CompactionEvent {
+  const sourceEntryId = 'session:' + source.seq
+  const entryId = sourceEntryId + ':' + suffix
+  const address = activity.nodeId === undefined || activity.nodeId === ''
+    ? entryId
+    : clipUtf8(activity.nodeId, MAX_JSON_STRING_BYTES)
+  if (activity.kind === 'phase') {
+    return base({
+      kind: 'fabricPhase',
+      subordinal: String(source.seq),
+      address,
+      phase: clipUtf8(activity.label, MAX_EVENT_TEXT_BYTES),
+    }, entryId, sourceEntryId)
+  }
+  if (activity.kind === 'workflow') {
+    return base({
+      kind: 'fabricRun',
+      toolCallId: entryId,
+      subordinal: String(source.seq),
+      address,
+      name: clipUtf8(activity.label, MAX_EVENT_TEXT_BYTES),
+      ...(activity.detail === undefined ? {} : { description: clipUtf8(activity.detail, MAX_EVENT_TEXT_BYTES) }),
+      outcome: activityOutcome(activity.status),
+      source: 'trace',
+    }, entryId, sourceEntryId)
+  }
+  const argsValue = boundedJson({
+    label: activity.label,
+    ...(activity.nodeId === undefined ? {} : { nodeId: activity.nodeId }),
+    ...(activity.detail === undefined ? {} : { detail: activity.detail }),
+  }, { nodes: 0 }, 0)
+  return base({
+    kind: 'fabricOperation',
+    subordinal: String(source.seq),
+    address,
+    ref: clipUtf8('fabric.' + activity.kind + '.' + activity.action, MAX_JSON_STRING_BYTES),
+    provider: '@dsh-fabric',
+    action: clipUtf8(activity.action, MAX_JSON_STRING_BYTES),
+    tool: meshActivityKind(activity.kind) ? 'fabric_mesh' : 'fabric_activity',
+    args: isRecord(argsValue) ? argsValue as Record<string, FabricTraceJsonValue> : {},
+    outcome: activityOutcome(activity.status),
+    source: 'trace',
+  }, entryId, sourceEntryId)
+}
+
+function isFabricActivity(value: unknown): value is FabricActivityRecord {
+  return isRecord(value)
+    && typeof value.id === 'string'
+    && typeof value.kind === 'string'
+    && typeof value.action === 'string'
+    && typeof value.label === 'string'
+    && typeof value.status === 'string'
+    && typeof value.updatedAt === 'number'
+}
+
+function parseRenderedJson(value: unknown): FabricJsonValue | undefined {
+  if (!Array.isArray(value)) return undefined
+  const text = value.flatMap(item => isRecord(item) && item.type === 'text' && typeof item.text === 'string' ? [item.text] : []).join('\n')
+  if (text === '') return undefined
+  try {
+    return boundedJson(JSON.parse(text), { nodes: 0 }, 0) as FabricJsonValue | undefined
+  } catch {
+    return undefined
+  }
 }
 
 function activityOutcome(status: string): FabricExecutionOutcomeV1 {
@@ -361,15 +456,29 @@ function base<T extends Omit<CompactionEvent, keyof EventBase>>(
   return { ...event, index: 0, entryId, sourceEntryId }
 }
 
-function parseArguments(source: string): Record<string, unknown> {
+function parseArguments(source: unknown): Record<string, unknown> {
   try {
-    const parsed: unknown = JSON.parse(source)
+    const parsed: unknown = typeof source === 'string' ? JSON.parse(source) : source
     if (!isRecord(parsed)) return {}
     const bounded = boundedJson(parsed, { nodes: 0 }, 0)
     return isRecord(bounded) ? bounded : {}
   } catch {
     return {}
   }
+}
+
+function contentTextUnknown(value: unknown): string {
+  if (!Array.isArray(value)) return ''
+  const output: string[] = []
+  const visit = (items: readonly unknown[]): void => {
+    for (const item of items) {
+      if (!isRecord(item)) continue
+      if (item.type === 'text' && typeof item.text === 'string') output.push(item.text)
+      else if (item.type === 'tool-result' && Array.isArray(item.content)) visit(item.content)
+    }
+  }
+  visit(value)
+  return output.join('\n')
 }
 
 function contentText(blocks: readonly ContentBlock[]): string {

@@ -20,7 +20,7 @@ const MAX_JSON_COLLECTION = 64
 const MAX_JSON_STRING_BYTES = 2048
 
 export const FABRIC_COMPACTION_PROVIDER = '@dsh-fabric/compaction'
-export const FABRIC_COMPACTION_MODEL = 'deterministic-projection-v1'
+export const FABRIC_COMPACTION_MODEL = 'deterministic-projection-v2'
 
 export interface FabricCompactionSnapshotV1 {
   kind: typeof SNAPSHOT_KIND
@@ -31,9 +31,14 @@ export interface FabricCompactionSnapshotV1 {
 }
 
 export interface CompileFabricSummaryOptions {
+  /** Typed fallback for detached callers; the DSH adapter reconstructs from source events instead. */
   prior?: FabricCompactionSnapshotV1
   lastTimestamp?: string
   activityEvents?: readonly SessionActivityInput[]
+  /** Current selected surface used only as the non-expansion byte budget. */
+  budgetMessages?: readonly Message[]
+  /** Source citation traversal reached its safety cap and omitted older facts. */
+  sourceTruncated?: boolean
 }
 
 export interface CompiledFabricSummary {
@@ -51,9 +56,12 @@ export function compileFabricSummary(
   const events = normalizeMessages(messages, options.prior?.events, options.activityEvents)
   if (events.length === 0) throw new Error('Fabric compaction source contains no typed text, tool, or activity events')
   const projection = projectWithMetadata(events)
-  const activityBytes = options.activityEvents?.reduce((total, event) => total + utf8Bytes(JSON.stringify(event)), 0) ?? 0
-  const sourceBytes = Math.max(1, activityBytes + messages.reduce((total, message) => total + messageBytes(message), 0))
-  const maxBytes = Math.min(MAX_SUMMARY_BYTES, Math.max(256, Math.floor(sourceBytes * 0.5) - 256))
+  if (options.sourceTruncated) {
+    projection.sections.status.unshift('Source recovery reached its event safety cap; older cited facts were omitted.')
+  }
+  const budgetMessages = options.budgetMessages ?? messages
+  const budgetBytes = Math.max(1, budgetMessages.reduce((total, message) => total + messageBytes(message), 0))
+  const maxBytes = Math.min(MAX_SUMMARY_BYTES, Math.max(256, Math.floor(budgetBytes * 0.5) - 256))
   const summary = renderSummary(projection.sections, {
     firstEntryId: events[0]?.sourceEntryId ?? '',
     lastEntryId: events.at(-1)?.sourceEntryId ?? '',
@@ -174,6 +182,7 @@ function isCompactionEvent(value: unknown, expectedIndex: number): value is Comp
         && boundedString(value.toolName, MAX_JSON_STRING_BYTES)
         && typeof value.isError === 'boolean'
         && boundedString(value.text, MAX_EVENT_TEXT_BYTES)
+        && optionalJson(value.result)
     case 'bash':
       return boundedString(value.toolCallId, MAX_JSON_STRING_BYTES)
         && boundedString(value.command, MAX_EVENT_TEXT_BYTES)

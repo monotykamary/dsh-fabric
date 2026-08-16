@@ -1,9 +1,12 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
+import type { JsonValue, Session } from '@deepseek-ai/dsh-session'
+import { createToolResultMessage } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import Storage from '@deepseek-ai/dsh-storage'
 import * as StorageJson from '@deepseek-ai/dsh-storage-json'
@@ -17,7 +20,47 @@ import * as MeshTool from '../src/tool.ts'
 
 const signal = new AbortController().signal
 
+type SettledToolResult = { isError: boolean; content: ContentBlock[]; value?: JsonValue; meta?: JsonValue }
+
+async function executeMesh(
+  ctx: Context,
+  agent: { session: Session },
+  callId: string,
+  args: Record<string, JsonValue>,
+): Promise<SettledToolResult> {
+  const result = await ctx.tools.execute({
+    signal,
+    callId: callId as never,
+    name: 'fabric_mesh',
+    arguments: args,
+    agent: agent as never,
+  })
+  agent.session.append('tool/result', {
+    turn: 1,
+    step: 1,
+    message: createToolResultMessage({ callId: callId as never, content: result.content, isError: result.isError }),
+    ...(result.meta === undefined ? {} : { meta: result.meta }),
+  }, { surfaceOp: 'append' })
+  return result
+}
+
 describe('fabric_mesh ToolRuntime composition', () => {
+  it('resolves an unindexed session by the registry canonical path synchronously', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-fabric-identity-'))
+    try {
+      const canonical = await realpath(root)
+      const ctx = {
+        get: (name: string) => name === 'workspaceRegistry'
+          ? { list: () => [{ id: 'stable-workspace', path: canonical, sessionIds: [] }] }
+          : undefined,
+      }
+      const agent = { id: SessionId('not-indexed-yet'), session: { header: { cwd: root } } }
+      expect(MeshTool.resolveWorkspaceIdentity(ctx as never, agent as never)).toBe('workspace:stable-workspace')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   it('commits storage, a durable activity event, and the host projection through one tool call', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-fabric-tool-'))
     const ctx = new Context()
@@ -36,18 +79,13 @@ describe('fabric_mesh ToolRuntime composition', () => {
 
       const session = ctx.sessions.create(SessionId('fabric-tool-session'))
       const agent = { id: session.id, session, ctx, options: {}, status: 'idle' }
-      const result = await ctx.tools.execute({
-        signal,
-        callId: 'fabric-mesh-1' as never,
-        name: 'fabric_mesh',
-        arguments: { action: 'create_actor', id: 'builder', label: 'Builder' },
-        agent: agent as never,
-      })
+      const result = await executeMesh(ctx, agent, 'fabric-mesh-1', { action: 'create_actor', id: 'builder', label: 'Builder' })
 
       expect(result.isError).toBe(false)
       expect(result.value).toMatchObject({ id: 'builder', label: 'Builder' })
-      expect(ctx.fabricMesh.snapshot().actors).toEqual([expect.objectContaining({ id: 'builder' })])
-      const initialAssembly = await ctx.systemPrompt.assemble()
+      const scopedMesh = ctx.fabricMesh.forWorkspace('session:' + session.id)
+      expect(scopedMesh.snapshot().actors).toEqual([expect.objectContaining({ id: 'builder' })])
+      const initialAssembly = await ctx.systemPrompt.assemble({ agent: agent as never })
       expect(initialAssembly.sections).toContainEqual(expect.objectContaining({
         name: 'fabric:mesh-guidance',
         text: expect.stringContaining('context compaction'),
@@ -56,38 +94,57 @@ describe('fabric_mesh ToolRuntime composition', () => {
         name: 'fabric:mesh-state',
         text: expect.stringMatching(/\"actors\".*\"builder\"/),
       }))
-      expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { kind: 'actor', action: 'created' } } })
+      expect(session.events.at(-1)).toMatchObject({
+        type: 'tool/result',
+        data: { meta: { kind: 'dsh-fabric.mesh-result', activity: { activity: { kind: 'actor', action: 'created' } } } },
+      })
       expect(ctx.sessionProjections.snapshot(session).values.fabricActivity).toMatchObject({
         activities: [expect.objectContaining({ nodeId: 'actor:builder' })],
         nodes: [expect.objectContaining({ id: 'actor:builder' })],
         edges: [expect.objectContaining({ source: '$session', target: 'actor:builder', kind: 'contains' })],
       })
 
-      const sent = await ctx.tools.execute({ signal, callId: 'fabric-mesh-2' as never, name: 'fabric_mesh', arguments: { action: 'send_actor', actor_id: 'builder', payload: { task: 'compile' } }, agent: agent as never })
-      await ctx.tools.execute({ signal, callId: 'fabric-mesh-2b' as never, name: 'fabric_mesh', arguments: { action: 'send_actor', actor_id: 'builder', payload: { task: 'verify' } }, agent: agent as never })
-      const claimed = await ctx.tools.execute({ signal, callId: 'fabric-mesh-3' as never, name: 'fabric_mesh', arguments: { action: 'claim_actor_message', actor_id: 'builder' }, agent: agent as never })
+      const sent = await executeMesh(ctx, agent, 'fabric-mesh-2', { action: 'send_actor', actor_id: 'builder', payload: { task: 'compile' } })
+      await executeMesh(ctx, agent, 'fabric-mesh-2b', { action: 'send_actor', actor_id: 'builder', payload: { task: 'verify' } })
+      const claimed = await executeMesh(ctx, agent, 'fabric-mesh-3', { action: 'claim_actor_message', actor_id: 'builder' })
       const message = claimed.value as { id: string; claimToken: string }
       expect(sent.isError).toBe(false)
       expect(message).toMatchObject({ id: expect.any(String), claimToken: expect.any(String) })
-      await ctx.tools.execute({ signal, callId: 'fabric-mesh-4' as never, name: 'fabric_mesh', arguments: { action: 'settle_actor_message', message_id: message.id, claim_token: message.claimToken, value: { ok: true } }, agent: agent as never })
-      const replay = await ctx.tools.execute({ signal, callId: 'fabric-mesh-5' as never, name: 'fabric_mesh', arguments: { action: 'settle_actor_message', message_id: message.id, claim_token: message.claimToken, error: 'late retry' }, agent: agent as never })
+      await executeMesh(ctx, agent, 'fabric-mesh-4', { action: 'settle_actor_message', message_id: message.id, claim_token: message.claimToken, value: { ok: true } })
+      const replay = await executeMesh(ctx, agent, 'fabric-mesh-5', { action: 'settle_actor_message', message_id: message.id, claim_token: message.claimToken, error: 'late retry' })
 
       expect(replay.value).toMatchObject({ status: 'completed', result: { ok: true } })
-      const rehydratedAssembly = await ctx.systemPrompt.assemble()
+      const rehydratedAssembly = await ctx.systemPrompt.assemble({ agent: agent as never })
       expect(rehydratedAssembly.contexts.find(context => context.name === 'fabric:mesh-state')?.text)
         .toMatch(/\"actorMessages\".*\"completed\"/)
 
-      const snapshot = await ctx.tools.execute({ signal, callId: 'fabric-mesh-6' as never, name: 'fabric_mesh', arguments: { action: 'snapshot', limit: 1 }, agent: agent as never })
+      const snapshot = await executeMesh(ctx, agent, 'fabric-mesh-6', { action: 'snapshot', limit: 1 })
       expect(snapshot.value).toMatchObject({ totals: { actors: 1, actorMessages: 2 }, truncated: true })
       expect(ctx.sessionProjections.snapshot(session).values.fabricActivity?.nodes)
         .toContainEqual(expect.objectContaining({ id: 'actor:builder', label: 'Builder', status: 'pending' }))
-      const excessive = await ctx.tools.execute({ signal, callId: 'fabric-mesh-7' as never, name: 'fabric_mesh', arguments: { action: 'snapshot', limit: 501 }, agent: agent as never })
+      const excessive = await executeMesh(ctx, agent, 'fabric-mesh-7', { action: 'snapshot', limit: 501 })
       expect(excessive.isError).toBe(true)
-      expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { action: 'completed', status: 'completed' } } })
-      const pruned = await ctx.tools.execute({ signal, callId: 'fabric-mesh-8' as never, name: 'fabric_mesh', arguments: { action: 'prune_mailbox', actor_id: 'builder', retain: 0 }, agent: agent as never })
+      const agentless = await ctx.tools.execute({
+        signal,
+        callId: 'fabric-mesh-agentless' as never,
+        name: 'fabric_mesh',
+        arguments: { action: 'snapshot' },
+      })
+      expect(agentless.isError).toBe(true)
+      expect(agentless.content).toContainEqual(expect.objectContaining({
+        type: 'text', text: expect.stringContaining('requires a DSH agent workspace'),
+      }))
+      expect(session.events).toContainEqual(expect.objectContaining({
+        type: 'tool/result',
+        data: expect.objectContaining({ meta: expect.objectContaining({ activity: expect.objectContaining({ activity: expect.objectContaining({ action: 'completed', status: 'completed' }) }) }) }),
+      }))
+      const pruned = await executeMesh(ctx, agent, 'fabric-mesh-8', { action: 'prune_mailbox', actor_id: 'builder', retain: 0 })
       expect(pruned.value).toEqual({ deleted: 1, retained: 0 })
-      expect(ctx.fabricMesh.actorMessages('builder' as never)).toHaveLength(1)
-      expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { action: 'pruned' } } })
+      expect(scopedMesh.actorMessages('builder' as never)).toHaveLength(1)
+      expect(session.events.at(-1)).toMatchObject({
+        type: 'tool/result',
+        data: { meta: { activity: { activity: { action: 'pruned' } } } },
+      })
     } finally {
       for (const fiber of fibers.reverse()) await fiber.dispose()
       await rm(root, { recursive: true, force: true })
@@ -136,9 +193,10 @@ describe('fabric_mesh ToolRuntime composition', () => {
       expect(result.value).toMatchObject({
         result: { actors: [expect.objectContaining({ id: 'code-builder' })] },
       })
-      expect(ctx.fabricMesh.snapshot().actors).toContainEqual(expect.objectContaining({ id: 'code-builder' }))
+      expect(ctx.fabricMesh.forWorkspace('session:' + session.id).snapshot().actors)
+        .toContainEqual(expect.objectContaining({ id: 'code-builder' }))
       expect(session.events.some(event => event.type === 'tool/code-dispatch')).toBe(true)
-      expect(session.events.some(event => event.type === 'fabric/activity')).toBe(true)
+      expect(session.events.some(event => String(event.type) === 'fabric/activity')).toBe(false)
       expect(ctx.sessionProjections.snapshot(session).values.fabricActivity?.nodes)
         .toContainEqual(expect.objectContaining({ id: 'actor:code-builder' }))
     } finally {

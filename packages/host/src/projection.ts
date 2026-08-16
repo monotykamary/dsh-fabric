@@ -1,17 +1,21 @@
 import { z } from 'zod'
-import { fabricSessionNodeId } from '@dsh-fabric/protocol'
+import { fabricSessionNodeId, projectFabricMeshActivity, readFabricMeshResultMeta } from '@dsh-fabric/protocol'
 import type {
+  FabricActivityEventData,
   FabricActivityProjection,
   FabricActivityRecord,
+  FabricJsonValue,
   FabricNodeStatus,
   FabricProjectedEdge,
   FabricProjectedNode,
 } from '@dsh-fabric/protocol'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import { snapshotJsonValue } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { WorkflowAgentOutcome, WorkflowStopReason } from '@deepseek-ai/dsh-workflow'
 import type {} from '@deepseek-ai/dsh-compaction'
 import type {} from '@deepseek-ai/dsh-tool-workflow/types'
+import type {} from '@deepseek-ai/dsh-tools'
 import type {} from './types.ts'
 
 const nodeStatusSchema = z.enum(['pending', 'running', 'idle', 'completed', 'failed', 'blocked', 'stopped'])
@@ -80,7 +84,7 @@ export function createFabricActivityProjection(
     init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
     view: state => ({ activities: state.activities, nodes: state.nodes, edges: state.edges }),
-    stateVersion: 3,
+    stateVersion: 4,
   }
 }
 
@@ -92,7 +96,19 @@ function applyEvent(
 ): FabricProjectionState {
   switch (event.type) {
     case 'fabric/activity':
-      return merge(state, event.data.activity, event.data.nodes ?? [], event.data.edges ?? [], activityLimit, topologyLimit)
+      return mergeActivity(state, event.data, activityLimit, topologyLimit)
+    case 'tool/result': {
+      const activity = readFabricMeshResultMeta(event.data.meta)
+      return activity === undefined ? state : mergeActivity(state, activity, activityLimit, topologyLimit)
+    }
+    case 'tool/code-dispatch': {
+      if (event.data.name !== 'fabric_mesh' || event.data.isError) return state
+      const args = jsonRecord(event.data.arguments)
+      const result = renderedJson(event.data.content)
+      if (args === undefined || result === undefined) return state
+      const activity = projectFabricMeshActivity(args, result, event.time)
+      return activity === undefined ? state : mergeActivity(state, activity, activityLimit, topologyLimit)
+    }
     case 'compaction/start': {
       const compactionId = String(event.data.compactionId)
       const id = `compaction:${compactionId}`
@@ -220,6 +236,32 @@ function applyEvent(
   }
 }
 
+function mergeActivity(
+  state: FabricProjectionState,
+  data: FabricActivityEventData,
+  activityLimit: number,
+  topologyLimit: number,
+): FabricProjectionState {
+  return merge(state, data.activity, data.nodes ?? [], data.edges ?? [], activityLimit, topologyLimit)
+}
+
+function renderedJson(content: readonly { type: string; text?: string }[]): FabricJsonValue | undefined {
+  const text = content.flatMap(block => block.type === 'text' && typeof block.text === 'string' ? [block.text] : []).join('\n')
+  if (text === '') return undefined
+  try {
+    const snapshot = snapshotJsonValue(JSON.parse(text))
+    return snapshot as FabricJsonValue | undefined
+  } catch {
+    return undefined
+  }
+}
+
+function jsonRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined
+}
+
 function merge(
   state: FabricProjectionState,
   activity: FabricActivityRecord,
@@ -230,14 +272,16 @@ function merge(
 ): FabricProjectionState {
   const normalizedActivity = boundedActivity(activity)
   const initialNodes = state.nodes.map(boundedNode)
-  const nextNodes = nodes.map(boundedNode).reduce((values, node) => upsert(values, node, topologyLimit), initialNodes)
+  const nextNodes = nodes.map(boundedNode).map(node => preserveKnownLabel(initialNodes, node))
+    .reduce((values, node) => upsert(values, node, topologyLimit), initialNodes)
   const initialEdges = state.edges.map(boundedEdge)
   const nextEdges = edges.map(boundedEdge).reduce((values, edge) => upsert(values, edge, topologyLimit), initialEdges)
     .filter(edge => edge.source === '$session' || nextNodes.some(node => node.id === edge.source))
     .filter(edge => edge.target === '$session' || nextNodes.some(node => node.id === edge.target))
+  const reconciledNodes = nextNodes.map(node => reconcileActorStatus(node, nextNodes, nextEdges))
   return {
     activities: [...state.activities.map(boundedActivity).filter(item => item.id !== normalizedActivity.id), normalizedActivity].slice(-activityLimit),
-    nodes: nextNodes,
+    nodes: reconciledNodes,
     edges: nextEdges,
     workflowMembers: state.workflowMembers,
   }
@@ -269,6 +313,31 @@ function boundedActivity(value: FabricActivityRecord): FabricActivityRecord {
     ...(value.nodeId === undefined ? {} : { nodeId: boundedIdentifier(value.nodeId) }),
     ...(value.detail === undefined ? {} : { detail: boundedText(value.detail, MAX_DETAIL_BYTES) }),
   }
+}
+
+function reconcileActorStatus(
+  node: FabricProjectedNode,
+  nodes: readonly FabricProjectedNode[],
+  edges: readonly FabricProjectedEdge[],
+): FabricProjectedNode {
+  if (node.kind !== 'actor') return node
+  const messageIds = new Set(edges.filter(edge => edge.source === node.id && edge.kind === 'message').map(edge => edge.target))
+  if (messageIds.size === 0) return node
+  const statuses = nodes.filter(candidate => messageIds.has(candidate.id)).map(candidate => candidate.status)
+  const status: FabricNodeStatus = statuses.includes('running')
+    ? 'running'
+    : statuses.includes('pending')
+      ? 'pending'
+      : statuses.includes('failed')
+        ? 'failed'
+        : 'idle'
+  return { ...node, status }
+}
+
+function preserveKnownLabel(existing: readonly FabricProjectedNode[], node: FabricProjectedNode): FabricProjectedNode {
+  if (node.kind !== 'actor' || !node.id.startsWith('actor:') || node.label !== node.id.slice('actor:'.length)) return node
+  const previous = existing.find(candidate => candidate.id === node.id)
+  return previous === undefined ? node : { ...node, label: previous.label }
 }
 
 function boundedNode(value: FabricProjectedNode): FabricProjectedNode {

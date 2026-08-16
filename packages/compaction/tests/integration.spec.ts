@@ -8,7 +8,7 @@ import LlmRuntime from '@deepseek-ai/dsh-llm'
 import SessionStore, { Session, SessionId } from '@deepseek-ai/dsh-session'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import { FabricCompactionEngine } from '../src/index.ts'
-import { readLatestFabricSnapshot } from '../src/compiler.ts'
+import { FABRIC_COMPACTION_MODEL, readLatestFabricSnapshot } from '../src/compiler.ts'
 import AgentPresets from '@deepseek-ai/dsh-agent-presets'
 import { apply as provideFabricPresetRoot, FABRIC_PRESET_ROOT } from '../src/presets.ts'
 
@@ -72,7 +72,7 @@ describe('Fabric /compact composition', () => {
       expect(engine.config.auto).toBe(false)
       const summary = agent.session.events.findLast(event => event.type === 'compaction/summary')
       expect(summary?.type === 'compaction/summary' && summary.data.provider).toBe('@dsh-fabric/compaction')
-      expect(summary?.type === 'compaction/summary' && summary.data.model).toBe('deterministic-projection-v1')
+      expect(summary?.type === 'compaction/summary' && summary.data.model).toBe(FABRIC_COMPACTION_MODEL)
       expect(summary?.type === 'compaction/summary' && summary.data.summary[0]?.type === 'text'
         ? summary.data.summary[0].text
         : '').toContain('[Session Goal]')
