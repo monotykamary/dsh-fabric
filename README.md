@@ -44,6 +44,14 @@ After the first build, `--skip-build` reuses the existing `lib` artifacts:
 pnpm run install:local -- --skip-build
 ```
 
+Remove all six local links with the matching command:
+
+```sh
+pnpm run uninstall:local
+```
+
+Use the same `--profile` or `DSH_HOME` selection as installation. Fabric only shadows the profile's `code-runtime` row; it does not uninstall the inherited provider. Removing the Fabric bundle recomposes the profile without that later row, so the inherited CodeRuntime becomes authoritative again. Other profile overlays can still replace it independently.
+
 A registry installation of `dsh-fabric` pulls these packages through ordinary dependencies. The initial installation changes the profile plugin graph and therefore takes effect on the next profile load. This project never starts, stops, or restarts the DSH server automatically.
 
 ### Client HMR

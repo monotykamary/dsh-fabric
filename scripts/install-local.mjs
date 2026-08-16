@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process'
-import { access } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -46,7 +46,12 @@ async function main() {
     return
   }
 
-  await verifyCheckout()
+  const packages = await localPackages()
+  if (options.uninstall) {
+    await uninstall(options.profile, packages)
+    return
+  }
+
   if (options.skipBuild) {
     await verifyArtifacts()
   } else {
@@ -54,28 +59,39 @@ async function main() {
     await runPnpm(['run', 'build'])
   }
 
-  const links = LINK_PATHS.map(path => `link:${resolve(ROOT, path)}`)
   await runPnpm([
     'dlx', DSH_PACKAGE,
     'plugin', '--profile', options.profile,
-    'add', ...links,
+    'add', ...packages.map(entry => entry.link),
   ])
 
-  const config = await runPnpm([
-    'dlx', DSH_PACKAGE,
-    '--profile', options.profile,
-    '--dump-config',
-  ], true)
-  verifyComposition(config, options.profile)
+  const config = await dumpConfig(options.profile)
+  verifyInstalled(config, options.profile)
 
   console.log(`Installed dsh-fabric into profile ${JSON.stringify(options.profile)}.`)
-  console.log('Validated all 5 Fabric rows and the inherited DSH compaction row.')
+  console.log('Validated all 5 Fabric rows and unchanged DSH compaction capability configuration.')
   console.log('No server was started or restarted; load the profile again to activate newly added rows.')
+}
+
+async function uninstall(profile, packages) {
+  await runPnpm([
+    'dlx', DSH_PACKAGE,
+    'plugin', '--profile', profile,
+    'remove', ...packages.map(entry => entry.name),
+  ])
+
+  const config = await dumpConfig(profile)
+  const restoredCodeRuntime = verifyUninstalled(config, profile)
+
+  console.log(`Removed local dsh-fabric packages from profile ${JSON.stringify(profile)}.`)
+  console.log(`Restored inherited code-runtime row ${JSON.stringify(restoredCodeRuntime)} and retained DSH compaction configuration.`)
+  console.log('No server was started or restarted; load the profile again to activate the recomposed profile.')
 }
 
 function parseArgs(args) {
   let profile = 'web'
   let skipBuild = false
+  let uninstall = false
   let help = false
 
   for (let index = 0; index < args.length; index += 1) {
@@ -91,6 +107,8 @@ function parseArgs(args) {
       profile = arg.slice('--profile='.length)
     } else if (arg === '--skip-build') {
       skipBuild = true
+    } else if (arg === '--uninstall') {
+      uninstall = true
     } else if (arg === '--help' || arg === '-h') {
       help = true
     } else {
@@ -101,11 +119,23 @@ function parseArgs(args) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) {
     throw new Error(`invalid profile name ${JSON.stringify(profile)}`)
   }
-  return { profile, skipBuild, help }
+  if (uninstall && skipBuild) throw new Error('--skip-build applies only to installation')
+  return { profile, skipBuild, uninstall, help }
 }
 
-async function verifyCheckout() {
-  for (const path of LINK_PATHS) await access(resolve(ROOT, path, 'package.json'))
+async function localPackages() {
+  const entries = await Promise.all(LINK_PATHS.map(async path => {
+    const directory = resolve(ROOT, path)
+    const manifest = JSON.parse(await readFile(resolve(directory, 'package.json'), 'utf8'))
+    if (typeof manifest.name !== 'string' || manifest.name === '') {
+      throw new Error(`${path}/package.json has no package name`)
+    }
+    return { name: manifest.name, link: `link:${directory}` }
+  }))
+  if (new Set(entries.map(entry => entry.name)).size !== entries.length) {
+    throw new Error('local package names are not unique')
+  }
+  return entries
 }
 
 async function verifyArtifacts() {
@@ -118,15 +148,63 @@ async function verifyArtifacts() {
   }
 }
 
-function verifyComposition(config, profile) {
+async function dumpConfig(profile) {
+  return await runPnpm([
+    'dlx', DSH_PACKAGE,
+    '--profile', profile,
+    '--dump-config',
+  ], true)
+}
+
+function verifyInstalled(config, profile) {
   for (const row of EXPECTED_ROWS) {
-    if (!config.includes(`name: '${row}'`) && !config.includes(`name: "${row}"`) && !config.includes(`name: ${row}`)) {
+    if (!hasNamedRow(config, row)) {
       throw new Error(`profile ${JSON.stringify(profile)} is missing composed row ${row}`)
     }
   }
-  if (!/\bid:\s+compaction\b/.test(config)) {
-    throw new Error(`profile ${JSON.stringify(profile)} does not retain DSH compaction`)
+  const codeRuntime = authoritativeRowName(config, 'code-runtime')
+  if (codeRuntime !== '@dsh-fabric/code-runtime-quickjs') {
+    throw new Error(`profile ${JSON.stringify(profile)} did not activate the Fabric code-runtime row`)
   }
+  verifyCompactionConfiguration(config, profile)
+}
+
+function verifyUninstalled(config, profile) {
+  for (const row of EXPECTED_ROWS) {
+    if (hasNamedRow(config, row)) {
+      throw new Error(`profile ${JSON.stringify(profile)} still contains Fabric row ${row}`)
+    }
+  }
+  const codeRuntime = authoritativeRowName(config, 'code-runtime')
+  if (codeRuntime === undefined || codeRuntime === '@dsh-fabric/code-runtime-quickjs') {
+    throw new Error(`profile ${JSON.stringify(profile)} did not restore an inherited code-runtime row`)
+  }
+  verifyCompactionConfiguration(config, profile)
+  return codeRuntime
+}
+
+function verifyCompactionConfiguration(config, profile) {
+  if (!hasNamedRow(config, '@deepseek-ai/dsh-compaction-basic')) {
+    throw new Error(`profile ${JSON.stringify(profile)} does not retain DSH compaction capability configuration`)
+  }
+}
+
+function hasNamedRow(config, name) {
+  return config.includes(`name: '${name}'`)
+    || config.includes(`name: "${name}"`)
+    || config.includes(`name: ${name}`)
+}
+
+function authoritativeRowName(config, id) {
+  const rows = [...config.matchAll(new RegExp(`^- id: ${escapeRegex(id)}\\r?\\n((?: {2}[^\\n]*(?:\\n|$))*)`, 'gm'))]
+  const block = rows.at(-1)?.[1]
+  if (block === undefined) return undefined
+  const raw = /^  name:\s+(.+)$/m.exec(block)?.[1]?.trim()
+  return raw?.replace(/^(['"])(.*)\1$/, '$2')
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function runPnpm(args, capture = false) {
@@ -147,13 +225,15 @@ function runPnpm(args, capture = false) {
 }
 
 function printHelp() {
-  console.log(`Usage: pnpm run install:local -- [options]
+  console.log(`Usage:
+  pnpm run install:local -- [options]
+  pnpm run uninstall:local -- [options]
 
-Build and link this source checkout into a DSH profile without starting it.
+Link or remove this source checkout in a DSH profile without starting it.
 
 Options:
   --profile <name>  Target profile (default: web)
-  --skip-build      Reuse existing lib artifacts
+  --skip-build      Reuse existing lib artifacts during installation
   -h, --help        Show this help
 
 DSH_HOME is inherited when you need a non-default profile root.`)

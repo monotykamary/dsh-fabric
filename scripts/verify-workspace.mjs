@@ -5,6 +5,9 @@ const root = JSON.parse(await readFile('package.json', 'utf8'))
 if (root.scripts?.['install:local'] !== 'node scripts/install-local.mjs') {
   throw new Error('package.json does not expose the local installer')
 }
+if (root.scripts?.['uninstall:local'] !== 'node scripts/install-local.mjs --uninstall') {
+  throw new Error('package.json does not expose the local uninstaller')
+}
 await access(resolve('scripts/install-local.mjs'))
 
 const patch = await readFile('cordis.patch.yml', 'utf8')
