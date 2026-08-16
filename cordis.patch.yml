@@ -1,8 +1,11 @@
 # This layer replaces the default CodeRuntime provider and adds Fabric-owned
 # host, mesh, tool, and browser plugins. DSH ToolRuntime and Cordis remain the
 # execution-policy and component-lifecycle authorities.
+- id: code-runtime
+  disabled: true
+
 - insert:
-    - id: code-runtime
+    - id: dsh-fabric-code-runtime
       name: '@dsh-fabric/code-runtime-quickjs'
 
     - id: dsh-fabric-host

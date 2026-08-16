@@ -14,7 +14,7 @@ The workspace root is an installable DSH bundle that composes five packages:
 | `@dsh-fabric/code-runtime-quickjs` | Fresh-context QuickJS WASM provider with TypeScript checking, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal. |
 | `@dsh-fabric/client-ui` | Fabric conversation tab, chronological Activity view, general directed Topology view, compact header popup, metrics, and authoritative subagent navigation. |
 
-The bundle replaces the web profile's `code-runtime` row with QuickJS and mounts the other Fabric rows. DSH ToolRuntime remains the sole tool registry and policy authority; Cordis remains the component lifecycle.
+The bundle disables the web profile's inherited `code-runtime` row, mounts QuickJS under the distinct `dsh-fabric-code-runtime` row, and mounts the other Fabric rows. DSH ToolRuntime remains the sole tool registry and policy authority; Cordis remains the component lifecycle.
 
 ## Develop
 
@@ -50,7 +50,7 @@ Remove all six local links with the matching command:
 pnpm run uninstall:local
 ```
 
-Use the same `--profile` or `DSH_HOME` selection as installation. Fabric only shadows the profile's `code-runtime` row; it does not uninstall the inherited provider. Removing the Fabric bundle recomposes the profile without that later row, so the inherited CodeRuntime becomes authoritative again. Other profile overlays can still replace it independently.
+Use the same `--profile` or `DSH_HOME` selection as installation. Fabric disables the profile's inherited `code-runtime` row but does not uninstall that provider. Removing the Fabric bundle removes both the disable patch and the distinct Fabric row, so profile recomposition enables the inherited CodeRuntime again. Other profile overlays can still replace it independently.
 
 A registry installation of `dsh-fabric` pulls these packages through ordinary dependencies. The initial installation changes the profile plugin graph and therefore takes effect on the next profile load. This project never starts, stops, or restarts the DSH server automatically.
 

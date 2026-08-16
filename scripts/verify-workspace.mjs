@@ -22,6 +22,12 @@ const expectedReferences = [
 if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
   throw new Error('cordis.patch.yml does not contain the exact Fabric composition rows')
 }
+if (!/^- id: code-runtime\r?\n  disabled: true$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must disable the inherited code-runtime row')
+}
+if (!/^    - id: dsh-fabric-code-runtime\r?\n      name: ['"]@dsh-fabric\/code-runtime-quickjs['"]$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must insert QuickJS under its distinct Fabric loader id')
+}
 for (const reference of references) {
   const packageName = packageNameFromSpecifier(reference)
   if (packageName !== root.name && root.dependencies?.[packageName] === undefined) {

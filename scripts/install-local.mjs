@@ -162,9 +162,15 @@ function verifyInstalled(config, profile) {
       throw new Error(`profile ${JSON.stringify(profile)} is missing composed row ${row}`)
     }
   }
-  const codeRuntime = authoritativeRowName(config, 'code-runtime')
-  if (codeRuntime !== '@dsh-fabric/code-runtime-quickjs') {
-    throw new Error(`profile ${JSON.stringify(profile)} did not activate the Fabric code-runtime row`)
+  const inheritedRows = rowsById(config, 'code-runtime')
+  if (inheritedRows.length !== 1 || inheritedRows[0].disabled !== true) {
+    throw new Error(`profile ${JSON.stringify(profile)} must contain exactly one disabled inherited code-runtime row`)
+  }
+  const fabricRows = rowsById(config, 'dsh-fabric-code-runtime')
+  if (fabricRows.length !== 1
+    || fabricRows[0].name !== '@dsh-fabric/code-runtime-quickjs'
+    || fabricRows[0].disabled === true) {
+    throw new Error(`profile ${JSON.stringify(profile)} did not activate exactly one Fabric code-runtime row`)
   }
   verifyCompactionConfiguration(config, profile)
 }
@@ -175,12 +181,18 @@ function verifyUninstalled(config, profile) {
       throw new Error(`profile ${JSON.stringify(profile)} still contains Fabric row ${row}`)
     }
   }
-  const codeRuntime = authoritativeRowName(config, 'code-runtime')
-  if (codeRuntime === undefined || codeRuntime === '@dsh-fabric/code-runtime-quickjs') {
-    throw new Error(`profile ${JSON.stringify(profile)} did not restore an inherited code-runtime row`)
+  if (rowsById(config, 'dsh-fabric-code-runtime').length !== 0) {
+    throw new Error(`profile ${JSON.stringify(profile)} still contains the Fabric code-runtime row`)
+  }
+  const inheritedRows = rowsById(config, 'code-runtime')
+  if (inheritedRows.length !== 1
+    || inheritedRows[0].name === undefined
+    || inheritedRows[0].name === '@dsh-fabric/code-runtime-quickjs'
+    || inheritedRows[0].disabled === true) {
+    throw new Error(`profile ${JSON.stringify(profile)} did not restore exactly one enabled inherited code-runtime row`)
   }
   verifyCompactionConfiguration(config, profile)
-  return codeRuntime
+  return inheritedRows[0].name
 }
 
 function verifyCompactionConfiguration(config, profile) {
@@ -195,12 +207,15 @@ function hasNamedRow(config, name) {
     || config.includes(`name: ${name}`)
 }
 
-function authoritativeRowName(config, id) {
+function rowsById(config, id) {
   const rows = [...config.matchAll(new RegExp(`^- id: ${escapeRegex(id)}\\r?\\n((?: {2}[^\\n]*(?:\\n|$))*)`, 'gm'))]
-  const block = rows.at(-1)?.[1]
-  if (block === undefined) return undefined
-  const raw = /^  name:\s+(.+)$/m.exec(block)?.[1]?.trim()
-  return raw?.replace(/^(['"])(.*)\1$/, '$2')
+  return rows.map(row => {
+    const rawName = /^  name:\s+(.+)$/m.exec(row[1])?.[1]?.trim()
+    return {
+      name: rawName?.replace(/^(['"])(.*)\1$/, '$2'),
+      disabled: /^  disabled:\s+true\s*$/m.test(row[1]),
+    }
+  })
 }
 
 function escapeRegex(value) {
