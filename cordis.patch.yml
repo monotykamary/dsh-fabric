@@ -13,6 +13,12 @@
 - id: agent-presets
   disabled: true
 
+# Code Mode keeps DSH ToolRuntime's ordering and exclusive-call barriers, but
+# Fabric does not throttle independent run_code sub-calls to DSH's default 10.
+- id: tools
+  config:
+    maxParallelSubCalls: !!js Number.MAX_SAFE_INTEGER
+
 - insert:
     - id: dsh-fabric-code-runtime
       name: '@dsh-fabric/code-runtime-quickjs'

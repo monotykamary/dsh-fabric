@@ -29,6 +29,9 @@ if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
 if (!/^- id: code-runtime\r?\n  disabled: true$/m.test(patch)) {
   throw new Error('cordis.patch.yml must disable the inherited code-runtime row')
 }
+if (!/^- id: tools\r?\n  config:\r?\n    maxParallelSubCalls: !!js Number\.MAX_SAFE_INTEGER$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must remove the default Code Mode parallel sub-call throttle')
+}
 for (const id of ['compaction-basic', 'tool-result-pruner', 'agent-presets']) {
   if (!new RegExp(`^- id: ${id}\\r?\\n  disabled: true$`, 'm').test(patch)) {
     throw new Error(`cordis.patch.yml must disable the inherited ${id} row`)

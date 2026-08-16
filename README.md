@@ -15,7 +15,7 @@ The workspace root is an installable DSH bundle that composes six packages:
 | `@dsh-fabric/code-runtime-quickjs` | Fresh-context QuickJS WASM provider with TypeScript checking, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal. |
 | `@dsh-fabric/client-ui` | Fabric conversation tab, chronological Activity view, general directed Topology view, compact header popup, metrics, and authoritative subagent navigation. |
 
-The bundle disables the inherited `code-runtime`, stock compactor/pruner, and shipped preset-roster rows; it mounts QuickJS, deterministic Fabric compaction, and one host-native roster pointed exclusively at Fabric-owned presets, plus the remaining Fabric rows under distinct ids. DSH ToolRuntime remains the sole tool registry and policy authority; Cordis remains the component lifecycle.
+The bundle disables the inherited `code-runtime`, stock compactor/pruner, and shipped preset-roster rows; it mounts QuickJS, deterministic Fabric compaction, and one host-native roster pointed exclusively at Fabric-owned presets, plus the remaining Fabric rows under distinct ids. DSH ToolRuntime remains the sole tool registry and policy authority; Cordis remains the component lifecycle. Fabric sets ToolRuntime's `maxParallelSubCalls` to `Number.MAX_SAFE_INTEGER`, effectively removing Code Mode's default ten-call overlap throttle while retaining submission order and exclusive-tool barriers.
 
 ## Develop
 

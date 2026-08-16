@@ -289,6 +289,10 @@ function verifyInstalled(config, profile) {
     || fabricRows[0].disabled === true) {
     throw new Error(`profile ${JSON.stringify(profile)} did not activate exactly one Fabric code-runtime row`)
   }
+  const toolsRows = rowsById(config, 'tools')
+  if (toolsRows.length !== 1 || toolsRows[0].unlimitedCodeSubCalls !== true) {
+    throw new Error(`profile ${JSON.stringify(profile)} did not remove the default Code Mode parallel sub-call throttle`)
+  }
   verifyInstalledCompactionMask(config, profile)
 }
 
@@ -351,6 +355,7 @@ function rowsById(config, id) {
     return {
       name: rawName?.replace(/^(['"])(.*)\1$/, '$2'),
       disabled: /^  disabled:\s+true\s*$/m.test(row[1]),
+      unlimitedCodeSubCalls: /^    maxParallelSubCalls:\s+!!js Number\.MAX_SAFE_INTEGER\s*$/m.test(row[1]),
     }
   })
 }
