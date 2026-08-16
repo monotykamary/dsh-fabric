@@ -144,8 +144,11 @@ if (!clientBundle.startsWith('window.__ModuleLoader__.load(')) {
 if (/require\(["']@dsh-fabric\//.test(clientBundle)) {
   throw new Error('client bundle contains an unresolved @dsh-fabric value import')
 }
-if (!clientBundle.includes('Fabric topology') || !clientBundle.includes('view.summary')) {
-  throw new Error('client bundle is missing the English Fabric locale dictionary')
+if (!clientBundle.includes('Fabric overview') || !clientBundle.includes('view.summary')) {
+  throw new Error('client bundle is missing the informative English Fabric overview dictionary')
+}
+if (!clientBundle.includes('data-conversation-composer-overlay') || !clientBundle.includes('--dsh-composer-height')) {
+  throw new Error('client bundle is missing the bounded host composer-overlay viewport contract')
 }
 if (!/else\s+existing\.textContent\s*=\s*css/.test(clientBundle)) {
   throw new Error('client bundle does not hot-replace existing package CSS')

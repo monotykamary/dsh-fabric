@@ -44,7 +44,7 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
 
   const selectedNode = model.graph.nodes.find(node => node.id === selected) ?? model.graph.nodes[0]
   return (
-    <section className={css.view} aria-label={t('view.aria')}>
+    <section className={css.view} data-conversation-composer-overlay="" aria-label={t('view.aria')}>
       <header className={css.toolbar}>
         <div>
           <h2 className={css.title}>Fabric</h2>
@@ -76,6 +76,8 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
               <div className={css.canvas}>
                 <svg
                   className={css.graph}
+                  width={model.layout.width}
+                  height={model.layout.height}
                   viewBox={`0 0 ${model.layout.width} ${model.layout.height}`}
                   role="tree"
                   aria-label={t('graph.aria')}

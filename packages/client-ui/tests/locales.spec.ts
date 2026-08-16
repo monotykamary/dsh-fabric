@@ -31,8 +31,11 @@ describe('Fabric client locales', () => {
   it('renders the reported header and shared labels in the active language', () => {
     const english = translator(en)
     const chinese = translator(zh)
-    expect(english('header.title')).toBe('Fabric topology')
-    expect(chinese('header.title')).toBe('Fabric 拓扑')
+    expect(english('header.title')).toBe('Fabric overview')
+    expect(chinese('header.title')).toBe('Fabric 概览')
+    expect(english('header.summary.one', { count: 1, running: 0 })).toBe('1 related node · 0 running')
+    expect(english('header.summary.many', { count: 2, running: 1 })).toBe('2 related nodes · 1 running')
+    expect(chinese('header.summary.many', { count: 2, running: 1 })).toBe('2 个相关节点 · 1 个运行中')
     expect(statusLabel('running', english)).toBe('Running')
     expect(kindLabel('compaction', english)).toBe('Context compaction')
     expect(activityKindLabel('workflow', chinese)).toBe('工作流')

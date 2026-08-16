@@ -2,7 +2,7 @@
 
 Browser feature plugin contributing a full `Fabric` conversation tab and compact session-header action.
 
-The Activity view combines session summaries with the host's bounded durable timeline. The Topology view renders general directed graphs containing sessions, workflow phases/members, topics, state, actors, and routed messages. While mounted, it lazily refreshes standard DSH subagent catalogs for visible session nodes and uses authoritative catalog addresses for navigation.
+The Activity view combines session summaries with the host's bounded durable timeline. The Topology view renders general directed graphs containing sessions, workflow phases/members, topics, state, actors, and routed messages. Its session-header overview lists every related node with status, including non-navigable topology records, instead of opening an empty session-only list. The full tab follows DSH's composer-overlay contract, keeps scrolling inside the available viewport, and renders sparse graphs at their intrinsic layout size. While mounted, it lazily refreshes standard DSH subagent catalogs for visible session nodes and uses authoritative catalog addresses for navigation.
 
 ## Model Experience
 

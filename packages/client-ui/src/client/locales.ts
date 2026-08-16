@@ -6,7 +6,7 @@ export type FabricLocaleKey =
   | 'tabs.aria' | 'tabs.activity' | 'tabs.topology' | 'graph.aria'
   | 'node.aria' | 'node.jobs'
   | 'details.aria' | 'details.status' | 'details.tokens' | 'details.duration' | 'details.jobs' | 'details.open'
-  | 'header.aria' | 'header.popover.aria' | 'header.title'
+  | 'header.aria' | 'header.popover.aria' | 'header.title' | 'header.summary.one' | 'header.summary.many'
   | 'status.running' | 'status.completed' | 'status.failed' | 'status.blocked'
   | 'status.stopped' | 'status.pending' | 'status.idle'
   | 'kind.main' | 'kind.session' | 'kind.subagent' | 'kind.workflow' | 'kind.phase' | 'kind.job'
@@ -41,9 +41,11 @@ export const en: LocaleDictOf<'fabric'> = {
   'details.duration': 'Duration',
   'details.jobs': 'Background jobs',
   'details.open': 'Open session',
-  'header.aria': 'Fabric topology, {count} nodes running',
-  'header.popover.aria': 'Fabric session nodes',
-  'header.title': 'Fabric topology',
+  'header.aria': 'Fabric overview: {count} related, {running} running',
+  'header.popover.aria': 'Fabric topology overview',
+  'header.title': 'Fabric overview',
+  'header.summary.one': '{count} related node · {running} running',
+  'header.summary.many': '{count} related nodes · {running} running',
   'status.running': 'Running',
   'status.completed': 'Completed',
   'status.failed': 'Failed',
@@ -110,9 +112,11 @@ export const zh: LocaleDictOf<'fabric'> = {
   'details.duration': '时长',
   'details.jobs': '后台任务',
   'details.open': '打开会话',
-  'header.aria': 'Fabric 拓扑，{count} 个节点运行中',
-  'header.popover.aria': 'Fabric 会话节点',
-  'header.title': 'Fabric 拓扑',
+  'header.aria': 'Fabric 概览：{count} 个相关节点，{running} 个运行中',
+  'header.popover.aria': 'Fabric 拓扑概览',
+  'header.title': 'Fabric 概览',
+  'header.summary.one': '{count} 个相关节点 · {running} 个运行中',
+  'header.summary.many': '{count} 个相关节点 · {running} 个运行中',
   'status.running': '运行中',
   'status.completed': '已完成',
   'status.failed': '失败',

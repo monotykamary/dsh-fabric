@@ -26,30 +26,41 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
   if (model === null || model.graph.nodes.length <= 1) return null
 
   const running = model.graph.nodes.filter(node => node.status === 'running')
-  const navigable = model.graph.nodes.filter(node => node.sessionId !== undefined && node.sessionId !== sessionId)
+  const related = model.graph.nodes.filter(node => node.sessionId !== sessionId)
   return (
     <div className={css.headerAction}>
       <button
         className={css.headerButton}
         type="button"
         aria-expanded={expanded}
-        aria-label={t('header.aria', { count: running.length })}
+        aria-label={t('header.aria', { count: related.length, running: running.length })}
         onClick={() => { setExpanded(value => !value) }}
       >
         <span className={running.length > 0 ? css.headerPulse : css.headerIdle} />
-        Fabric · {model.graph.nodes.length - 1}
+        Fabric · {related.length}
       </button>
       {expanded ? (
         <div className={css.headerPopover} role="dialog" aria-label={t('header.popover.aria')}>
           <strong>{t('header.title')}</strong>
+          <p className={css.headerSummary}>{t(related.length === 1 ? 'header.summary.one' : 'header.summary.many', { count: related.length, running: running.length })}</p>
           <ul>
-            {navigable.map(node => (
+            {related.map(node => (
               <li key={node.id}>
-                <button type="button" onClick={() => { void openNode(node.sessionId as string); setExpanded(false) }}>
-                  <span className={css.headerNodeDot} data-status={node.status} />
-                  <span>{node.label}</span>
-                  <small>{statusLabel(node.status, t)}</small>
-                </button>
+                {node.sessionId === undefined
+                  ? (
+                    <div className={css.headerNode}>
+                      <span className={css.headerNodeDot} data-status={node.status} />
+                      <span>{node.label}</span>
+                      <small>{statusLabel(node.status, t)}</small>
+                    </div>
+                  )
+                  : (
+                    <button type="button" onClick={() => { void openNode(node.sessionId as string); setExpanded(false) }}>
+                      <span className={css.headerNodeDot} data-status={node.status} />
+                      <span>{node.label}</span>
+                      <small>{statusLabel(node.status, t)}</small>
+                    </button>
+                  )}
               </li>
             ))}
           </ul>
