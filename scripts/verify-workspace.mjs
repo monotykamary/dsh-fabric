@@ -153,7 +153,11 @@ if (!clientBundle.includes('data-conversation-composer-overlay')
   throw new Error('client bundle is missing the bounded, pane-blended host composer-overlay contract')
 }
 if (!clientBundle.includes('--dsw-font-xs-13')) {
-  throw new Error('client bundle is missing compact host typography for the Fabric overview')
+  throw new Error('client bundle is missing normalized compact host typography for Fabric surfaces')
+}
+if (!clientBundle.includes('conversation session did not expose its shared Chat store')
+  || !clientBundle.includes('actions.setView("chat")')) {
+  throw new Error('client bundle is missing same-session navigation back to the host Chat view')
 }
 if (!/else\s+existing\.textContent\s*=\s*css/.test(clientBundle)) {
   throw new Error('client bundle does not hot-replace existing package CSS')

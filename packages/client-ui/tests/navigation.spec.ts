@@ -32,6 +32,19 @@ describe('Fabric client navigation', () => {
     expect(open).not.toHaveBeenCalled()
     await expect(controls.openNode('unknown')).resolves.toBeUndefined()
     expect(open).not.toHaveBeenCalled()
+
+    const showChat = vi.fn()
+    const currentControls = createFabricControls(sessions, { currentSessionId: root, showChat })
+    await currentControls.openNode(root)
+    expect(showChat).toHaveBeenCalledOnce()
+    expect(open).not.toHaveBeenCalled()
+
+    showChat.mockClear()
+    openSubagent.mockClear()
+    await currentControls.openNode(child)
+    expect(openSubagent).toHaveBeenCalledWith(address)
+    expect(showChat).not.toHaveBeenCalled()
+
     await controls.openNode(root)
     expect(open).toHaveBeenCalledWith(root)
   })
