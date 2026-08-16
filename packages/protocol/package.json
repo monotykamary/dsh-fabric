@@ -1,0 +1,22 @@
+{
+  "name": "@dsh-fabric/protocol",
+  "version": "0.1.0",
+  "publishConfig": { "access": "public" },
+  "description": "Host-independent activity and topology records for dsh-fabric",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

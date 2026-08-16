@@ -1,0 +1,49 @@
+{
+  "name": "dsh-fabric",
+  "version": "0.1.0",
+  "description": "Fabric-style activity, topology, code runtime, mesh, and actor capabilities for DeepSeek Harness",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "files": [
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "exports": {
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@dsh-fabric/client-ui": "workspace:^",
+    "@dsh-fabric/code-runtime-quickjs": "workspace:^",
+    "@dsh-fabric/host": "workspace:^",
+    "@dsh-fabric/mesh": "workspace:^",
+    "@dsh-fabric/protocol": "workspace:^"
+  },
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "pnpm run clean && pnpm --filter @dsh-fabric/protocol run build && pnpm --filter @dsh-fabric/host run build && pnpm --filter @dsh-fabric/mesh run build && pnpm --filter @dsh-fabric/code-runtime-quickjs run build && pnpm --filter @dsh-fabric/client-ui run build",
+    "watch:client": "pnpm --filter @dsh-fabric/client-ui run watch",
+    "typecheck": "pnpm --filter @dsh-fabric/protocol run typecheck && pnpm --filter @dsh-fabric/protocol run build && pnpm --filter @dsh-fabric/host run typecheck && pnpm --filter @dsh-fabric/host run build && pnpm --filter @dsh-fabric/mesh run typecheck && pnpm --filter @dsh-fabric/code-runtime-quickjs run typecheck && pnpm --filter @dsh-fabric/client-ui run typecheck",
+    "test": "vitest run",
+    "verify": "node scripts/verify-workspace.mjs",
+    "check": "pnpm run typecheck && pnpm run build && pnpm run test && pnpm run verify"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "lightningcss": "^1.32.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}
