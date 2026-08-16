@@ -25,16 +25,23 @@ pnpm install
 pnpm run check
 ```
 
-For local development, linked packages do not install one another into the consuming profile. Link the root and every workspace package named by or required from the bundle:
+For local development, run the installer from this repository. It installs dependencies, builds every workspace package, links the root and all five packages into `web`, validates the composed Fabric and inherited compaction rows, and does not start or restart DSH:
 
 ```sh
-dsh plugin --profile web add \
-  "link:$PWD" \
-  "link:$PWD/packages/protocol" \
-  "link:$PWD/packages/host" \
-  "link:$PWD/packages/mesh" \
-  "link:$PWD/packages/code-runtime-quickjs" \
-  "link:$PWD/packages/client-ui"
+pnpm run install:local
+```
+
+Target another profile or profile root when needed:
+
+```sh
+pnpm run install:local -- --profile tui
+DSH_HOME=/path/to/dsh-home pnpm run install:local -- --profile web
+```
+
+After the first build, `--skip-build` reuses the existing `lib` artifacts:
+
+```sh
+pnpm run install:local -- --skip-build
 ```
 
 A registry installation of `dsh-fabric` pulls these packages through ordinary dependencies. The initial installation changes the profile plugin graph and therefore takes effect on the next profile load. This project never starts, stops, or restarts the DSH server automatically.

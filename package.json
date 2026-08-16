@@ -35,6 +35,7 @@
     "clean": "node scripts/clean.mjs",
     "build": "pnpm run clean && pnpm --filter @dsh-fabric/protocol run build && pnpm --filter @dsh-fabric/host run build && pnpm --filter @dsh-fabric/mesh run build && pnpm --filter @dsh-fabric/code-runtime-quickjs run build && pnpm --filter @dsh-fabric/client-ui run build",
     "watch:client": "pnpm --filter @dsh-fabric/client-ui run watch",
+    "install:local": "node scripts/install-local.mjs",
     "typecheck": "pnpm --filter @dsh-fabric/protocol run typecheck && pnpm --filter @dsh-fabric/protocol run build && pnpm --filter @dsh-fabric/host run typecheck && pnpm --filter @dsh-fabric/host run build && pnpm --filter @dsh-fabric/mesh run typecheck && pnpm --filter @dsh-fabric/code-runtime-quickjs run typecheck && pnpm --filter @dsh-fabric/client-ui run typecheck",
     "test": "vitest run",
     "verify": "node scripts/verify-workspace.mjs",

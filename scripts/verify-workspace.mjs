@@ -2,6 +2,11 @@ import { access, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = JSON.parse(await readFile('package.json', 'utf8'))
+if (root.scripts?.['install:local'] !== 'node scripts/install-local.mjs') {
+  throw new Error('package.json does not expose the local installer')
+}
+await access(resolve('scripts/install-local.mjs'))
+
 const patch = await readFile('cordis.patch.yml', 'utf8')
 const references = [...patch.matchAll(/^\s+name:\s+['"]([^'"]+)['"]\s*$/gm)].map(match => match[1])
 const expectedReferences = [
