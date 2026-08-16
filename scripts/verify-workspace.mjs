@@ -147,8 +147,13 @@ if (/require\(["']@dsh-fabric\//.test(clientBundle)) {
 if (!clientBundle.includes('Fabric overview') || !clientBundle.includes('view.summary')) {
   throw new Error('client bundle is missing the informative English Fabric overview dictionary')
 }
-if (!clientBundle.includes('data-conversation-composer-overlay') || !clientBundle.includes('--dsh-composer-height')) {
-  throw new Error('client bundle is missing the bounded host composer-overlay viewport contract')
+if (!clientBundle.includes('data-conversation-composer-overlay')
+  || !clientBundle.includes('--dsh-composer-height')
+  || !clientBundle.includes('--dsh-fabric-bottom-clearance')) {
+  throw new Error('client bundle is missing the bounded, pane-blended host composer-overlay contract')
+}
+if (!clientBundle.includes('--dsw-font-xs-13')) {
+  throw new Error('client bundle is missing compact host typography for the Fabric overview')
 }
 if (!/else\s+existing\.textContent\s*=\s*css/.test(clientBundle)) {
   throw new Error('client bundle does not hot-replace existing package CSS')
