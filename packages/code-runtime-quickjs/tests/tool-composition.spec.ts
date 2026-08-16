@@ -6,7 +6,7 @@ import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
 import QuickJsCodeRuntime from '../src/index.ts'
 
 const config = {
-  maxWallMs: 2_000,
+  maxWallMs: 10_000,
   memoryLimitBytes: 32 * 1024 * 1024,
   maxStackBytes: 256 * 1024,
   maxOutputBytes: 64 * 1024,

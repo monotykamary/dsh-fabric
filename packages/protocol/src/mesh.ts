@@ -82,11 +82,22 @@ export interface FabricActorSnapshot extends FabricActorRecord {
   claimed: number
 }
 
-/** Complete synchronous view of the durable mesh service. */
+/** Collection totals for one authoritative mesh snapshot. */
+export interface FabricMeshTotals {
+  topics: number
+  topicMessages: number
+  states: number
+  actors: number
+  actorMessages: number
+}
+
+/** Complete or explicitly truncated synchronous view of the durable mesh service. */
 export interface FabricMeshSnapshot {
   topics: readonly FabricTopicRecord[]
   topicMessages: readonly FabricTopicMessage[]
   states: readonly FabricStateRecord[]
   actors: readonly FabricActorSnapshot[]
   actorMessages: readonly FabricActorMessage[]
+  totals: FabricMeshTotals
+  truncated: boolean
 }

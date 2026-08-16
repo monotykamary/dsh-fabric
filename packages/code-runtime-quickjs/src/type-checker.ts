@@ -34,41 +34,40 @@ export function compileQuickJsProgram(
   program: string,
   bindings: readonly CodeBindingNamespace[],
 ): QuickJsCompileResult {
-  const declarations = declarationsFor(bindings)
+  const prelude = declarationsFor(bindings)
+  const parameters = parametersFor(bindings)
+  const typeParameters = typeParametersFor(bindings)
   const id = ++nextCheckerId
   const sourcePath = normalize(path.resolve(`/__dsh_fabric_guest_${id}.ts`))
-  const declarationsPath = normalize(path.resolve(`/__dsh_fabric_bindings_${id}.d.ts`))
-  const sourceText = `async function __dshMain() {\n${program}\n}\n`
+  const sourceText = [
+    prelude,
+    `function __dsh_main__${typeParameters}(${parameters.join(', ')}) {`,
+    '  return async function () {',
+    program,
+    '  }',
+    '}',
+    '',
+  ].join('\n')
   const source = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.ES2022, true)
-  const declarationSource = ts.createSourceFile(declarationsPath, declarations, ts.ScriptTarget.ES2022, true)
   const base = ts.createCompilerHost(compilerOptions, true)
   const canonical = (value: string) => base.getCanonicalFileName(normalize(value))
   const libraryRoot = `${canonical(path.dirname(ts.getDefaultLibFilePath(compilerOptions)))}/`
   const permitted = (file: string): boolean => {
     const value = canonical(file)
-    return value === canonical(sourcePath) || value === canonical(declarationsPath) || value.startsWith(libraryRoot)
+    return value === canonical(sourcePath) || value.startsWith(libraryRoot)
   }
   const host: ts.CompilerHost = {
     ...base,
-    fileExists: file => permitted(file) && (canonical(file) === canonical(sourcePath)
-      || canonical(file) === canonical(declarationsPath)
-      || base.fileExists(file)),
+    fileExists: file => permitted(file) && (canonical(file) === canonical(sourcePath) || base.fileExists(file)),
     readFile: file => canonical(file) === canonical(sourcePath)
       ? sourceText
-      : canonical(file) === canonical(declarationsPath)
-        ? declarations
-        : permitted(file) ? base.readFile(file) : undefined,
+      : permitted(file) ? base.readFile(file) : undefined,
     getSourceFile: (file, languageVersion, onError, shouldCreateNewSourceFile) => {
       if (canonical(file) === canonical(sourcePath)) return source
-      if (canonical(file) === canonical(declarationsPath)) return declarationSource
       return permitted(file) ? base.getSourceFile(file, languageVersion, onError, shouldCreateNewSourceFile) : undefined
     },
   }
-  const compiler = ts.createProgram({
-    rootNames: [declarationsPath, sourcePath],
-    options: compilerOptions,
-    host,
-  })
+  const compiler = ts.createProgram({ rootNames: [sourcePath], options: compilerOptions, host })
   const diagnostics = [
     ...compiler.getSyntacticDiagnostics(source),
     ...compiler.getSemanticDiagnostics(source),
@@ -86,22 +85,34 @@ export function compileQuickJsProgram(
     : { code }
 }
 
-function declarationsFor(bindings: readonly CodeBindingNamespace[]): string {
-  const lines = [
+function declarationsFor(_bindings: readonly CodeBindingNamespace[]): string {
+  return [
     'type DshCodeJson = null | boolean | number | string | DshCodeJson[] | { [key: string]: DshCodeJson };',
-    'declare const console: { log(...values: unknown[]): void; info(...values: unknown[]): void; warn(...values: unknown[]): void; error(...values: unknown[]): void; debug(...values: unknown[]): void };',
+    'type __dsh_main__ = Error;',
+  ].join('\n')
+}
+
+function typeParametersFor(bindings: readonly CodeBindingNamespace[]): string {
+  const parameters = bindings.flatMap(namespace => namespace.errorClass === undefined
+    ? []
+    : [`${namespace.errorClass.name} extends __dsh_main__ & { readonly ${JSON.stringify(namespace.errorClass.memberNameProperty)}: string }`])
+  return parameters.length === 0 ? '' : `<${parameters.join(', ')}>`
+}
+
+function parametersFor(bindings: readonly CodeBindingNamespace[]): string[] {
+  const parameters = [
+    'console: { log(...values: unknown[]): void; info(...values: unknown[]): void; warn(...values: unknown[]): void; error(...values: unknown[]): void; debug(...values: unknown[]): void }',
   ]
   for (const namespace of bindings) {
-    lines.push(`declare const ${namespace.global}: {`)
-    for (const name of Object.keys(namespace.functions)) {
-      lines.push(`  readonly ${JSON.stringify(name)}: (args: DshCodeJson) => Promise<any>;`)
-    }
-    lines.push('};')
+    const members = Object.keys(namespace.functions)
+      .map(name => `readonly ${JSON.stringify(name)}: (args: DshCodeJson) => any`)
+      .join('; ')
+    parameters.push(`${namespace.global}: { ${members} }`)
     if (namespace.errorClass !== undefined) {
-      lines.push(`declare class ${namespace.errorClass.name} extends Error { readonly ${JSON.stringify(namespace.errorClass.memberNameProperty)}: string }`)
+      parameters.push(`${namespace.errorClass.name}: { new(message?: string): ${namespace.errorClass.name} }`)
     }
   }
-  return lines.join('\n')
+  return parameters
 }
 
 function diagnosticOf(diagnostic: ts.Diagnostic, source: ts.SourceFile): QuickJsTypeError {

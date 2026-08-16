@@ -19,6 +19,11 @@ const nodeKindSchema = z.enum(['main', 'session', 'subagent', 'workflow', 'phase
 const edgeKindSchema = z.enum(['parent', 'contains', 'member', 'publish', 'message', 'state', 'route'])
 const activityKindSchema = z.enum(['session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction'])
 
+const MAX_ID_BYTES = 512
+const MAX_ACTION_BYTES = 256
+const MAX_LABEL_BYTES = 2048
+const MAX_DETAIL_BYTES = 4096
+
 const activitySchema = z.object({
   id: z.string(),
   kind: activityKindSchema,
@@ -75,7 +80,7 @@ export function createFabricActivityProjection(
     init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
     view: state => ({ activities: state.activities, nodes: state.nodes, edges: state.edges }),
-    stateVersion: 2,
+    stateVersion: 3,
   }
 }
 
@@ -165,10 +170,12 @@ function applyEvent(
       }, nodes, edges, activityLimit, topologyLimit)
       return {
         ...next,
-        workflowMembers: {
-          ...next.workflowMembers,
-          [workflowMemberKey(runId, event.data.seq)]: { runId, nodeId: childId, sessionId: String(event.data.childId), label: event.data.label },
-        },
+        workflowMembers: putWorkflowMember(next.workflowMembers, workflowMemberKey(runId, event.data.seq), {
+          runId,
+          nodeId: childId,
+          sessionId: String(event.data.childId),
+          label: event.data.label,
+        }, topologyLimit),
       }
     }
     case 'tool-workflow/agent-end': {
@@ -193,16 +200,19 @@ function applyEvent(
       const id = workflowNodeId(String(event.data.runId))
       const existing = state.nodes.find(node => node.id === id)
       const status = stopStatus(event.data.stopReason)
-      const phasePrefix = `${id}:phase:`
+      const phaseIds = new Set(state.edges
+        .filter(edge => edge.source === id && edge.kind === 'contains')
+        .map(edge => edge.target))
       const phaseNodes = state.nodes
-        .filter(node => node.kind === 'phase' && node.id.startsWith(phasePrefix))
+        .filter(node => node.kind === 'phase' && phaseIds.has(node.id))
         .map(node => ({ ...node, status, updatedAt: event.time }))
       const next = merge(state, {
         id: `workflow:${String(event.data.runId)}:end`, kind: 'workflow', action: event.data.stopReason,
         label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time, nodeId: id,
       }, [...phaseNodes, { id, kind: 'workflow', label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time }], [], activityLimit, topologyLimit)
+      const boundedRunId = boundedIdentifier(String(event.data.runId))
       const workflowMembers = Object.fromEntries(Object.entries(next.workflowMembers)
-        .filter(([, member]) => member.runId !== String(event.data.runId)))
+        .filter(([, member]) => member.runId !== boundedRunId))
       return { ...next, workflowMembers }
     }
     default:
@@ -218,16 +228,104 @@ function merge(
   activityLimit: number,
   topologyLimit: number,
 ): FabricProjectionState {
-  const nextNodes = nodes.reduce((values, node) => upsert(values, node, topologyLimit), state.nodes)
-  const nextEdges = edges.reduce((values, edge) => upsert(values, edge, topologyLimit), state.edges)
+  const normalizedActivity = boundedActivity(activity)
+  const initialNodes = state.nodes.map(boundedNode)
+  const nextNodes = nodes.map(boundedNode).reduce((values, node) => upsert(values, node, topologyLimit), initialNodes)
+  const initialEdges = state.edges.map(boundedEdge)
+  const nextEdges = edges.map(boundedEdge).reduce((values, edge) => upsert(values, edge, topologyLimit), initialEdges)
     .filter(edge => edge.source === '$session' || nextNodes.some(node => node.id === edge.source))
     .filter(edge => edge.target === '$session' || nextNodes.some(node => node.id === edge.target))
   return {
-    activities: [...state.activities.filter(item => item.id !== activity.id), activity].slice(-activityLimit),
+    activities: [...state.activities.map(boundedActivity).filter(item => item.id !== normalizedActivity.id), normalizedActivity].slice(-activityLimit),
     nodes: nextNodes,
     edges: nextEdges,
     workflowMembers: state.workflowMembers,
   }
+}
+
+function putWorkflowMember(
+  members: FabricProjectionState['workflowMembers'],
+  key: string,
+  member: FabricProjectionState['workflowMembers'][string],
+  limit: number,
+): FabricProjectionState['workflowMembers'] {
+  return Object.fromEntries(Object.entries({
+    ...members,
+    [boundedIdentifier(key)]: {
+      runId: boundedIdentifier(member.runId),
+      nodeId: boundedIdentifier(member.nodeId),
+      sessionId: boundedIdentifier(member.sessionId),
+      label: boundedText(member.label, MAX_LABEL_BYTES),
+    },
+  }).slice(-limit))
+}
+
+function boundedActivity(value: FabricActivityRecord): FabricActivityRecord {
+  return {
+    ...value,
+    id: boundedIdentifier(value.id),
+    action: boundedText(value.action, MAX_ACTION_BYTES),
+    label: boundedText(value.label, MAX_LABEL_BYTES),
+    ...(value.nodeId === undefined ? {} : { nodeId: boundedIdentifier(value.nodeId) }),
+    ...(value.detail === undefined ? {} : { detail: boundedText(value.detail, MAX_DETAIL_BYTES) }),
+  }
+}
+
+function boundedNode(value: FabricProjectedNode): FabricProjectedNode {
+  return {
+    ...value,
+    id: boundedIdentifier(value.id),
+    label: boundedText(value.label, MAX_LABEL_BYTES),
+    ...(value.sessionId === undefined ? {} : { sessionId: boundedIdentifier(value.sessionId) }),
+    ...(value.detail === undefined ? {} : { detail: boundedText(value.detail, MAX_DETAIL_BYTES) }),
+  }
+}
+
+function boundedEdge(value: FabricProjectedEdge): FabricProjectedEdge {
+  return {
+    ...value,
+    id: boundedIdentifier(value.id),
+    source: boundedIdentifier(value.source),
+    target: boundedIdentifier(value.target),
+  }
+}
+
+function boundedIdentifier(value: string): string {
+  if (value === '$session' || utf8Bytes(value) <= MAX_ID_BYTES) return value
+  const suffix = `#${identifierDigest(value)}`
+  return `${boundedText(value, MAX_ID_BYTES - utf8Bytes(suffix))}${suffix}`
+}
+
+function boundedText(value: string, maxBytes: number): string {
+  if (utf8Bytes(value) <= maxBytes) return value
+  let low = 0
+  let high = value.length
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2)
+    if (utf8Bytes(value.slice(0, middle)) <= maxBytes) low = middle
+    else high = middle - 1
+  }
+  return value.slice(0, low)
+}
+
+function utf8Bytes(value: string): number {
+  let bytes = 0
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0
+    bytes += point <= 0x7f ? 1 : point <= 0x7ff ? 2 : point <= 0xffff ? 3 : 4
+  }
+  return bytes
+}
+
+function identifierDigest(value: string): string {
+  let first = 0x811c9dc5
+  let second = 0x9e3779b9
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index)
+    first = Math.imul(first ^ unit, 0x01000193) >>> 0
+    second = Math.imul(second ^ unit, 0x85ebca6b) >>> 0
+  }
+  return first.toString(16).padStart(8, '0') + second.toString(16).padStart(8, '0')
 }
 
 function upsert<T extends { id: string }>(values: readonly T[], value: T, limit: number): T[] {
@@ -235,15 +333,15 @@ function upsert<T extends { id: string }>(values: readonly T[], value: T, limit:
 }
 
 function workflowMemberKey(runId: string, seq: number): string {
-  return `${runId.length}:${runId}:${seq}`
+  return boundedIdentifier(`${runId.length}:${runId}:${seq}`)
 }
 
 function workflowNodeId(runId: string): string {
-  return `workflow:${runId}`
+  return boundedIdentifier(`workflow:${runId}`)
 }
 
 function workflowPhaseNodeId(runId: string, phase: string): string {
-  return `workflow:${runId}:phase:${phase.length}:${phase}`
+  return boundedIdentifier(`workflow:${runId}:phase:${phase.length}:${phase}`)
 }
 
 function outcomeStatus(outcome: WorkflowAgentOutcome): FabricNodeStatus {

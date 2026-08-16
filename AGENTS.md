@@ -11,6 +11,7 @@ Never start, stop, or restart the user's DSH server unless explicitly requested.
 ## Package roles
 
 - `@dsh-fabric/protocol`: host-independent activity, topology, and mesh records.
+- `@dsh-fabric/compaction`: deterministic summary compiler, DSH compaction adapter, and masked preset roster.
 - `@dsh-fabric/client-ui`: browser Activity and Topology surfaces.
 - `@dsh-fabric/host`: DSH durable-event and session-projection adapter.
 - `@dsh-fabric/mesh`: storage-backed topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer.

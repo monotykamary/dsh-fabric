@@ -1,0 +1,3 @@
+name: Standard mode
+description: Full coding agent with file editing, shell, search, skills, planning, goals, subagents, and workflows.
+order: 1

@@ -1,0 +1,163 @@
+/** Locale bundles for Fabric Activity and Topology surfaces. */
+import type { LocaleDictOf } from '@deepseek-ai/dsh-client-ui-slots'
+
+export type FabricLocaleKey =
+  | 'view.tab' | 'view.empty' | 'view.aria' | 'view.summary'
+  | 'tabs.aria' | 'tabs.activity' | 'tabs.topology' | 'graph.aria'
+  | 'node.aria' | 'node.jobs'
+  | 'details.aria' | 'details.status' | 'details.tokens' | 'details.duration' | 'details.jobs' | 'details.open'
+  | 'header.aria' | 'header.popover.aria' | 'header.title'
+  | 'status.running' | 'status.completed' | 'status.failed' | 'status.blocked'
+  | 'status.stopped' | 'status.pending' | 'status.idle'
+  | 'kind.main' | 'kind.session' | 'kind.subagent' | 'kind.workflow' | 'kind.phase' | 'kind.job'
+  | 'kind.actor' | 'kind.topic' | 'kind.message' | 'kind.state' | 'kind.component' | 'kind.compaction'
+  | 'activity.kind.session' | 'activity.kind.workflow' | 'activity.kind.phase' | 'activity.kind.agent' | 'activity.kind.mesh'
+  | 'activity.kind.topic' | 'activity.kind.state' | 'activity.kind.actor' | 'activity.kind.message' | 'activity.kind.compaction'
+  | 'action.created' | 'action.published' | 'action.compareAndSwap' | 'action.sent' | 'action.claimed'
+  | 'action.failed' | 'action.completed' | 'action.started' | 'action.summarized' | 'action.pruned'
+  | 'action.updated' | 'action.cancelled' | 'action.running' | 'action.idle' | 'action.error'
+  | 'duration.seconds' | 'duration.minutes' | 'duration.hours'
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    fabric: FabricLocaleKey
+  }
+}
+
+export const en: LocaleDictOf<'fabric'> = {
+  'view.tab': 'Fabric',
+  'view.empty': 'No Fabric topology is available for this session yet.',
+  'view.aria': 'Fabric orchestration view',
+  'view.summary': '{nodes} topology nodes · {active} active nodes',
+  'tabs.aria': 'Fabric views',
+  'tabs.activity': 'Activity',
+  'tabs.topology': 'Topology',
+  'graph.aria': 'Session, workflow, and Fabric Mesh topology',
+  'node.aria': '{label}, {status}',
+  'node.jobs': '{count} jobs',
+  'details.aria': 'Node details',
+  'details.status': 'Status',
+  'details.tokens': 'Tokens',
+  'details.duration': 'Duration',
+  'details.jobs': 'Background jobs',
+  'details.open': 'Open session',
+  'header.aria': 'Fabric topology, {count} nodes running',
+  'header.popover.aria': 'Fabric session nodes',
+  'header.title': 'Fabric topology',
+  'status.running': 'Running',
+  'status.completed': 'Completed',
+  'status.failed': 'Failed',
+  'status.blocked': 'Blocked',
+  'status.stopped': 'Stopped',
+  'status.pending': 'Pending',
+  'status.idle': 'Idle',
+  'kind.main': 'Main session',
+  'kind.session': 'Session',
+  'kind.subagent': 'Subagent',
+  'kind.workflow': 'Workflow',
+  'kind.phase': 'Phase',
+  'kind.job': 'Background job',
+  'kind.actor': 'Actor',
+  'kind.topic': 'Topic',
+  'kind.message': 'Message',
+  'kind.state': 'State',
+  'kind.component': 'Component',
+  'kind.compaction': 'Context compaction',
+  'activity.kind.session': 'Session',
+  'activity.kind.workflow': 'Workflow',
+  'activity.kind.phase': 'Phase',
+  'activity.kind.agent': 'Agent',
+  'activity.kind.mesh': 'Mesh',
+  'activity.kind.topic': 'Topic',
+  'activity.kind.state': 'State',
+  'activity.kind.actor': 'Actor',
+  'activity.kind.message': 'Message',
+  'activity.kind.compaction': 'Compaction',
+  'action.created': 'Created',
+  'action.published': 'Published',
+  'action.compareAndSwap': 'Compared and swapped',
+  'action.sent': 'Sent',
+  'action.claimed': 'Claimed',
+  'action.failed': 'Failed',
+  'action.completed': 'Completed',
+  'action.started': 'Started',
+  'action.summarized': 'Summarized',
+  'action.pruned': 'Pruned',
+  'action.updated': 'Updated',
+  'action.cancelled': 'Cancelled',
+  'action.running': 'Running',
+  'action.idle': 'Idle',
+  'action.error': 'Error',
+  'duration.seconds': '{count}s',
+  'duration.minutes': '{count}m',
+  'duration.hours': '{hours}h {minutes}m',
+}
+
+export const zh: LocaleDictOf<'fabric'> = {
+  'view.tab': 'Fabric',
+  'view.empty': '当前会话尚无可用的 Fabric 拓扑。',
+  'view.aria': 'Fabric 编排视图',
+  'view.summary': '{nodes} 个拓扑节点 · {active} 个活动节点',
+  'tabs.aria': 'Fabric 视图',
+  'tabs.activity': '活动',
+  'tabs.topology': '拓扑',
+  'graph.aria': '会话、工作流与 Fabric Mesh 拓扑',
+  'node.aria': '{label}，{status}',
+  'node.jobs': '{count} 个任务',
+  'details.aria': '节点详情',
+  'details.status': '状态',
+  'details.tokens': '令牌',
+  'details.duration': '时长',
+  'details.jobs': '后台任务',
+  'details.open': '打开会话',
+  'header.aria': 'Fabric 拓扑，{count} 个节点运行中',
+  'header.popover.aria': 'Fabric 会话节点',
+  'header.title': 'Fabric 拓扑',
+  'status.running': '运行中',
+  'status.completed': '已完成',
+  'status.failed': '失败',
+  'status.blocked': '受阻',
+  'status.stopped': '已停止',
+  'status.pending': '等待中',
+  'status.idle': '非活动',
+  'kind.main': '主会话',
+  'kind.session': '会话',
+  'kind.subagent': '子代理',
+  'kind.workflow': '工作流',
+  'kind.phase': '阶段',
+  'kind.job': '后台任务',
+  'kind.actor': '执行者',
+  'kind.topic': '主题',
+  'kind.message': '消息',
+  'kind.state': '状态',
+  'kind.component': '组件',
+  'kind.compaction': '上下文压缩',
+  'activity.kind.session': '会话',
+  'activity.kind.workflow': '工作流',
+  'activity.kind.phase': '阶段',
+  'activity.kind.agent': '代理',
+  'activity.kind.mesh': '网格',
+  'activity.kind.topic': '主题',
+  'activity.kind.state': '状态',
+  'activity.kind.actor': '执行者',
+  'activity.kind.message': '消息',
+  'activity.kind.compaction': '压缩',
+  'action.created': '已创建',
+  'action.published': '已发布',
+  'action.compareAndSwap': '已比较并交换',
+  'action.sent': '已发送',
+  'action.claimed': '已领取',
+  'action.failed': '失败',
+  'action.completed': '已完成',
+  'action.started': '已开始',
+  'action.summarized': '已总结',
+  'action.pruned': '已裁剪',
+  'action.updated': '已更新',
+  'action.cancelled': '已取消',
+  'action.running': '运行中',
+  'action.idle': '非活动',
+  'action.error': '错误',
+  'duration.seconds': '{count} 秒',
+  'duration.minutes': '{count} 分钟',
+  'duration.hours': '{hours} 小时 {minutes} 分钟',
+}

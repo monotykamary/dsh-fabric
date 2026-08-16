@@ -64,6 +64,7 @@ describe('fabric_mesh ToolRuntime composition', () => {
       })
 
       const sent = await ctx.tools.execute({ signal, callId: 'fabric-mesh-2' as never, name: 'fabric_mesh', arguments: { action: 'send_actor', actor_id: 'builder', payload: { task: 'compile' } }, agent: agent as never })
+      await ctx.tools.execute({ signal, callId: 'fabric-mesh-2b' as never, name: 'fabric_mesh', arguments: { action: 'send_actor', actor_id: 'builder', payload: { task: 'verify' } }, agent: agent as never })
       const claimed = await ctx.tools.execute({ signal, callId: 'fabric-mesh-3' as never, name: 'fabric_mesh', arguments: { action: 'claim_actor_message', actor_id: 'builder' }, agent: agent as never })
       const message = claimed.value as { id: string; claimToken: string }
       expect(sent.isError).toBe(false)
@@ -77,10 +78,16 @@ describe('fabric_mesh ToolRuntime composition', () => {
         .toMatch(/\"actorMessages\".*\"completed\"/)
 
       const snapshot = await ctx.tools.execute({ signal, callId: 'fabric-mesh-6' as never, name: 'fabric_mesh', arguments: { action: 'snapshot', limit: 1 }, agent: agent as never })
-      expect(snapshot.value).toMatchObject({ totals: { actors: 1, actorMessages: 1 }, truncated: false })
+      expect(snapshot.value).toMatchObject({ totals: { actors: 1, actorMessages: 2 }, truncated: true })
+      expect(ctx.sessionProjections.snapshot(session).values.fabricActivity?.nodes)
+        .toContainEqual(expect.objectContaining({ id: 'actor:builder', label: 'Builder', status: 'pending' }))
       const excessive = await ctx.tools.execute({ signal, callId: 'fabric-mesh-7' as never, name: 'fabric_mesh', arguments: { action: 'snapshot', limit: 501 }, agent: agent as never })
       expect(excessive.isError).toBe(true)
       expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { action: 'completed', status: 'completed' } } })
+      const pruned = await ctx.tools.execute({ signal, callId: 'fabric-mesh-8' as never, name: 'fabric_mesh', arguments: { action: 'prune_mailbox', actor_id: 'builder', retain: 0 }, agent: agent as never })
+      expect(pruned.value).toEqual({ deleted: 1, retained: 0 })
+      expect(ctx.fabricMesh.actorMessages('builder' as never)).toHaveLength(1)
+      expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { action: 'pruned' } } })
     } finally {
       for (const fiber of fibers.reverse()) await fiber.dispose()
       await rm(root, { recursive: true, force: true })
@@ -97,7 +104,7 @@ describe('fabric_mesh ToolRuntime composition', () => {
       fibers.push(await ctx.plugin(HostPlugin, { activityLimit: 20, topologyLimit: 20 }))
       fibers.push(await ctx.plugin(SystemPrompt))
       fibers.push(await ctx.plugin(QuickJsCodeRuntime, {
-        maxWallMs: 2_000,
+        maxWallMs: 10_000,
         memoryLimitBytes: 32 * 1024 * 1024,
         maxStackBytes: 256 * 1024,
         maxOutputBytes: 64 * 1024,

@@ -1,5 +1,6 @@
 import { access, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const root = JSON.parse(await readFile('package.json', 'utf8'))
 if (root.scripts?.['install:local'] !== 'node scripts/install-local.mjs') {
@@ -13,8 +14,11 @@ await access(resolve('scripts/install-local.mjs'))
 const patch = await readFile('cordis.patch.yml', 'utf8')
 const references = [...patch.matchAll(/^\s+name:\s+['"]([^'"]+)['"]\s*$/gm)].map(match => match[1])
 const expectedReferences = [
+  '@deepseek-ai/dsh-agent-presets',
   '@dsh-fabric/client-ui',
   '@dsh-fabric/code-runtime-quickjs',
+  '@dsh-fabric/compaction',
+  '@dsh-fabric/compaction/presets',
   '@dsh-fabric/host',
   '@dsh-fabric/mesh/provider',
   '@dsh-fabric/mesh/tool',
@@ -24,6 +28,21 @@ if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
 }
 if (!/^- id: code-runtime\r?\n  disabled: true$/m.test(patch)) {
   throw new Error('cordis.patch.yml must disable the inherited code-runtime row')
+}
+for (const id of ['compaction-basic', 'tool-result-pruner', 'agent-presets']) {
+  if (!new RegExp(`^- id: ${id}\\r?\\n  disabled: true$`, 'm').test(patch)) {
+    throw new Error(`cordis.patch.yml must disable the inherited ${id} row`)
+  }
+}
+if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]@dsh-fabric\/compaction['"]$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must insert the Fabric compaction engine')
+}
+if (!/^    - id: dsh-fabric-preset-root\r?\n      name: ['"]@dsh-fabric\/compaction\/presets['"]$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must insert the Fabric preset-root provider')
+}
+if (!/^    - id: dsh-fabric-agent-presets\r?\n      name: ['"]@deepseek-ai\/dsh-agent-presets['"]$/m.test(patch)
+  || !/^          - path: !!js ctx\.fabricPresetRoot\r?\n            trust: system$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must insert the host-native Fabric preset roster with a system-trusted package root')
 }
 if (!/^    - id: dsh-fabric-code-runtime\r?\n      name: ['"]@dsh-fabric\/code-runtime-quickjs['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert QuickJS under its distinct Fabric loader id')
@@ -35,7 +54,7 @@ for (const reference of references) {
   }
 }
 
-const packageDirs = ['protocol', 'host', 'mesh', 'code-runtime-quickjs', 'client-ui']
+const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'code-runtime-quickjs', 'client-ui']
 for (const directory of packageDirs) {
   const manifestPath = `packages/${directory}/package.json`
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
@@ -52,10 +71,20 @@ for (const directory of packageDirs) {
   if (hasClientExport !== hasClientDeclaration) {
     throw new Error(`${manifest.name} must declare both exports["./client"] and dsh.client, or neither`)
   }
+  if (directory === 'client-ui' && !manifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-locale')) {
+    throw new Error(`${manifest.name} must inject the DSH client locale service`)
+  }
+  if ((directory === 'host' || directory === 'client-ui') && !manifest.files.includes('THIRD_PARTY_NOTICES.md')) {
+    throw new Error(`${manifest.name} must publish its DeepSeek third-party notice`)
+  }
 }
 
 const artifacts = [
   'packages/protocol/lib/index.js',
+  'packages/compaction/lib/index.js',
+  'packages/compaction/lib/compiler.js',
+  'packages/compaction/lib/presets.js',
+  'packages/compaction/lib/invariant.js',
   'packages/host/lib/index.js',
   'packages/host/lib/invariant.js',
   'packages/mesh/lib/provider.js',
@@ -69,6 +98,40 @@ const artifacts = [
 ]
 for (const artifact of artifacts) await access(resolve(artifact))
 
+for (const artifact of [
+  'packages/code-runtime-quickjs/lib/index.js',
+  'packages/compaction/lib/index.js',
+  'packages/compaction/lib/presets.js',
+  'packages/host/lib/index.js',
+  'packages/mesh/lib/provider.js',
+  'packages/mesh/lib/tool.js',
+  'packages/client-ui/lib/index.js',
+]) {
+  const module = await import(pathToFileURL(resolve(artifact)).href)
+  const plugin = module.default ?? module
+  if (typeof plugin !== 'function' && (typeof plugin !== 'object' || plugin === null || typeof plugin.apply !== 'function')) {
+    throw new Error(`${artifact} does not expose a loader-valid Cordis plugin`)
+  }
+}
+
+for (const preset of ['standard', 'code', 'cordis', 'minimal']) {
+  const composition = await readFile(`packages/compaction/presets/${preset}/agent.cordis.yml`, 'utf8')
+  if ((composition.match(/@dsh-fabric\/compaction/g) ?? []).length !== 1
+    || !composition.includes('@deepseek-ai/dsh-command-compact')
+    || composition.includes('@deepseek-ai/dsh-compaction-basic')
+    || composition.includes('@deepseek-ai/dsh-compaction-tool-result-pruner')
+    || /@dsh-fabric\/compaction[\s\S]{0,120}auto:\s*false/.test(composition)) {
+    throw new Error(`Fabric preset ${preset} does not exclusively compose Fabric compaction`)
+  }
+}
+
+for (const asset of [
+  'packages/host/THIRD_PARTY_NOTICES.md',
+  'packages/client-ui/THIRD_PARTY_NOTICES.md',
+  'packages/compaction/presets/cordis/skills/cordis-plugin-development/SKILL.md',
+  'packages/compaction/presets/cordis/skills/editing-cordis-compositions/SKILL.md',
+]) await access(resolve(asset))
+
 await access(resolve('ADAPTATION_SWEEP.md'))
 
 const clientBundle = await readFile('packages/client-ui/lib/client.js', 'utf8')
@@ -77,6 +140,9 @@ if (!clientBundle.startsWith('window.__ModuleLoader__.load(')) {
 }
 if (/require\(["']@dsh-fabric\//.test(clientBundle)) {
   throw new Error('client bundle contains an unresolved @dsh-fabric value import')
+}
+if (!clientBundle.includes('Fabric topology') || !clientBundle.includes('view.summary')) {
+  throw new Error('client bundle is missing the English Fabric locale dictionary')
 }
 if (!/else\s+existing\.textContent\s*=\s*css/.test(clientBundle)) {
   throw new Error('client bundle does not hot-replace existing package CSS')

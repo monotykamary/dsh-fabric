@@ -90,4 +90,37 @@ describe('fabric activity projection', () => {
     }))
   })
 
+  it('bounds record bytes while preserving normalized edge and activity references', () => {
+    const definition = createFabricActivityProjection(5, 5)
+    const hugeId = 'node:'.concat('x'.repeat(4_000))
+    const hugeText = 'y'.repeat(10_000)
+    let state = definition.init()
+    state = definition.apply(state, event('fabric/activity', {
+      activity: { id: hugeId, kind: 'mesh', action: hugeText, label: hugeText, detail: hugeText, status: 'completed', updatedAt: 1, nodeId: hugeId },
+      nodes: [{ id: hugeId, kind: 'state', label: hugeText, detail: hugeText, status: 'completed', updatedAt: 1 }],
+      edges: [{ id: `edge:${hugeId}`, source: '$session', target: hugeId, kind: 'state', updatedAt: 1 }],
+    }, 0))
+
+    const view = definition.view(state)
+    expect(view.activities[0]?.id.length).toBeLessThanOrEqual(512)
+    expect(view.activities[0]?.action.length).toBeLessThanOrEqual(256)
+    expect(view.activities[0]?.label.length).toBeLessThanOrEqual(2048)
+    expect(view.activities[0]?.detail?.length).toBeLessThanOrEqual(4096)
+    expect(view.activities[0]?.nodeId).toBe(view.nodes[0]?.id)
+    expect(view.edges[0]?.target).toBe(view.nodes[0]?.id)
+    expect(view.nodes[0]?.id).toMatch(/#[0-9a-f]{16}$/)
+  })
+
+  it('bounds abandoned private workflow correlations by topology limit', () => {
+    const definition = createFabricActivityProjection(10, 2)
+    let state = definition.init()
+    for (let index = 0; index < 5; index += 1) {
+      state = definition.apply(state, event('tool-workflow/agent-start', {
+        runId: `run-${index}`, childId: `child-${index}`, seq: index, label: `Agent ${index}`,
+      }, index))
+    }
+
+    expect(Object.keys(state.workflowMembers)).toHaveLength(2)
+  })
+
 })

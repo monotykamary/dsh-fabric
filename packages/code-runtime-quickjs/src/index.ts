@@ -1,4 +1,5 @@
 /** QuickJS WASM implementation of DSH's existing CodeRuntime service. */
+import { Buffer } from 'node:buffer'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
@@ -20,6 +21,7 @@ import { executeQuickJs } from './runtime.ts'
 /** QuickJS runtime budgets. */
 export interface Config {
   maxWallMs?: number
+  maxSourceBytes?: number
   memoryLimitBytes?: number
   maxStackBytes?: number
   maxOutputBytes?: number
@@ -34,6 +36,7 @@ const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 export class QuickJsCodeRuntime extends CodeRuntime {
   static Config: z<Config> = z.object({
     maxWallMs: z.number().default(600_000),
+    maxSourceBytes: z.number().default(262_144),
     memoryLimitBytes: z.number().default(536_870_912),
     maxStackBytes: z.number().default(262_144),
     maxOutputBytes: z.number().default(67_108_864),
@@ -60,8 +63,13 @@ export class QuickJsCodeRuntime extends CodeRuntime {
 
   async run(request: CodeRunRequest): Promise<CodeRunResult> {
     if (this.disposed) throw new Error('dsh-fabric QuickJS run() after disposal')
+    const deadline = Date.now() + this.config.maxWallMs
     const bindings = validateBindings(request.bindings)
     if (request.signal?.aborted) return failure('abort', abortMessage(request.signal))
+    const sourceBytes = compilationInputBytes(request.program, request.bindings)
+    if (sourceBytes > this.config.maxSourceBytes) {
+      return failure('exception', `TypeScript input exceeds the configured source limit (${sourceBytes} > ${this.config.maxSourceBytes} bytes)`)
+    }
 
     let checked: ReturnType<typeof compileQuickJsProgram>
     try {
@@ -74,12 +82,17 @@ export class QuickJsCodeRuntime extends CodeRuntime {
       return failure('exception', `TypeScript check failed:\n${detail}`)
     }
 
+    const remainingWallMs = deadline - Date.now()
+    if (remainingWallMs <= 0) {
+      return failure('timeout', `wall-clock ceiling reached during TypeScript checking (${this.config.maxWallMs}ms)`)
+    }
+
     const controller = new AbortController()
     const onAbort = () => controller.abort(request.signal?.reason)
     request.signal?.addEventListener('abort', onAbort, { once: true })
     const live: LiveRun = {
       controller,
-      promise: executeQuickJs(checked.code, bindings, { ...this.config, signal: controller.signal })
+      promise: executeQuickJs(checked.code, bindings, { ...this.config, maxWallMs: remainingWallMs, signal: controller.signal })
         .catch((error: unknown) => failure('worker-exit', `QuickJS substrate failed: ${messageOf(error)}`)),
     }
     this.live.add(live)
@@ -129,6 +142,19 @@ function usableIdentifier(value: string, label: string): void {
   if (!IDENTIFIER.test(value) || PORTABLE_RESERVED_WORDS.has(value)) {
     throw new Error(`dsh-fabric QuickJS ${label} ${JSON.stringify(value)} is not a usable identifier`)
   }
+}
+
+function compilationInputBytes(program: string, namespaces: readonly CodeBindingNamespace[]): number {
+  let total = Buffer.byteLength(program, 'utf8')
+  for (const namespace of namespaces) {
+    total += Buffer.byteLength(namespace.global, 'utf8') + 32
+    for (const member of Object.keys(namespace.functions)) total += Buffer.byteLength(member, 'utf8') + 48
+    if (namespace.errorClass !== undefined) {
+      total += Buffer.byteLength(namespace.errorClass.name, 'utf8')
+        + Buffer.byteLength(namespace.errorClass.memberNameProperty, 'utf8') + 64
+    }
+  }
+  return total
 }
 
 function failure(kind: CodeRunFailure['kind'], message: string): CodeRunResult {

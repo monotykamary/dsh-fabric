@@ -4,7 +4,7 @@ This document records the completion sweep for the focused DeepSeek Harness adap
 
 ## Boundary
 
-The adaptation reuses DSH as the authority for tools, workflows, sessions, compaction, client navigation, and Cordis lifecycle. It adds only capabilities DSH does not already own: a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, and Activity/Topology presentation.
+The adaptation reuses DSH as the authority for tools, workflows, sessions, the compaction service/transaction seam, client navigation, and Cordis lifecycle. It adds a deterministic Fabric compaction provider and a host-native roster restricted to Fabric-owned presets, a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, and Activity/Topology presentation.
 
 It is not a line-for-line port of pi-fabric's component system, workflow engine, agent transports, or TUI.
 
@@ -17,20 +17,22 @@ It is not a line-for-line port of pi-fabric's component system, workflow engine,
 | Workflows and subagents | DSH workflow/subagent services | Projection of `tool-workflow/*` into Fabric topology | Fold tests include phases, bounded member correlation, and settlement | Verified |
 | Mesh business state | DSH `storage-domain` | Topics, CAS state, actor mailboxes | Restart composition tests and claim-token replay tests | Verified |
 | Session-derived Fabric UI | DSH SessionProjectionRegistry | Bounded `fabricActivity` fold | Live composition, detached serialized replay, checkpoint restore | Verified with the persistence caveat below |
-| Context compaction | DSH compaction engine/provider | Compaction lifecycle projection plus reassembled mesh context | Compaction fold/replay and system-prompt assembly tests | Verified |
+| Context compaction | DSH service, token meter, command, durable transaction, invariants | Exclusive Fabric deterministic compiler/provider, typed cumulative snapshot, masked preset roster, lifecycle projection, reassembled mesh context | Real `/compact`, compiler/activity/provenance, preset-mask, standing-mount, fold/replay, and system-prompt tests | Verified |
 | Browser slots and navigation | DSH client slots and sessions service | Activity, Topology, header action | Uses `sessions.subagentAddress()` and `openSubagent()` | Verified |
 | Client HMR | DSH client module loader | Package-owned CSS module update | Rebuilt bundles replace existing style-tag text | Verified by build contract |
 | Component lifecycle | Cordis | Ordinary plugins/effects | No second registry or lifecycle | Verified by workspace structure |
 
 ## Compaction and continuation
 
-The bundle does not install a second compactor. The profile retains DSH's configured compaction provider.
+The bundle installs one Fabric compaction backend and masks every stock DSH backend/pruner composition row. DSH still owns the abstract service contract, token meter, `/compact` command, durable lock and surface-replacement transaction, persistence flush, and compaction invariants.
 
-1. DSH remains authoritative for selecting, summarizing, replacing, and replaying compacted history.
-2. `@dsh-fabric/host` folds `compaction/start`, `compaction/summary`, `compaction/end`, and `compaction/prune` into bounded Activity/Topology records without deleting existing Fabric facts.
-3. `@dsh-fabric/mesh/tool` contributes bounded, metadata-only durable coordination context through DSH SystemPrompt. DSH materializes that context again after a compacted snapshot, so the model can rediscover topic, state, actor, and mailbox identifiers.
-4. The prompt tells the model to inspect durable state after compaction or `TOOL_OUTCOME_UNKNOWN`, and to use CAS revisions and actor claim tokens rather than conversational memory.
-5. Mesh payloads are not copied into prompt context. The context carries identifiers, statuses, revisions, counts, and truncation metadata; records are read explicitly through `fabric_mesh`.
+1. `@dsh-fabric/compaction` subclasses DSH's supported `BasicCompactionEngine` extension point, replacing its model summarizer with a deterministic Fabric compiler while reusing the audited range selection and durable transaction.
+2. The root layer disables `compaction-basic`, `tool-result-pruner`, and `agent-presets`, then inserts the Fabric engine plus a Fabric-owned roster. All four pinned presets compose one isolated Fabric engine and the backend-independent DSH command; none composes the stock backend or pruner.
+3. Typed DSH messages are normalized without reasoning blocks. Durable `fabric/activity` and native `tool-workflow/*` lifecycle events supply structured Fabric runs, phases, and operations. Graded projections preserve goals, exact file operations, Fabric activity, unresolved and resolved failures, earlier turns, current status, and a bounded recent transcript.
+4. Each summary event carries a bounded strict snapshot in `rawOutput`. The next compaction considers only the newest matching Fabric provider/model boundary, validates every required and optional field plus bounded JSON shape, and never falls back through corruption or treats previous summary prose as authority.
+5. `@dsh-fabric/host` folds `compaction/start`, `compaction/summary`, and `compaction/end` into bounded Activity/Topology records without deleting existing Fabric facts. Stock `compaction/prune` is no longer emitted while Fabric is active because the stock pruner is masked.
+6. `@dsh-fabric/mesh/tool` contributes count- and byte-bounded, metadata-only durable coordination context through DSH SystemPrompt. DSH materializes that context after a compacted checkpoint, so the model can rediscover topic, state, actor, and mailbox identifiers.
+7. Removing the bundle restores exact pre-existing direct dependency specifications, removes only locally owned links, and reveals the inherited DSH preset roster and stock per-preset compaction composition without overriding independent overlays.
 
 ## Blocking gap in DSH 0.1.0-rc.6
 
@@ -64,8 +66,10 @@ The sweep is complete when all of the following remain true:
 - `pnpm run check` passes from a clean build;
 - native ToolRuntime and QuickJS Code Mode both execute `fabric_mesh` end to end;
 - mesh state reopens through DSH storage composition;
+- `/compact` commits a deterministic Fabric summary without an auxiliary LLM call, and later compilation rehydrates its strict typed snapshot;
+- all four Fabric preset compositions contain exactly one automatic Fabric compactor and no stock compactor/pruner, and a linked no-server profile can standing-mount all four through the host-native roster;
 - a JSON-round-tripped session log reconstructs Fabric and compaction projections;
-- prompt assembly re-emits current bounded mesh metadata;
+- prompt assembly re-emits current count- and byte-bounded mesh metadata from detached authoritative records;
 - topology settlement survives bounded edge/node eviction;
 - the rc.6 persistence incompatibility stays explicit until upstream support lands;
-- package manifests, licenses, bundle rows, and client artifacts pass `scripts/verify-workspace.mjs`.
+- package manifests, licenses, exclusive compaction masks, localized client dictionaries, bundle rows, and client artifacts pass `scripts/verify-workspace.mjs`.

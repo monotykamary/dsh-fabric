@@ -1,0 +1,422 @@
+/** DSH message normalization for deterministic Fabric compaction. */
+import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
+import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
+import { clipUtf8 } from './bounds.ts'
+
+export type FabricTraceJsonValue = null | boolean | number | string | FabricTraceJsonValue[] | { [key: string]: FabricTraceJsonValue }
+export type FabricExecutionOutcomeV1 = 'succeeded' | 'failed' | 'aborted' | 'timed_out'
+export type FabricProjectionSource = 'trace' | 'legacy'
+
+interface EventBase {
+  index: number
+  entryId: string
+  sourceEntryId: string
+}
+
+interface UserEvent extends EventBase {
+  kind: 'user'
+  text: string
+}
+
+interface AssistantTextEvent extends EventBase {
+  kind: 'assistantText'
+  text: string
+}
+
+interface CustomMessageEvent extends EventBase {
+  kind: 'customMessage'
+  customType: string
+  text: string
+  display: boolean
+  details?: FabricTraceJsonValue
+}
+
+export interface ToolCallEvent extends EventBase {
+  kind: 'toolCall'
+  toolCallId: string
+  name: string
+  args: Record<string, unknown>
+}
+
+interface ToolResultEvent extends EventBase {
+  kind: 'toolResult'
+  toolCallId: string
+  toolName: string
+  isError: boolean
+  text: string
+}
+
+interface BashEvent extends EventBase {
+  kind: 'bash'
+  toolCallId: string
+  command: string
+  isError: boolean
+  exitCode: number | null
+  error?: string
+}
+
+interface FabricPhaseEvent extends EventBase {
+  kind: 'fabricPhase'
+  subordinal: string
+  address: string
+  phase: string
+}
+
+export interface FabricRunEvent extends EventBase {
+  kind: 'fabricRun'
+  toolCallId: string
+  subordinal: string
+  address: string
+  name: string
+  description?: string
+  outcome: FabricExecutionOutcomeV1
+  source: FabricProjectionSource | 'result' | 'branch'
+}
+
+interface FabricOperationEvent extends EventBase {
+  kind: 'fabricOperation'
+  subordinal: string
+  address: string
+  ref: string
+  provider?: string
+  action?: string
+  tool: string
+  args: Record<string, FabricTraceJsonValue>
+  outcome: FabricExecutionOutcomeV1
+  error?: string
+  result?: FabricTraceJsonValue
+  source: FabricProjectionSource | 'branch'
+}
+
+export type CompactionEvent =
+  | UserEvent
+  | AssistantTextEvent
+  | CustomMessageEvent
+  | ToolCallEvent
+  | ToolResultEvent
+  | BashEvent
+  | FabricPhaseEvent
+  | FabricRunEvent
+  | FabricOperationEvent
+
+const MAX_EVENT_TEXT_BYTES = 8 * 1024
+const MAX_JSON_DEPTH = 10
+const MAX_JSON_NODES = 256
+const MAX_JSON_COLLECTION = 64
+const MAX_JSON_STRING_BYTES = 2048
+
+/** Minimal durable session envelope consumed without coupling the compiler to host adapters. */
+export interface SessionActivityInput {
+  readonly type: string
+  readonly seq: number
+  readonly time: number
+  readonly data: unknown
+}
+
+/** Convert selected DSH messages, durable activity, and a prior typed snapshot into one addressed stream. */
+export function normalizeMessages(
+  messages: readonly Message[],
+  prior: readonly CompactionEvent[] = [],
+  activityEvents: readonly SessionActivityInput[] = [],
+): CompactionEvent[] {
+  const output: CompactionEvent[] = prior.map(event => ({ ...event }))
+  appendSessionActivities(output, activityEvents, new Set(output.map(event => event.entryId)))
+  const calls = new Map<string, ToolCallEvent>()
+  for (const event of output) if (event.kind === 'toolCall') calls.set(event.toolCallId, event)
+
+  for (const message of messages) {
+    if (isCompactCheckpointSource(message.source)) continue
+    const sourceEntryId = String(message.id)
+    for (const [blockIndex, block] of message.content.entries()) {
+      const entryId = `${sourceEntryId}:${blockIndex}`
+      if (block.type === 'reasoning' || block.type === 'image') continue
+      if (block.type === 'text') {
+        const text = clipUtf8(block.text, MAX_EVENT_TEXT_BYTES)
+        if (text.trim().length === 0) continue
+        if (message.role === 'assistant') {
+          output.push(base({ kind: 'assistantText', text }, entryId, sourceEntryId))
+        } else if (message.source.kind === 'user') {
+          output.push(base({ kind: 'user', text }, entryId, sourceEntryId))
+        } else {
+          const source = message.source as { kind: string; plugin?: unknown }
+          output.push(base({
+            kind: 'customMessage',
+            customType: typeof source.plugin === 'string' ? source.plugin : source.kind,
+            text,
+            display: true,
+          }, entryId, sourceEntryId))
+        }
+        continue
+      }
+      if (block.type === 'tool-call') {
+        const event = base({
+          kind: 'toolCall',
+          toolCallId: String(block.id),
+          name: block.name,
+          args: parseArguments(block.arguments),
+        }, entryId, sourceEntryId)
+        output.push(event)
+        calls.set(event.toolCallId, event)
+        continue
+      }
+      if (block.type === 'tool-result') {
+        const toolCallId = String(block.toolCallId)
+        const call = calls.get(toolCallId)
+        const text = clipUtf8(contentText(block.content), MAX_EVENT_TEXT_BYTES)
+        const isError = block.isError === true
+        const toolName = call?.name ?? 'unknown'
+        if (toolName === 'bash' || toolName === 'tool-bash') {
+          output.push(base({
+            kind: 'bash',
+            toolCallId,
+            command: commandFrom(call?.args),
+            isError,
+            exitCode: null,
+            ...(isError && text.length > 0 ? { error: text } : {}),
+          }, entryId, sourceEntryId))
+        } else {
+          output.push(base({ kind: 'toolResult', toolCallId, toolName, isError, text }, entryId, sourceEntryId))
+        }
+      }
+    }
+  }
+
+  return output.map((event, index) => ({ ...event, index: index + 1 }))
+}
+
+function appendSessionActivities(
+  output: CompactionEvent[],
+  sourceEvents: readonly SessionActivityInput[],
+  seen: Set<string>,
+): void {
+  const workflows = new Map<string, string>()
+  const members = new Map<string, { label: string; phase?: string }>()
+  const push = (event: CompactionEvent): void => {
+    if (seen.has(event.entryId)) return
+    seen.add(event.entryId)
+    output.push(event)
+  }
+
+  for (const source of sourceEvents) {
+    if (!Number.isSafeInteger(source.seq) || source.seq < 0 || !isRecord(source.data)) continue
+    const sourceEntryId = `session:${source.seq}`
+    if (source.type === 'fabric/activity') {
+      const activity = source.data.activity
+      if (!isRecord(activity)
+        || typeof activity.kind !== 'string'
+        || typeof activity.action !== 'string'
+        || typeof activity.label !== 'string'
+        || typeof activity.status !== 'string') continue
+      const entryId = `${sourceEntryId}:fabric`
+      const address = typeof activity.nodeId === 'string' && activity.nodeId !== ''
+        ? clipUtf8(activity.nodeId, MAX_JSON_STRING_BYTES)
+        : entryId
+      if (activity.kind === 'phase') {
+        push(base({
+          kind: 'fabricPhase',
+          subordinal: String(source.seq),
+          address,
+          phase: clipUtf8(activity.label, MAX_EVENT_TEXT_BYTES),
+        }, entryId, sourceEntryId))
+        continue
+      }
+      if (activity.kind === 'workflow') {
+        push(base({
+          kind: 'fabricRun',
+          toolCallId: entryId,
+          subordinal: String(source.seq),
+          address,
+          name: clipUtf8(activity.label, MAX_EVENT_TEXT_BYTES),
+          ...(typeof activity.detail === 'string' ? { description: clipUtf8(activity.detail, MAX_EVENT_TEXT_BYTES) } : {}),
+          outcome: activityOutcome(activity.status),
+          source: 'trace',
+        }, entryId, sourceEntryId))
+        continue
+      }
+      const argsValue = boundedJson({
+        label: activity.label,
+        ...(typeof activity.nodeId === 'string' ? { nodeId: activity.nodeId } : {}),
+        ...(typeof activity.detail === 'string' ? { detail: activity.detail } : {}),
+      }, { nodes: 0 }, 0)
+      push(base({
+        kind: 'fabricOperation',
+        subordinal: String(source.seq),
+        address,
+        ref: clipUtf8(`fabric.${activity.kind}.${activity.action}`, MAX_JSON_STRING_BYTES),
+        provider: '@dsh-fabric',
+        action: clipUtf8(activity.action, MAX_JSON_STRING_BYTES),
+        tool: meshActivityKind(activity.kind) ? 'fabric_mesh' : 'fabric_activity',
+        args: isRecord(argsValue) ? argsValue as Record<string, FabricTraceJsonValue> : {},
+        outcome: activityOutcome(activity.status),
+        source: 'trace',
+      }, entryId, sourceEntryId))
+      continue
+    }
+
+    if (source.type === 'tool-workflow/run-start') {
+      const runId = stringField(source.data, 'runId')
+      if (runId !== undefined) workflows.set(runId, stringField(source.data, 'name') ?? runId)
+      continue
+    }
+    if (source.type === 'tool-workflow/agent-start') {
+      const runId = stringField(source.data, 'runId')
+      const sequence = numberField(source.data, 'seq')
+      if (runId === undefined || sequence === undefined) continue
+      const label = stringField(source.data, 'label') ?? `Agent ${sequence}`
+      const phase = stringField(source.data, 'phase')
+      members.set(workflowMemberKey(runId, sequence), { label, ...(phase === undefined ? {} : { phase }) })
+      if (phase !== undefined) {
+        push(base({
+          kind: 'fabricPhase',
+          subordinal: String(sequence),
+          address: `workflow:${clipUtf8(runId, MAX_JSON_STRING_BYTES)}:phase:${clipUtf8(phase, MAX_JSON_STRING_BYTES)}`,
+          phase: clipUtf8(phase, MAX_EVENT_TEXT_BYTES),
+        }, `${sourceEntryId}:workflow-phase`, sourceEntryId))
+      }
+      continue
+    }
+    if (source.type === 'tool-workflow/agent-end') {
+      const runId = stringField(source.data, 'runId')
+      const sequence = numberField(source.data, 'seq')
+      const outcome = workflowOutcome(source.data.outcome)
+      if (runId === undefined || sequence === undefined || outcome === undefined) continue
+      const member = members.get(workflowMemberKey(runId, sequence))
+      push(base({
+        kind: 'fabricRun',
+        toolCallId: `workflow:${runId}:agent:${sequence}`,
+        subordinal: String(sequence),
+        address: `workflow:${clipUtf8(runId, MAX_JSON_STRING_BYTES)}:agent:${sequence}`,
+        name: clipUtf8(member?.label ?? `Agent ${sequence}`, MAX_EVENT_TEXT_BYTES),
+        ...(member?.phase === undefined ? {} : { description: clipUtf8(member.phase, MAX_EVENT_TEXT_BYTES) }),
+        outcome,
+        source: 'branch',
+      }, `${sourceEntryId}:workflow-agent`, sourceEntryId))
+      continue
+    }
+    if (source.type === 'tool-workflow/run-end') {
+      const runId = stringField(source.data, 'runId')
+      const outcome = workflowOutcome(source.data.stopReason)
+      if (runId === undefined || outcome === undefined) continue
+      push(base({
+        kind: 'fabricRun',
+        toolCallId: `workflow:${runId}`,
+        subordinal: String(source.seq),
+        address: `workflow:${clipUtf8(runId, MAX_JSON_STRING_BYTES)}`,
+        name: clipUtf8(workflows.get(runId) ?? runId, MAX_EVENT_TEXT_BYTES),
+        outcome,
+        source: 'branch',
+      }, `${sourceEntryId}:workflow-run`, sourceEntryId))
+    }
+  }
+}
+
+function activityOutcome(status: string): FabricExecutionOutcomeV1 {
+  if (status === 'failed' || status === 'blocked') return 'failed'
+  if (status === 'stopped') return 'aborted'
+  return 'succeeded'
+}
+
+function workflowOutcome(value: unknown): FabricExecutionOutcomeV1 | undefined {
+  if (value === 'completed') return 'succeeded'
+  if (value === 'failed' || value === 'error') return 'failed'
+  if (value === 'cancelled') return 'aborted'
+  return undefined
+}
+
+function meshActivityKind(kind: string): boolean {
+  return kind === 'mesh' || kind === 'topic' || kind === 'state' || kind === 'actor' || kind === 'message'
+}
+
+function workflowMemberKey(runId: string, sequence: number): string {
+  return `${runId.length}:${runId}:${sequence}`
+}
+
+function stringField(record: Record<string, unknown>, field: string): string | undefined {
+  const value = record[field]
+  return typeof value === 'string' && value !== '' ? value : undefined
+}
+
+function numberField(record: Record<string, unknown>, field: string): number | undefined {
+  const value = record[field]
+  return Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : undefined
+}
+
+/** Count reasoning blocks deliberately erased from one summary source. */
+export function firstLine(text: string): string {
+  const trimmed = text.trimStart()
+  const newline = trimmed.indexOf('\n')
+  return newline < 0 ? trimmed : trimmed.slice(0, newline)
+}
+
+export function countReasoningBlocks(messages: readonly Message[]): number {
+  return messages.reduce((total, message) => total
+    + message.content.filter(block => block.type === 'reasoning').length, 0)
+}
+
+function base<T extends Omit<CompactionEvent, keyof EventBase>>(
+  event: T,
+  entryId: string,
+  sourceEntryId: string,
+): T & EventBase {
+  return { ...event, index: 0, entryId, sourceEntryId }
+}
+
+function parseArguments(source: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(source)
+    if (!isRecord(parsed)) return {}
+    const bounded = boundedJson(parsed, { nodes: 0 }, 0)
+    return isRecord(bounded) ? bounded : {}
+  } catch {
+    return {}
+  }
+}
+
+function contentText(blocks: readonly ContentBlock[]): string {
+  const output: string[] = []
+  const visit = (items: readonly ContentBlock[]): void => {
+    for (const block of items) {
+      if (block.type === 'text') output.push(block.text)
+      else if (block.type === 'tool-result') visit(block.content)
+    }
+  }
+  visit(blocks)
+  return output.join('\n')
+}
+
+function commandFrom(args: Record<string, unknown> | undefined): string {
+  const value = args?.command ?? args?.cmd
+  return typeof value === 'string' ? clipUtf8(value, MAX_EVENT_TEXT_BYTES) : ''
+}
+
+function boundedJson(
+  value: unknown,
+  state: { nodes: number },
+  depth: number,
+): FabricTraceJsonValue | undefined {
+  state.nodes += 1
+  if (state.nodes > MAX_JSON_NODES || depth > MAX_JSON_DEPTH) return undefined
+  if (value === null || typeof value === 'boolean') return value
+  if (typeof value === 'string') return clipUtf8(value, MAX_JSON_STRING_BYTES)
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (Array.isArray(value)) {
+    const output: FabricTraceJsonValue[] = []
+    for (const item of value.slice(0, MAX_JSON_COLLECTION)) {
+      const bounded = boundedJson(item, state, depth + 1)
+      if (bounded !== undefined) output.push(bounded)
+    }
+    return output
+  }
+  if (!isRecord(value)) return undefined
+  const output: Record<string, FabricTraceJsonValue> = Object.create(null)
+  for (const key of Object.keys(value).sort().slice(0, MAX_JSON_COLLECTION)) {
+    const bounded = boundedJson(value[key], state, depth + 1)
+    const boundedKey = clipUtf8(key, MAX_JSON_STRING_BYTES)
+    if (bounded !== undefined && !Object.hasOwn(output, boundedKey)) output[boundedKey] = bounded
+  }
+  return output
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}

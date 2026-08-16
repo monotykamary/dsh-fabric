@@ -20,8 +20,17 @@ export interface QuickJsExecutionOptions {
 type QuickJsModule = Awaited<ReturnType<typeof newQuickJSWASMModuleFromVariant>>
 let modulePromise: Promise<QuickJsModule> | undefined
 
+export const internals = {
+  moduleLoader: (): Promise<QuickJsModule> => newQuickJSWASMModuleFromVariant(releaseSyncVariant),
+  resetModule(): void { modulePromise = undefined },
+}
+
 const quickJsModule = (): Promise<QuickJsModule> =>
-  (modulePromise ??= newQuickJSWASMModuleFromVariant(releaseSyncVariant))
+  (modulePromise ??= internals.moduleLoader())
+
+class QuickJsModuleDeadlineError extends Error {
+  override readonly name = 'QuickJsModuleDeadlineError'
+}
 
 const SETUP_SOURCE = `
 (() => {
@@ -29,6 +38,7 @@ const SETUP_SOURCE = `
   const specs = globalThis.__dshNamespaces;
   delete globalThis.__dshHostCall;
   delete globalThis.__dshNamespaces;
+  const args = [Object.freeze({ log: print, info: print, warn: print, error: print, debug: print })];
   for (const spec of specs) {
     let ErrorClass;
     if (spec.errorClass) {
@@ -39,15 +49,14 @@ const SETUP_SOURCE = `
           Object.defineProperty(this, spec.errorClass.memberNameProperty, { enumerable: true, value: member });
         }
       };
-      Object.defineProperty(globalThis, spec.errorClass.name, { configurable: true, value: ErrorClass });
     }
     const namespace = Object.create(null);
     for (const member of spec.names) {
       Object.defineProperty(namespace, member, {
         enumerable: true,
-        value: async (args) => {
+        value: async (value) => {
           try {
-            return await bridge(spec.global, member, args);
+            return await bridge(spec.global, member, value);
           } catch (error) {
             if (ErrorClass) throw new ErrorClass(error instanceof Error ? error.message : String(error), member);
             throw error;
@@ -55,10 +64,11 @@ const SETUP_SOURCE = `
         },
       });
     }
-    Object.defineProperty(globalThis, spec.global, { configurable: true, value: Object.freeze(namespace) });
+    args.push(Object.freeze(namespace));
+    if (ErrorClass) args.push(ErrorClass);
   }
-  globalThis.console = Object.freeze({ log: print, info: print, warn: print, error: print, debug: print });
-})();
+  return Object.freeze(args);
+})()
 `
 
 const HOST_SETTLE_GRACE_MS = 250
@@ -71,12 +81,24 @@ export async function executeQuickJs(
   options: QuickJsExecutionOptions,
 ): Promise<CodeRunResult> {
   if (options.signal?.aborted) return boundedFailure([], { kind: 'abort', message: abortMessage(options.signal) }, options.maxOutputBytes)
-  const module = await quickJsModule()
+  const deadline = Date.now() + options.maxWallMs
+  let module: QuickJsModule
+  try {
+    module = await moduleBeforeDeadline(quickJsModule(), options.signal, deadline)
+  } catch (error: unknown) {
+    if (options.signal?.aborted) return boundedFailure([], { kind: 'abort', message: abortMessage(options.signal) }, options.maxOutputBytes)
+    if (error instanceof QuickJsModuleDeadlineError) {
+      return boundedFailure([], { kind: 'timeout', message: error.message }, options.maxOutputBytes)
+    }
+    throw error
+  }
+  if (Date.now() >= deadline) {
+    return boundedFailure([], { kind: 'timeout', message: `wall-clock ceiling reached (${options.maxWallMs}ms)` }, options.maxOutputBytes)
+  }
   const context = module.newContext()
   const runtime = context.runtime
   runtime.setMemoryLimit(options.memoryLimitBytes)
   runtime.setMaxStackSize(options.maxStackBytes)
-  const deadline = Date.now() + options.maxWallMs
   let interrupted = false
   runtime.setInterruptHandler(() => {
     if (options.signal?.aborted === true || Date.now() > deadline) {
@@ -96,6 +118,9 @@ export async function executeQuickJs(
   const jsonParse = context.getProp(jsonObject, 'parse')
   let activeHandle: any
   let gate: any
+  let setupArguments: any
+  let mainFunction: any
+  let raceFunction: any
   let pendingResolution: Promise<any> | undefined
   let timer: NodeJS.Timeout | undefined
   let abortHandler: (() => void) | undefined
@@ -187,31 +212,65 @@ export async function executeQuickJs(
       setup.error.dispose()
       return boundedFailure(logs, { kind: 'exception', message }, options.maxOutputBytes)
     }
-    setup.value.dispose()
+    setupArguments = setup.value
+    const parameterNames = guestParameterNames(bindings)
+    const factory = context.evalCode(
+      `${code}\n__dsh_main__`,
+      'dsh-fabric-guest-factory.js',
+    )
+    if (factory.error) {
+      const message = formatDump(context.dump(factory.error))
+      factory.error.dispose()
+      return boundedFailure(logs, { kind: 'exception', message }, options.maxOutputBytes)
+    }
+
+    const argumentHandles = parameterNames.map((_, index) => context.getProp(setupArguments, String(index)))
+    const instantiated = context.callFunction(factory.value, context.undefined, ...argumentHandles)
+    factory.value.dispose()
+    for (const handle of argumentHandles) handle.dispose()
+    setupArguments.dispose()
+    setupArguments = undefined
+    if (instantiated.error) {
+      const message = formatDump(context.dump(instantiated.error))
+      instantiated.error.dispose()
+      return boundedFailure(logs, { kind: 'exception', message }, options.maxOutputBytes)
+    }
+    mainFunction = instantiated.value
 
     gate = context.newPromise()
-    context.setProp(context.global, '__dshExecutionGate', gate.handle)
+    const remainingMs = Math.max(1, deadline - Date.now())
     timer = setTimeout(() => {
       abortHost(`wall-clock ceiling reached (${options.maxWallMs}ms)`)
       rejectGate(`wall-clock ceiling reached (${options.maxWallMs}ms)`)
-    }, options.maxWallMs)
+    }, remainingMs)
     abortHandler = () => {
       abortHost(abortMessage(options.signal))
       rejectGate(abortMessage(options.signal))
     }
     options.signal?.addEventListener('abort', abortHandler, { once: true })
+    if (options.signal?.aborted) abortHandler()
 
-    const evaluation = context.evalCode(
-      `${code}\nPromise.race([globalThis.__dshMain(), globalThis.__dshExecutionGate])`,
-      'dsh-fabric-guest.js',
+    const race = context.evalCode(
+      '(() => { const race = Promise.race.bind(Promise); return (main, gate) => race([main(), gate]); })()',
+      'dsh-fabric-quickjs-race.js',
     )
+    if (race.error) {
+      const message = formatDump(context.dump(race.error))
+      race.error.dispose()
+      return boundedFailure(logs, { kind: 'exception', message }, options.maxOutputBytes)
+    }
+    raceFunction = race.value
+    const evaluation = context.callFunction(raceFunction, context.undefined, mainFunction, gate.handle)
+    raceFunction.dispose()
+    raceFunction = undefined
+    mainFunction.dispose()
+    mainFunction = undefined
     pump()
     if (evaluation.error) {
       const message = formatDump(context.dump(evaluation.error))
       evaluation.error.dispose()
       return boundedFailure(logs, classifyFailure(message, options.signal, interrupted, deadline), options.maxOutputBytes)
     }
-
     activeHandle = evaluation.value
     pendingResolution = context.resolvePromise(activeHandle)
     pump()
@@ -256,6 +315,9 @@ export async function executeQuickJs(
       }
     }
     if (pendingResolution !== undefined) await Promise.race([pendingResolution.catch(() => undefined), delay(250)])
+    if (setupArguments?.alive !== false) setupArguments?.dispose()
+    if (mainFunction?.alive !== false) mainFunction?.dispose()
+    if (raceFunction?.alive !== false) raceFunction?.dispose()
     if (activeHandle?.alive !== false) activeHandle?.dispose()
     if (gate?.alive !== false) gate?.dispose()
     pump()
@@ -265,6 +327,39 @@ export async function executeQuickJs(
   }
 }
 
+function guestParameterNames(bindings: ReadonlyMap<string, CodeBindingNamespace>): string[] {
+  const names = ['console']
+  for (const [global, namespace] of bindings) {
+    names.push(global)
+    if (namespace.errorClass !== undefined) names.push(namespace.errorClass.name)
+  }
+  return names
+}
+
+function moduleBeforeDeadline(
+  operation: Promise<QuickJsModule>,
+  signal: AbortSignal | undefined,
+  deadline: number,
+): Promise<QuickJsModule> {
+  if (signal?.aborted) return Promise.reject(signal.reason)
+  const remaining = deadline - Date.now()
+  if (remaining <= 0) return Promise.reject(new QuickJsModuleDeadlineError('wall-clock ceiling reached during QuickJS initialization'))
+  return new Promise<QuickJsModule>((resolve, reject) => {
+    const timer = setTimeout(() => finish(() => reject(new QuickJsModuleDeadlineError('wall-clock ceiling reached during QuickJS initialization'))), remaining)
+    const onAbort = () => finish(() => reject(signal?.reason))
+    const finish = (settle: () => void): void => {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
+      settle()
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+    operation.then(
+      value => finish(() => resolve(value)),
+      error => finish(() => reject(error)),
+    )
+  })
+}
+
 function classifyFailure(
   message: string,
   signal: AbortSignal | undefined,
@@ -272,7 +367,7 @@ function classifyFailure(
   deadline: number,
 ): CodeRunFailure {
   if (signal?.aborted) return { kind: 'abort', message: abortMessage(signal) }
-  if (interrupted || Date.now() > deadline) return { kind: 'timeout', message }
+  if (interrupted || Date.now() >= deadline) return { kind: 'timeout', message }
   return { kind: 'exception', message }
 }
 

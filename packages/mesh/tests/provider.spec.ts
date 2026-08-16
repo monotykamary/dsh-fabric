@@ -82,6 +82,65 @@ describe('StorageFabricMesh', () => {
     await expect(mesh.createTopic('late')).rejects.toThrow('service is disposing')
   })
 
+
+  it('detaches caller-owned and returned JSON across durable boundaries', async () => {
+    const { mesh, dispose } = await setup()
+    const input = { nested: { ready: false } }
+    const stored = await mesh.compareAndSwap(FabricStateKey('detached'), 0, input)
+    input.nested.ready = true
+    ;(stored.value as { nested: { ready: boolean } }).nested.ready = true
+
+    expect(mesh.getState(FabricStateKey('detached'))?.value).toEqual({ nested: { ready: false } })
+    const snapshot = mesh.snapshot()
+    ;(snapshot.states[0]!.value as { nested: { ready: boolean } }).nested.ready = true
+    expect(mesh.getState(FabricStateKey('detached'))?.value).toEqual({ nested: { ready: false } })
+    await dispose()
+  })
+
+  it('returns bounded snapshots with authoritative totals and rejects oversized identifiers', async () => {
+    const { mesh, dispose } = await setup()
+    await mesh.createActor('One', FabricActorId('one'))
+    await mesh.createActor('Two', FabricActorId('two'))
+    await mesh.sendActor(FabricActorId('one'), { task: 1 })
+    await mesh.sendActor(FabricActorId('one'), { task: 2 })
+
+    expect(mesh.snapshot(1)).toMatchObject({
+      actors: [expect.any(Object)],
+      actorMessages: [expect.any(Object)],
+      totals: { actors: 2, actorMessages: 2 },
+      truncated: true,
+    })
+    expect(mesh.actor(FabricActorId('one'))).toMatchObject({ label: 'One', status: 'pending', queued: 2 })
+    expect(() => mesh.createActor('Too long', FabricActorId('x'.repeat(257)))).toThrow('1–256 UTF-8 bytes')
+    await dispose()
+  })
+
+  it('prunes topic history and terminal mailbox records without deleting active commands', async () => {
+    const { mesh, dispose } = await setup()
+    const topic = await mesh.createTopic('retained')
+    await mesh.publish(topic.id, { ordinal: 1 })
+    await mesh.publish(topic.id, { ordinal: 2 })
+    await mesh.publish(topic.id, { ordinal: 3 })
+    expect(await mesh.pruneTopic(topic.id, 1)).toEqual({ deleted: 2, retained: 1 })
+    expect(mesh.topicMessages(topic.id)).toHaveLength(1)
+
+    const actor = await mesh.createActor('retained actor', FabricActorId('retained-actor'))
+    await mesh.sendActor(actor.id, { ordinal: 1 })
+    await mesh.sendActor(actor.id, { ordinal: 2 })
+    const failed = await mesh.claimActor(actor.id)
+    await mesh.settleActor(failed!.id, failed!.claimToken!, { error: 'failed once' })
+    await new Promise(resolve => setTimeout(resolve, 2))
+    const completed = await mesh.claimActor(actor.id)
+    await mesh.settleActor(completed!.id, completed!.claimToken!, { result: { ok: true } })
+    const active = await mesh.sendActor(actor.id, { ordinal: 3 })
+
+    expect(await mesh.pruneActor(actor.id, 1)).toEqual({ deleted: 1, retained: 1 })
+    expect(mesh.actorMessages(actor.id).map(message => message.id)).toEqual(expect.arrayContaining([completed!.id, active.id]))
+    expect(mesh.actorMessages(actor.id)).not.toContainEqual(expect.objectContaining({ id: failed!.id }))
+    expect(mesh.actor(actor.id)).toMatchObject({ status: 'pending', queued: 1, claimed: 0 })
+    await dispose()
+  })
+
   it('publishes durable topic messages into the snapshot', async () => {
     const { mesh, dispose } = await setup()
     const topic = await mesh.createTopic('events')

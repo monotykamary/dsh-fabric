@@ -1,21 +1,20 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { InjectFace } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   FabricActivityRecord,
   FabricGraphNode,
-  FabricNodeKind,
-  FabricNodeStatus,
 } from '@dsh-fabric/protocol'
 import { buildFabricClientModel } from './model.ts'
+import { actionLabel, activityKindLabel, formatDuration, kindLabel, statusLabel } from './labels.ts'
 import type { FabricControls } from './types.ts'
 import css from './fabric.module.css'
 
 /** Complete props delivered to the Fabric conversation view. */
-export type FabricViewProps = ConvViewProps & InjectFace<FabricControls>
+export type FabricViewProps = ConvViewProps & InjectFace<FabricControls> & PropsLocale<'fabric'>
 
 /** Render the selected lineage as Activity and Topology views. */
-export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs }: FabricViewProps) {
+export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, t }: FabricViewProps) {
   const sessions = useSessions(value => value)
   const model = useMemo(
     () => buildFabricClientModel(sessions, sessionId, Date.now()),
@@ -40,46 +39,46 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs }
   }, [model, selected])
 
   if (model === null) {
-    return <div className={css.empty}>当前会话尚无可用的 Fabric 拓扑。</div>
+    return <div className={css.empty}>{t('view.empty')}</div>
   }
 
   const selectedNode = model.graph.nodes.find(node => node.id === selected) ?? model.graph.nodes[0]
   return (
-    <section className={css.view} aria-label="Fabric 编排视图">
+    <section className={css.view} aria-label={t('view.aria')}>
       <header className={css.toolbar}>
         <div>
           <h2 className={css.title}>Fabric</h2>
-          <p className={css.subtitle}>{model.graph.nodes.length} 个拓扑节点 · {model.active.length} 个活动节点</p>
+          <p className={css.subtitle}>{t('view.summary', { nodes: model.graph.nodes.length, active: model.active.length })}</p>
         </div>
-        <div className={css.tabs} role="tablist" aria-label="Fabric 视图">
+        <div className={css.tabs} role="tablist" aria-label={t('tabs.aria')}>
           <button
             className={mode === 'activity' ? css.tabActive : css.tab}
             type="button"
             role="tab"
             aria-selected={mode === 'activity'}
             onClick={() => { setMode('activity') }}
-          >活动</button>
+          >{t('tabs.activity')}</button>
           <button
             className={mode === 'topology' ? css.tabActive : css.tab}
             type="button"
             role="tab"
             aria-selected={mode === 'topology'}
             onClick={() => { setMode('topology') }}
-          >拓扑</button>
+          >{t('tabs.topology')}</button>
         </div>
       </header>
 
       <div className={css.content}>
         <div className={css.primary}>
           {mode === 'activity'
-            ? <ActivityList activities={model.activity} nodes={model.graph.nodes} onSelect={node => { setSelected(node.id) }} />
+            ? <ActivityList activities={model.activity} nodes={model.graph.nodes} onSelect={node => { setSelected(node.id) }} t={t} />
             : (
               <div className={css.canvas}>
                 <svg
                   className={css.graph}
                   viewBox={`0 0 ${model.layout.width} ${model.layout.height}`}
                   role="tree"
-                  aria-label="会话、工作流与 Fabric Mesh 拓扑"
+                  aria-label={t('graph.aria')}
                 >
                   {model.graph.edges.map((edge) => {
                     const source = model.layout.nodes.find(item => item.node.id === edge.source)
@@ -101,7 +100,8 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs }
                       y={y}
                       selected={node.id === selectedNode?.id}
                       onSelect={() => { setSelected(node.id) }}
-                      {...node.sessionId === undefined ? {} : { onOpen: () => { openNode(node.sessionId as string) } }}
+                      t={t}
+                      {...node.sessionId === undefined ? {} : { onOpen: () => { void openNode(node.sessionId as string) } }}
                     />
                   ))}
                 </svg>
@@ -111,7 +111,8 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs }
         {selectedNode === undefined ? null : (
           <NodeDetails
             node={selectedNode}
-            {...selectedNode.sessionId === undefined ? {} : { onOpen: () => { openNode(selectedNode.sessionId as string) } }}
+            t={t}
+            {...selectedNode.sessionId === undefined ? {} : { onOpen: () => { void openNode(selectedNode.sessionId as string) } }}
           />
         )}
       </div>
@@ -119,13 +120,14 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs }
   )
 }
 
-function GraphNode({ node, x, y, selected, onSelect, onOpen }: {
+function GraphNode({ node, x, y, selected, onSelect, onOpen, t }: {
   node: FabricGraphNode
   x: number
   y: number
   selected: boolean
   onSelect: () => void
   onOpen?: () => void
+  t: TranslateNS<'fabric'>
 }) {
   const activate = (event: KeyboardEvent<SVGGElement>) => {
     if (event.key === 'Enter' && onOpen !== undefined) onOpen()
@@ -141,7 +143,7 @@ function GraphNode({ node, x, y, selected, onSelect, onOpen }: {
       transform={`translate(${x - 82} ${y - 30})`}
       role="treeitem"
       tabIndex={0}
-      aria-label={`${node.label}，${statusLabel(node.status)}`}
+      aria-label={t('node.aria', { label: node.label, status: statusLabel(node.status, t) })}
       onClick={onSelect}
       {...onOpen === undefined ? {} : { onDoubleClick: onOpen }}
       onKeyDown={activate}
@@ -151,16 +153,17 @@ function GraphNode({ node, x, y, selected, onSelect, onOpen }: {
       <circle className={css.statusDot} cx="15" cy="18" r="5" />
       <text className={css.nodeLabel} x="27" y="22">{truncate(node.label, 18)}</text>
       <text className={css.nodeMeta} x="15" y="44">
-        {kindLabel(node.kind)}{node.jobCount > 0 ? ` · ${node.jobCount} 个任务` : ''}
+        {kindLabel(node.kind, t)}{node.jobCount > 0 ? ` · ${t('node.jobs', { count: node.jobCount })}` : ''}
       </text>
     </g>
   )
 }
 
-function ActivityList({ activities, nodes, onSelect }: {
+function ActivityList({ activities, nodes, onSelect, t }: {
   activities: readonly FabricActivityRecord[]
   nodes: readonly FabricGraphNode[]
   onSelect: (node: FabricGraphNode) => void
+  t: TranslateNS<'fabric'>
 }) {
   return (
     <ul className={css.activityList}>
@@ -177,9 +180,9 @@ function ActivityList({ activities, nodes, onSelect }: {
               <span className={css.activityDot} />
               <span className={css.activityCopy}>
                 <strong>{activity.label}</strong>
-                <small>{activity.action} · {statusLabel(activity.status)}{activity.detail === undefined ? '' : ` · ${activity.detail}`}</small>
+                <small>{actionLabel(activity.action, t)} · {statusLabel(activity.status, t)}{activity.detail === undefined ? '' : ` · ${activity.detail}`}</small>
               </span>
-              <span className={css.activityMetric}>{activity.kind.toUpperCase()}</span>
+              <span className={css.activityMetric}>{activityKindLabel(activity.kind, t)}</span>
             </button>
           </li>
         )
@@ -188,50 +191,21 @@ function ActivityList({ activities, nodes, onSelect }: {
   )
 }
 
-function NodeDetails({ node, onOpen }: { node: FabricGraphNode; onOpen?: () => void }) {
+function NodeDetails({ node, onOpen, t }: { node: FabricGraphNode; onOpen?: () => void; t: TranslateNS<'fabric'> }) {
   return (
-    <aside className={css.details} aria-label="节点详情">
-      <span className={css.eyebrow}>{node.kind === 'main' ? 'MAIN' : node.kind.toUpperCase()}</span>
+    <aside className={css.details} aria-label={t('details.aria')}>
+      <span className={css.eyebrow}>{kindLabel(node.kind, t)}</span>
       <h3>{node.label}</h3>
       <dl className={css.metrics}>
-        <div><dt>状态</dt><dd>{statusLabel(node.status)}</dd></div>
-        <div><dt>令牌</dt><dd>{node.tokens === undefined ? '—' : formatTokens(node.tokens)}</dd></div>
-        <div><dt>时长</dt><dd>{node.durationMs === undefined ? '—' : formatDuration(node.durationMs)}</dd></div>
-        <div><dt>后台任务</dt><dd>{node.jobCount}</dd></div>
+        <div><dt>{t('details.status')}</dt><dd>{statusLabel(node.status, t)}</dd></div>
+        <div><dt>{t('details.tokens')}</dt><dd>{node.tokens === undefined ? '—' : formatTokens(node.tokens)}</dd></div>
+        <div><dt>{t('details.duration')}</dt><dd>{node.durationMs === undefined ? '—' : formatDuration(node.durationMs, t)}</dd></div>
+        <div><dt>{t('details.jobs')}</dt><dd>{node.jobCount}</dd></div>
       </dl>
       {node.detail === undefined ? null : <p className={css.nodeDetail}>{node.detail}</p>}
-      {onOpen === undefined ? null : <button className={css.openButton} type="button" onClick={onOpen}>打开会话</button>}
+      {onOpen === undefined ? null : <button className={css.openButton} type="button" onClick={onOpen}>{t('details.open')}</button>}
     </aside>
   )
-}
-
-function statusLabel(status: FabricNodeStatus): string {
-  switch (status) {
-    case 'running': return '运行中'
-    case 'completed': return '已完成'
-    case 'failed': return '失败'
-    case 'blocked': return '受阻'
-    case 'stopped': return '已停止'
-    case 'pending': return '等待中'
-    case 'idle': return '非活动'
-  }
-}
-
-function kindLabel(kind: FabricNodeKind): string {
-  switch (kind) {
-    case 'main': return '主会话'
-    case 'session': return '会话'
-    case 'subagent': return '子代理'
-    case 'workflow': return '工作流'
-    case 'phase': return '阶段'
-    case 'job': return '后台任务'
-    case 'actor': return 'Actor'
-    case 'topic': return '主题'
-    case 'message': return '消息'
-    case 'state': return '状态'
-    case 'component': return '组件'
-    case 'compaction': return '上下文压缩'
-  }
 }
 
 function truncate(value: string, limit: number): string {
@@ -240,12 +214,4 @@ function truncate(value: string, limit: number): string {
 
 function formatTokens(value: number): string {
   return value < 1_000 ? String(value) : `${(value / 1_000).toFixed(value < 10_000 ? 1 : 0)}k`
-}
-
-function formatDuration(value: number): string {
-  const seconds = Math.max(0, Math.floor(value / 1_000))
-  if (seconds < 60) return `${seconds} 秒`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} 分钟`
-  return `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`
 }

@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process'
-import { access, readFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { access, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const DSH_PACKAGE = '@deepseek-ai/dsh@0.1.0-rc.6'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const PNPM = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
+const LOCAL_STATE_FILE = '.dsh-fabric-local-install.json'
 const LINK_PATHS = [
   '.',
   'packages/protocol',
+  'packages/compaction',
   'packages/host',
   'packages/mesh',
   'packages/code-runtime-quickjs',
@@ -18,6 +20,8 @@ const LINK_PATHS = [
 ]
 const EXPECTED_ROWS = [
   '@dsh-fabric/code-runtime-quickjs',
+  '@dsh-fabric/compaction',
+  '@dsh-fabric/compaction/presets',
   '@dsh-fabric/host',
   '@dsh-fabric/mesh/provider',
   '@dsh-fabric/mesh/tool',
@@ -25,6 +29,9 @@ const EXPECTED_ROWS = [
 ]
 const REQUIRED_ARTIFACTS = [
   'packages/protocol/lib/index.js',
+  'packages/compaction/lib/index.js',
+  'packages/compaction/lib/compiler.js',
+  'packages/compaction/lib/presets.js',
   'packages/host/lib/index.js',
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
@@ -59,6 +66,7 @@ async function main() {
     await runPnpm(['run', 'build'])
   }
 
+  await captureInstallState(options.profile, packages)
   await runPnpm([
     'dlx', DSH_PACKAGE,
     'plugin', '--profile', options.profile,
@@ -69,22 +77,38 @@ async function main() {
   verifyInstalled(config, options.profile)
 
   console.log(`Installed dsh-fabric into profile ${JSON.stringify(options.profile)}.`)
-  console.log('Validated all 5 Fabric rows and unchanged DSH compaction capability configuration.')
+  console.log(`Validated all ${EXPECTED_ROWS.length} Fabric rows and the exclusive Fabric compaction mask.`)
   console.log('No server was started or restarted; load the profile again to activate newly added rows.')
 }
 
 async function uninstall(profile, packages) {
+  const state = await localInstallState(profile, packages)
   await runPnpm([
     'dlx', DSH_PACKAGE,
     'plugin', '--profile', profile,
     'remove', ...packages.map(entry => entry.name),
   ])
 
+  const restore = packages.flatMap(entry => {
+    const spec = state.dependencies[entry.name]
+    return spec === null ? [] : [`${entry.name}@${spec}`]
+  })
+  if (restore.length > 0) {
+    await runPnpm(['dlx', DSH_PACKAGE, 'plugin', '--profile', profile, 'add', ...restore])
+  }
+
+  await verifyRestoredDependencies(profile, packages, state)
   const config = await dumpConfig(profile)
-  const restoredCodeRuntime = verifyUninstalled(config, profile)
+  const priorBundle = state.dependencies['dsh-fabric'] !== null
+  const restoredCodeRuntime = priorBundle ? undefined : verifyUninstalled(config, profile)
+  await rm(localStatePath(profile), { force: true })
 
   console.log(`Removed local dsh-fabric packages from profile ${JSON.stringify(profile)}.`)
-  console.log(`Restored inherited code-runtime row ${JSON.stringify(restoredCodeRuntime)} and retained DSH compaction configuration.`)
+  if (priorBundle) {
+    console.log(`Restored the pre-existing dsh-fabric dependency ${JSON.stringify(state.dependencies['dsh-fabric'])}; that bundle remains authoritative.`)
+  } else {
+    console.log(`Inherited code-runtime row ${JSON.stringify(restoredCodeRuntime.name)} is present${restoredCodeRuntime.disabled ? ' and remains disabled by another overlay' : ''}; the inherited DSH preset roster is present.`)
+  }
   console.log('No server was started or restarted; load the profile again to activate the recomposed profile.')
 }
 
@@ -138,6 +162,99 @@ async function localPackages() {
   return entries
 }
 
+function dshHomeRoot() {
+  const configured = process.env.DSH_HOME?.trim()
+  const selected = configured === undefined || configured === '' ? join(homedir(), '.dsh') : configured
+  if (selected === '~') return homedir()
+  if (selected.startsWith('~/') || selected.startsWith('~\\')) return resolve(homedir(), selected.slice(2))
+  return resolve(selected)
+}
+
+function profileDirectory(profile) {
+  return join(dshHomeRoot(), 'profiles', profile)
+}
+
+function localStatePath(profile) {
+  return join(profileDirectory(profile), LOCAL_STATE_FILE)
+}
+
+async function profileDependencies(profile) {
+  const manifest = JSON.parse(await readFile(join(profileDirectory(profile), 'package.json'), 'utf8'))
+  return typeof manifest.dependencies === 'object' && manifest.dependencies !== null ? manifest.dependencies : {}
+}
+
+async function captureInstallState(profile, packages) {
+  const existing = await readLocalState(profile)
+  if (existing !== undefined) {
+    validateLocalState(existing, packages)
+    if (existing.root !== ROOT) throw new Error(`profile ${JSON.stringify(profile)} is already owned by local checkout ${JSON.stringify(existing.root)}`)
+    return
+  }
+  const current = await profileDependencies(profile)
+  const dependencies = Object.fromEntries(packages.map(entry => {
+    const spec = typeof current[entry.name] === 'string' ? current[entry.name] : null
+    return [entry.name, spec === entry.link ? null : spec]
+  }))
+  const state = { version: 1, root: ROOT, dependencies }
+  const path = localStatePath(profile)
+  const temporary = `${path}.${process.pid}.tmp`
+  await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, { flag: 'wx' })
+  await rename(temporary, path)
+}
+
+async function localInstallState(profile, packages) {
+  const saved = await readLocalState(profile)
+  if (saved !== undefined) {
+    validateLocalState(saved, packages)
+    if (saved.root !== ROOT) throw new Error(`profile ${JSON.stringify(profile)} is owned by local checkout ${JSON.stringify(saved.root)}, not this checkout`)
+    return saved
+  }
+
+  const current = await profileDependencies(profile)
+  if (!packages.some(entry => current[entry.name] === entry.link)) {
+    throw new Error(`profile ${JSON.stringify(profile)} has no ${LOCAL_STATE_FILE}; refusing to remove packages not proven to belong to this local installer`)
+  }
+  return {
+    version: 1,
+    root: ROOT,
+    dependencies: Object.fromEntries(packages.map(entry => {
+      const spec = typeof current[entry.name] === 'string' ? current[entry.name] : null
+      return [entry.name, spec === entry.link ? null : spec]
+    })),
+  }
+}
+
+async function verifyRestoredDependencies(profile, packages, state) {
+  const current = await profileDependencies(profile)
+  for (const entry of packages) {
+    const expected = state.dependencies[entry.name]
+    const actual = typeof current[entry.name] === 'string' ? current[entry.name] : null
+    if (actual !== expected) {
+      throw new Error(`profile ${JSON.stringify(profile)} restored ${entry.name} as ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    }
+  }
+}
+
+async function readLocalState(profile) {
+  try {
+    return JSON.parse(await readFile(localStatePath(profile), 'utf8'))
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
+function validateLocalState(state, packages) {
+  if (state === null || typeof state !== 'object' || state.version !== 1 || typeof state.root !== 'string'
+    || state.dependencies === null || typeof state.dependencies !== 'object') {
+    throw new Error(`invalid ${LOCAL_STATE_FILE}`)
+  }
+  for (const entry of packages) {
+    const spec = state.dependencies[entry.name]
+    if (spec !== null && typeof spec !== 'string') throw new Error(`invalid ${LOCAL_STATE_FILE} dependency for ${entry.name}`)
+  }
+}
+
 async function verifyArtifacts() {
   for (const path of REQUIRED_ARTIFACTS) {
     try {
@@ -172,7 +289,7 @@ function verifyInstalled(config, profile) {
     || fabricRows[0].disabled === true) {
     throw new Error(`profile ${JSON.stringify(profile)} did not activate exactly one Fabric code-runtime row`)
   }
-  verifyCompactionConfiguration(config, profile)
+  verifyInstalledCompactionMask(config, profile)
 }
 
 function verifyUninstalled(config, profile) {
@@ -187,17 +304,37 @@ function verifyUninstalled(config, profile) {
   const inheritedRows = rowsById(config, 'code-runtime')
   if (inheritedRows.length !== 1
     || inheritedRows[0].name === undefined
-    || inheritedRows[0].name === '@dsh-fabric/code-runtime-quickjs'
-    || inheritedRows[0].disabled === true) {
-    throw new Error(`profile ${JSON.stringify(profile)} did not restore exactly one enabled inherited code-runtime row`)
+    || inheritedRows[0].name === '@dsh-fabric/code-runtime-quickjs') {
+    throw new Error(`profile ${JSON.stringify(profile)} did not retain exactly one non-Fabric inherited code-runtime row`)
   }
-  verifyCompactionConfiguration(config, profile)
-  return inheritedRows[0].name
+  verifyRestoredCompaction(config, profile)
+  return inheritedRows[0]
 }
 
-function verifyCompactionConfiguration(config, profile) {
+function verifyInstalledCompactionMask(config, profile) {
+  for (const id of ['compaction-basic', 'tool-result-pruner', 'agent-presets']) {
+    const rows = rowsById(config, id)
+    if (rows.length !== 1 || rows[0].disabled !== true) {
+      throw new Error(`profile ${JSON.stringify(profile)} must contain exactly one disabled inherited ${id} row`)
+    }
+  }
+  const engine = rowsById(config, 'dsh-fabric-compaction')
+  const presetRoot = rowsById(config, 'dsh-fabric-preset-root')
+  const presets = rowsById(config, 'dsh-fabric-agent-presets')
+  if (engine.length !== 1 || engine[0].name !== '@dsh-fabric/compaction' || engine[0].disabled === true
+    || presetRoot.length !== 1 || presetRoot[0].name !== '@dsh-fabric/compaction/presets' || presetRoot[0].disabled === true
+    || presets.length !== 1 || presets[0].name !== '@deepseek-ai/dsh-agent-presets' || presets[0].disabled === true) {
+    throw new Error(`profile ${JSON.stringify(profile)} did not activate the exclusive Fabric compaction engine and host-native roster`)
+  }
+}
+
+function verifyRestoredCompaction(config, profile) {
   if (!hasNamedRow(config, '@deepseek-ai/dsh-compaction-basic')) {
-    throw new Error(`profile ${JSON.stringify(profile)} does not retain DSH compaction capability configuration`)
+    throw new Error(`profile ${JSON.stringify(profile)} does not retain the inherited DSH compaction capability`)
+  }
+  const roster = rowsById(config, 'agent-presets')
+  if (roster.length !== 1 || roster[0].name !== '@deepseek-ai/dsh-agent-presets') {
+    throw new Error(`profile ${JSON.stringify(profile)} did not retain the inherited DSH preset roster`)
   }
 }
 
@@ -223,8 +360,9 @@ function escapeRegex(value) {
 }
 
 function runPnpm(args, capture = false) {
+  const invocation = pnpmInvocation(args)
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(PNPM, args, {
+    const child = spawn(invocation.command, invocation.args, {
       cwd: ROOT,
       env: process.env,
       stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit',
@@ -234,9 +372,18 @@ function runPnpm(args, capture = false) {
     child.once('error', rejectPromise)
     child.once('close', (code, signal) => {
       if (code === 0) resolvePromise(stdout)
-      else rejectPromise(new Error(`${PNPM} ${args.join(' ')} failed${signal === null ? ` with exit code ${code}` : ` from signal ${signal}`}`))
+      else rejectPromise(new Error(`pnpm ${args.join(' ')} failed${signal === null ? ` with exit code ${code}` : ` from signal ${signal}`}`))
     })
   })
+}
+
+function pnpmInvocation(args) {
+  if (process.platform !== 'win32') return { command: 'pnpm', args }
+  const entry = process.env.npm_execpath
+  if (entry === undefined || !/\.[cm]?js$/i.test(entry)) {
+    throw new Error('on Windows, invoke this installer through pnpm run so npm_execpath identifies pnpm without a shell')
+  }
+  return { command: process.execPath, args: [entry, ...args] }
 }
 
 function printHelp() {
