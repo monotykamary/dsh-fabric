@@ -1,109 +1,166 @@
-# dsh-fabric
+<div align="center">
 
-Fabric-style deterministic compaction, activity, topology, checked code execution, durable coordination, and actor mailboxes for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+# 🧵 dsh-fabric
 
-## Capabilities
+**Fabric-style capabilities for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)**
 
-The workspace root is an installable DSH bundle that composes six packages:
+_Deterministic compaction, checked code execution, durable coordination, and live topology — delivered as native DSH plugins._
+
+[![checks](https://img.shields.io/github/actions/workflow/status/monotykamary/dsh-fabric/check.yml?branch=main&style=for-the-badge&label=checks)](https://github.com/monotykamary/dsh-fabric/actions/workflows/check.yml)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek-Harness-4D6BFE?style=for-the-badge)](https://github.com/deepseek-ai/deepseek-harness)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![license](https://img.shields.io/badge/license-MIT-f4c430?style=for-the-badge)](LICENSE)
+
+</div>
+
+---
+
+**dsh-fabric** adapts the most useful ideas from [pi-fabric](https://github.com/monotykamary/pi-fabric) to DeepSeek Harness without creating a parallel runtime. DSH ToolRuntime remains the tool and policy authority, Cordis owns component lifecycle, and Fabric adds focused providers for compaction, code execution, coordination, projections, and browser UI.
+
+## Why Fabric?
+
+| | Capability | What it unlocks |
+| :-: | --- | --- |
+| 🧠 | **Deterministic compaction** | Structured, bounded summaries without a second model request. |
+| ⚡ | **Checked Code Mode** | TypeScript validation followed by isolated QuickJS execution with strict budgets. |
+| 🕸️ | **Durable mesh** | Topics, compare-and-swap state, and crash-conservative actor mailboxes. |
+| 📡 | **Unified activity** | Fabric, workflow, and compaction events projected into one chronological surface. |
+| 🗺️ | **Live topology** | Sessions, agents, actors, topics, state, and messages in one directed graph. |
+| 🧩 | **Native composition** | External DSH plugins — no second tool registry, lifecycle, or React business-state store. |
+
+## How it fits
+
+```mermaid
+flowchart LR
+  Model[Model] --> TR[DSH ToolRuntime]
+  TR --> QJS[Checked QuickJS]
+  TR --> Mesh[Fabric Mesh]
+  Mesh --> Store[(storage-domain)]
+  DSH[DSH events] --> Host[Fabric host projection]
+  Mesh --> Host
+  Host --> UI[Activity + Topology UI]
+  Compiler[Deterministic compiler] --> Compact[DSH compaction transaction]
+  DSH --> Compiler
+```
+
+The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh Consumer, host projection, and client surfaces under seven composed rows.
+
+## Packages
 
 | Package | Responsibility |
-|---|---|
-| `@dsh-fabric/protocol` | Host-independent activity, topology, mesh, and actor records. |
-| `@dsh-fabric/compaction` | Deterministic graded summary compiler, DSH `CompactionEngine`, and authoritative masked agent-preset roster. |
-| `@dsh-fabric/host` | Required `fabric/activity` vocabulary and bounded `fabricActivity` session projection; also folds DSH workflow and compaction events. |
-| `@dsh-fabric/mesh` | Storage-domain-backed topics, compare-and-swap state, crash-conservative actor mailboxes, the `fabric_mesh` Consumer, and bounded continuation context. |
-| `@dsh-fabric/code-runtime-quickjs` | Fresh-context QuickJS WASM provider with TypeScript checking, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal. |
-| `@dsh-fabric/client-ui` | Fabric conversation tab, chronological Activity view, general directed Topology view, compact header popup, metrics, and authoritative subagent navigation. |
+| --- | --- |
+| [`@dsh-fabric/protocol`](packages/protocol) | Host-independent activity, topology, mesh, and actor records. |
+| [`@dsh-fabric/compaction`](packages/compaction) | Deterministic summary compiler, DSH `CompactionEngine`, and masked preset roster. |
+| [`@dsh-fabric/host`](packages/host) | Durable-event adapter and bounded session projection. |
+| [`@dsh-fabric/mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
+| [`@dsh-fabric/code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
+| [`@dsh-fabric/client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |
 
-The bundle disables the inherited `code-runtime`, stock compactor/pruner, and shipped preset-roster rows; it mounts QuickJS, deterministic Fabric compaction, and one host-native roster pointed exclusively at Fabric-owned presets, plus the remaining Fabric rows under distinct ids. DSH ToolRuntime remains the sole tool registry and policy authority; Cordis remains the component lifecycle. Fabric sets ToolRuntime's `maxParallelSubCalls` to `Number.MAX_SAFE_INTEGER`, effectively removing Code Mode's default ten-call overlap throttle while retaining submission order and exclusive-tool barriers.
+## Install
 
-## Develop
+Requirements: Node.js `^22.19.0 || >=24`, pnpm 11, and DSH `0.1.0-rc.6`.
 
-Requirements: Node `^22.19.0 || >=24`, pnpm 11, and DSH `0.1.0-rc.6`.
+Clone the repository and install it into your local DSH `web` profile:
 
-```sh
+```bash
+git clone https://github.com/monotykamary/dsh-fabric.git
+cd dsh-fabric
+pnpm install
+pnpm run install:local
+```
+
+The installer builds all packages, links the bundle and its six packages, and validates the composed plugin graph. It **does not** start or restart DSH. The plugin graph takes effect on the next profile load.
+
+<details>
+<summary><strong>Profiles, custom DSH homes, and uninstalling</strong></summary>
+
+```bash
+# Target another profile
+pnpm run install:local -- --profile tui
+
+# Target another DSH home
+DSH_HOME=/path/to/dsh-home pnpm run install:local -- --profile web
+
+# Reuse existing build output
+pnpm run install:local -- --skip-build
+
+# Restore the exact dependency specifications that existed before install
+pnpm run uninstall:local
+```
+
+Use the same `--profile` or `DSH_HOME` selection when uninstalling. Without its ownership-state file, the uninstaller refuses to remove packages unless this checkout's exact local links prove ownership.
+
+</details>
+
+## The `fabric_mesh` tool
+
+One Consumer exposes durable coordination through a compact action protocol:
+
+| Primitive | Actions | Guarantee |
+| --- | --- | --- |
+| **Topics** | `create_topic`, `publish`, `read_topic`, `prune_topic` | Storage-backed ordered messages with explicit retention. |
+| **State** | `get_state`, `cas_state` | Revision-checked updates; revision `0` creates an absent key. |
+| **Actors** | `create_actor`, `send_actor`, `read_mailbox` | Durable command queues addressed to stable actors. |
+| **Claims** | `claim_actor_message`, `settle_actor_message` | Token-fenced settlement and replay-safe terminal outcomes. |
+| **Discovery** | `snapshot` | Bounded metadata for rediscovering durable coordination state. |
+
+Actor claims are deliberately crash-conservative. A claimed command stays claimed after process failure, settlement requires the opaque claim token, and retrying the same settlement returns the stored result rather than executing twice.
+
+## Compaction and continuation
+
+Fabric becomes the only composed compaction backend while preserving DSH's `/compact` command, durable transaction, token meter, and backend-independent invariants.
+
+- Typed messages and lifecycle events compile into bounded **Session Goal**, **Files and Changes**, **Fabric Activity**, **Outstanding Context**, **Earlier Turns**, **Current Status**, and recent-transcript sections.
+- Reasoning blocks are erased; tool calls and results remain paired by exact identity.
+- Only the newest strict, provider-stamped snapshot can seed a later compaction.
+- Mesh contributes bounded metadata — never arbitrary payloads — so durable identifiers can be rediscovered after compaction.
+- Guidance requires rereading durable state after compaction or `TOOL_OUTCOME_UNKNOWN` instead of trusting conversational memory.
+
+See [`ADAPTATION_SWEEP.md`](ADAPTATION_SWEEP.md) for the reuse matrix, acceptance evidence, and deferred parity surfaces.
+
+## Client surfaces
+
+Fabric adds a conversation tab with:
+
+- a chronological **Activity** view for agent, workflow, mesh, and compaction events;
+- a directed **Topology** view spanning sessions, actors, topics, CAS state, and routed messages;
+- a compact header popup with status and metrics;
+- native navigation to authoritative DSH subagent sessions.
+
+Business state remains in DSH and storage-domain. Client-local state is limited to view selection, filters, expansion, and viewport state.
+
+### Client HMR
+
+Hot reload requires both watchers:
+
+1. The DeepSeek Harness checkout serving the GUI runs `pnpm run dev:web`.
+2. This workspace runs `pnpm run watch:client` to rebuild `packages/client-ui/lib/client.js`.
+
+A running server alone does not compile this repository, and the first installation of a new profile row requires a later profile load.
+
+## Development
+
+```bash
 pnpm install
 pnpm run check
 ```
 
-For local development, run the installer from this repository. It installs dependencies, builds every workspace package, links the root and all six packages into `web`, validates seven Fabric plugin rows and the exclusive compaction mask, and does not start or restart DSH:
+`pnpm run check` type-checks, builds, tests, and verifies the complete workspace. The QuickJS provider enforces fresh contexts, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal.
 
-```sh
-pnpm run install:local
-```
+## Current scope
 
-Target another profile or profile root when needed:
+This is a focused DSH adaptation, not literal pi-fabric parity. Known constraints include:
 
-```sh
-pnpm run install:local -- --profile tui
-DSH_HOME=/path/to/dsh-home pnpm run install:local -- --profile web
-```
+- DSH `0.1.0-rc.6` cannot reload logs containing Fabric's required external activity event because its persisted-event allowlist is static. Live operation and detached replay work; mesh business state remains durable.
+- The current DSH `CodeRunRequest` omits the generated SDK declaration prelude, so QuickJS checks namespace/member existence and normal TypeScript semantics while ToolRuntime remains the authoritative argument/result validator.
+- Actor mailboxes provide durable claim/settle semantics, not an always-resident autonomous actor host.
+- Fabric-owned presets are pinned adaptations of DSH `0.1.0-rc.6` and must be reviewed on host upgrades.
 
-After the first build, `--skip-build` reuses the existing `lib` artifacts:
+## Acknowledgments
 
-```sh
-pnpm run install:local -- --skip-build
-```
-
-Remove all seven local links with the matching command. The installer records exact pre-existing direct dependency specifications in the selected profile and restores them rather than deleting registry or file dependencies it did not own:
-
-```sh
-pnpm run uninstall:local
-```
-
-Use the same `--profile` or `DSH_HOME` selection as installation. Fabric masks inherited providers and the shipped preset roster through composition; it does not uninstall their packages. When no Fabric bundle predated the local links, removing them removes those masks and distinct Fabric rows, so profile recomposition restores the inherited CodeRuntime, DSH compactor/pruner, and DSH preset roster. If a registry or file `dsh-fabric` dependency already existed, uninstall restores that exact specification and leaves its composition authoritative. Independent profile overlays remain authoritative, including overlays that intentionally keep an inherited row disabled. Without its ownership-state file, the uninstaller refuses to remove packages unless this checkout's exact local links prove ownership.
-
-A registry installation of `dsh-fabric` pulls these packages through ordinary dependencies. The initial installation changes the profile plugin graph and therefore takes effect on the next profile load. This project never starts, stops, or restarts the DSH server automatically.
-
-### Client HMR
-
-DSH can hot-reload an already loaded client plugin only when both watchers run:
-
-1. The DeepSeek Harness checkout serving the GUI runs `pnpm run dev:web` so its client-module registry watches bundles.
-2. This workspace runs `pnpm run watch:client` so `packages/client-ui/lib/client.js` is rebuilt. CSS modules ride that bundle and replace their package-owned style tags on hot evaluation.
-
-A running server by itself does not compile this repository, and adding a new profile row is not equivalent to reloading an active row.
-
-## Mesh tool
-
-`fabric_mesh` supports:
-
-- `snapshot`;
-- `create_topic`, `publish`, `read_topic`, and explicit `prune_topic`;
-- `get_state` and revision-checked `cas_state` (`expected_version: 0` creates an absent key);
-- `create_actor`, `send_actor`, `read_mailbox`, explicit terminal-record `prune_mailbox`, `claim_actor_message`, and `settle_actor_message`.
-
-Identifiers, labels, returned records, and caller-owned JSON are bounded or detached at the service boundary. Prompt metadata is count-limited and shrinks to a final 16 KiB UTF-8 ceiling without carrying payloads. Actor claims are crash-conservative. A claimed command remains claimed after a process failure; settlement requires its opaque token, and repeating the same settlement token returns the stored result instead of executing twice. Mailbox pruning never removes queued or claimed commands; deleting an old terminal record explicitly ends that record's replay window. Snapshot and read counts are bounded; arbitrary payloads are fetched explicitly rather than copied into continuation context.
-
-## Compaction and continuation
-
-When the bundle is active, Fabric is the only composed compaction backend. The bundle masks DSH's `compaction-basic`, `tool-result-pruner`, and shipped `agent-presets` rows, then mounts a Fabric engine and a pinned Fabric-owned roster for Standard, Code, Minimal, and Creation modes. DSH's backend-independent `/compact` command, token meter, durable lock/replacement transaction, and compaction invariants remain authoritative infrastructure.
-
-- The deterministic compiler projects typed DSH messages plus durable Fabric/workflow lifecycle events into bounded Session Goal, Files and Changes, Fabric Activity, Outstanding Context, Earlier Turns, Current Status, and recent-transcript sections without a second model request.
-- Reasoning blocks are erased. Tool calls and results remain paired by exact call identity, and failures resolve only through later typed successes.
-- A bounded typed snapshot is stored in `compaction/summary.rawOutput`; later compactions accept only the newest strict snapshot with Fabric provider/model provenance and never trust prior summary prose.
-- The host projection folds DSH `compaction/*` lifecycle events into Activity and Topology.
-- `fabric_mesh` contributes bounded, metadata-only runtime context. DSH reassembles it after compaction so models can rediscover durable state, actor, topic, and mailbox identifiers.
-- Model guidance requires inspecting durable state after compaction or `TOOL_OUTCOME_UNKNOWN`, then resuming with CAS revisions and claim tokens rather than conversational memory.
-
-See [ADAPTATION_SWEEP.md](ADAPTATION_SWEEP.md) for the reuse matrix, acceptance evidence, and deferred parity surfaces.
-
-## Architecture
-
-- Durable mesh records use DSH `storage-domain`; session events contain only model-visible post-commit activity facts and topology updates.
-- Existing `tool-workflow/*` events are folded rather than duplicated. Workflow phases and members appear in the same topology as sessions, actors, topics, state, and routed messages.
-- The browser lazily refreshes standard DSH subagent catalogs for visible session nodes. It creates no polling protocol or business-state store.
-- QuickJS receives only `CodeRuntimeBinding` functions. It cannot import Node modules or reach host globals.
-
-## Known limitations
-
-- **Session persistence blocker:** DSH 0.1.0-rc.6 validates loaded logs against a static `KNOWN_SESSION_EVENT_TYPES` set that declaration merging cannot extend. A required `fabric/activity` event therefore works live and in detached replay, but stock persistence refuses to reload a session containing it. Mesh business state remains durable. This needs an upstream external-event registration/codec seam or native event recognition; marking the event ignorable would silently lose the projection.
-- DSH `CodeRunRequest` does not carry the generated detailed SDK declaration prelude. The QuickJS provider checks namespace/member existence and ordinary TypeScript semantics with generic JSON arguments and permissive result signatures; ToolRuntime still performs authoritative argument and result validation.
-- Actor mailboxes provide durable claim/settle semantics, not an always-resident autonomous actor host. A Consumer can drive claims through the service without changing the stored protocol.
-- Fabric's authoritative preset files and both Creation-mode Cordis authoring skills are pinned adaptations of DSH 0.1.0-rc.6. A DSH upgrade requires reviewing and refreshing those copies before changing the peer range.
-- DSH client discovery caches newly added package rows for the process lifetime; the first installation requires a later profile load. Source edits hot-reload after the row is active and both watchers are running.
-- This is a focused DSH adaptation, not literal pi-fabric parity. Schema certification, semantic recall, resident actor execution, cross-provider cost budgets, and the full Pi TUI remain deferred; see the sweep document.
+- Built for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+- Adapted from ideas and implementation experience in [pi-fabric](https://github.com/monotykamary/pi-fabric).
 
 ## License
 
-MIT. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT © [Tom Nguyen](https://github.com/monotykamary). See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
