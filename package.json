@@ -12,7 +12,8 @@
     "cordis.patch.yml",
     "README.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "ADAPTATION_SWEEP.md"
   ],
   "exports": {
     "./cordis.patch.yml": "./cordis.patch.yml",

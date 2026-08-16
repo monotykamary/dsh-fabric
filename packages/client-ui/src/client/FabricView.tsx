@@ -230,6 +230,7 @@ function kindLabel(kind: FabricNodeKind): string {
     case 'message': return '消息'
     case 'state': return '状态'
     case 'component': return '组件'
+    case 'compaction': return '上下文压缩'
   }
 }
 

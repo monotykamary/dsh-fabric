@@ -1,6 +1,5 @@
 /** Browser entry for dsh-fabric's Activity and Topology surfaces. */
 import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
-import type { SubagentCatalog } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { FabricHeaderAction } from './FabricHeaderAction.tsx'
 import { FabricView } from './FabricView.tsx'
@@ -14,20 +13,9 @@ export function apply(ctx: ClientContext): void {
   const controls = (_sessionId: SessionId): FabricControls => ({
     openNode: (rawSessionId) => {
       const sessionId = rawSessionId as SessionId
-      const snapshot = ctx.sessions.list.getSnapshot()
-      for (const [rawParentId, catalog] of Object.entries(snapshot.subagentsByParent)) {
-        const child = (catalog as typeof catalog & SubagentCatalog).entries
-          .find(entry => entry.kind === 'child' && entry.id === sessionId)
-        if (child?.kind === 'child') {
-          void ctx.sessions.openSubagent({
-            parentSessionId: rawParentId as SessionId,
-            childSessionId: sessionId,
-            mode: child.mode,
-          })
-          return
-        }
-      }
-      void ctx.sessions.open(sessionId)
+      const address = ctx.sessions.subagentAddress(sessionId)
+      if (address === undefined) ctx.sessions.open(sessionId)
+      else ctx.sessions.openSubagent(address)
     },
     refreshCatalogs: (sessionIds) => {
       for (const sessionId of new Set(sessionIds)) void ctx.sessions.refreshSubagents(sessionId as SessionId)

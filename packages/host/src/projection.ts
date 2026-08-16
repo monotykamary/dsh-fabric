@@ -10,13 +10,14 @@ import type {
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { WorkflowAgentOutcome, WorkflowStopReason } from '@deepseek-ai/dsh-workflow'
+import type {} from '@deepseek-ai/dsh-compaction'
 import type {} from '@deepseek-ai/dsh-tool-workflow/types'
 import type {} from './types.ts'
 
 const nodeStatusSchema = z.enum(['pending', 'running', 'idle', 'completed', 'failed', 'blocked', 'stopped'])
-const nodeKindSchema = z.enum(['main', 'session', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component'])
+const nodeKindSchema = z.enum(['main', 'session', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction'])
 const edgeKindSchema = z.enum(['parent', 'contains', 'member', 'publish', 'message', 'state', 'route'])
-const activityKindSchema = z.enum(['session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message'])
+const activityKindSchema = z.enum(['session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction'])
 
 const activitySchema = z.object({
   id: z.string(),
@@ -51,33 +52,85 @@ const projectionSchema = z.object({
   edges: z.array(edgeSchema),
 }) as z.ZodType<FabricActivityProjection>
 
+interface FabricProjectionState extends FabricActivityProjection {
+  workflowMembers: Record<string, {
+    runId: string
+    nodeId: string
+    sessionId: string
+    label: string
+  }>
+}
+
 /** Create the pure bounded fold registered by the host adapter. */
 export function createFabricActivityProjection(
   activityLimit = 200,
   topologyLimit = 256,
-): ProjectionDefinition<'fabricActivity', FabricActivityProjection> {
+): ProjectionDefinition<'fabricActivity', FabricProjectionState> {
   if (!Number.isSafeInteger(activityLimit) || activityLimit < 1) throw new TypeError('activityLimit must be a positive safe integer')
   if (!Number.isSafeInteger(topologyLimit) || topologyLimit < 1) throw new TypeError('topologyLimit must be a positive safe integer')
 
   return {
     key: 'fabricActivity',
     schema: projectionSchema,
-    init: () => ({ activities: [], nodes: [], edges: [] }),
+    init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
-    view: state => state,
-    stateVersion: 1,
+    view: state => ({ activities: state.activities, nodes: state.nodes, edges: state.edges }),
+    stateVersion: 2,
   }
 }
 
 function applyEvent(
-  state: FabricActivityProjection,
+  state: FabricProjectionState,
   event: SessionEvent,
   activityLimit: number,
   topologyLimit: number,
-): FabricActivityProjection {
+): FabricProjectionState {
   switch (event.type) {
     case 'fabric/activity':
       return merge(state, event.data.activity, event.data.nodes ?? [], event.data.edges ?? [], activityLimit, topologyLimit)
+    case 'compaction/start': {
+      const compactionId = String(event.data.compactionId)
+      const id = `compaction:${compactionId}`
+      return merge(state, {
+        id: `${id}:start`, kind: 'compaction', action: 'started', label: 'Context compaction',
+        status: 'running', updatedAt: event.time, nodeId: id,
+      }, [{ id, kind: 'compaction', label: 'Context compaction', status: 'running', updatedAt: event.time }], [{
+        id: `compaction-owner:${compactionId}`, source: '$session', target: id, kind: 'contains', updatedAt: event.time,
+      }], activityLimit, topologyLimit)
+    }
+    case 'compaction/summary': {
+      const compactionId = String(event.data.compactionId)
+      const id = `compaction:${compactionId}`
+      const existing = state.nodes.find(node => node.id === id)
+      const detail = `${event.data.shadowedTokenCount} tokens · seq ${event.data.shadowedRange.start}–${event.data.shadowedRange.end}`
+      return merge(state, {
+        id: `${id}:summary`, kind: 'compaction', action: 'summarized', label: existing?.label ?? 'Context compaction',
+        status: 'running', updatedAt: event.time, nodeId: id, detail,
+      }, [{ id, kind: 'compaction', label: existing?.label ?? 'Context compaction', status: 'running', updatedAt: event.time, detail }], [], activityLimit, topologyLimit)
+    }
+    case 'compaction/end': {
+      const compactionId = String(event.data.compactionId)
+      const id = `compaction:${compactionId}`
+      const existing = state.nodes.find(node => node.id === id)
+      const status = event.data.error === undefined ? 'completed' : 'failed'
+      return merge(state, {
+        id: `${id}:end`, kind: 'compaction', action: status, label: existing?.label ?? 'Context compaction',
+        status, updatedAt: event.time, nodeId: id, ...(event.data.error === undefined ? {} : { detail: event.data.error }),
+      }, [{
+        id, kind: 'compaction', label: existing?.label ?? 'Context compaction', status, updatedAt: event.time,
+        ...(event.data.error === undefined ? existing?.detail === undefined ? {} : { detail: existing.detail } : { detail: event.data.error }),
+      }], [], activityLimit, topologyLimit)
+    }
+    case 'compaction/prune': {
+      const id = `compaction:prune:${event.seq}`
+      const detail = `${event.data.shadowedTokenCount} tokens · seq ${event.data.shadowedRange.start}–${event.data.shadowedRange.end}`
+      return merge(state, {
+        id, kind: 'compaction', action: 'pruned', label: 'Tool result pruning', status: 'completed',
+        updatedAt: event.time, nodeId: id, detail,
+      }, [{ id, kind: 'compaction', label: 'Tool result pruning', status: 'completed', updatedAt: event.time, detail }], [{
+        id: `compaction-prune-owner:${event.seq}`, source: '$session', target: id, kind: 'contains', updatedAt: event.time,
+      }], activityLimit, topologyLimit)
+    }
     case 'tool-workflow/run-start': {
       const id = workflowNodeId(String(event.data.runId))
       return merge(state, {
@@ -106,31 +159,51 @@ function applyEvent(
           { id: `workflow-member:${runId}:${event.data.seq}`, source: phaseId, target: childId, kind: 'member', updatedAt: event.time },
         )
       }
-      return merge(state, {
+      const next = merge(state, {
         id: `workflow:${runId}:agent:${event.data.seq}:start`, kind: 'agent', action: 'started', label: event.data.label,
         status: 'running', updatedAt: event.time, nodeId: childId, ...(phase === undefined ? {} : { detail: phase }),
       }, nodes, edges, activityLimit, topologyLimit)
+      return {
+        ...next,
+        workflowMembers: {
+          ...next.workflowMembers,
+          [workflowMemberKey(runId, event.data.seq)]: { runId, nodeId: childId, sessionId: String(event.data.childId), label: event.data.label },
+        },
+      }
     }
     case 'tool-workflow/agent-end': {
       const runId = String(event.data.runId)
-      const edge = state.edges.find(candidate => candidate.id === `workflow-member:${runId}:${event.data.seq}`)
-      const childId = edge?.target
+      const memberKey = workflowMemberKey(runId, event.data.seq)
+      const member = state.workflowMembers[memberKey]
+      const childId = member?.nodeId
       const existing = childId === undefined ? undefined : state.nodes.find(node => node.id === childId)
       const status = outcomeStatus(event.data.outcome)
-      return merge(state, {
+      const next = merge(state, {
         id: `workflow:${runId}:agent:${event.data.seq}:end`, kind: 'agent', action: event.data.outcome,
-        label: existing?.label ?? `Agent ${event.data.seq}`, status, updatedAt: event.time,
+        label: existing?.label ?? member?.label ?? `Agent ${event.data.seq}`, status, updatedAt: event.time,
         ...(childId === undefined ? {} : { nodeId: childId }),
-      }, existing === undefined ? [] : [{ ...existing, status, updatedAt: event.time }], [], activityLimit, topologyLimit)
+      }, childId === undefined ? [] : [{
+        ...(existing ?? { id: childId, kind: 'subagent' as const, label: member?.label ?? `Agent ${event.data.seq}`, ...(member === undefined ? {} : { sessionId: member.sessionId }) }),
+        status, updatedAt: event.time,
+      }], [], activityLimit, topologyLimit)
+      const { [memberKey]: _settled, ...workflowMembers } = next.workflowMembers
+      return { ...next, workflowMembers }
     }
     case 'tool-workflow/run-end': {
       const id = workflowNodeId(String(event.data.runId))
       const existing = state.nodes.find(node => node.id === id)
       const status = stopStatus(event.data.stopReason)
-      return merge(state, {
+      const phasePrefix = `${id}:phase:`
+      const phaseNodes = state.nodes
+        .filter(node => node.kind === 'phase' && node.id.startsWith(phasePrefix))
+        .map(node => ({ ...node, status, updatedAt: event.time }))
+      const next = merge(state, {
         id: `workflow:${String(event.data.runId)}:end`, kind: 'workflow', action: event.data.stopReason,
         label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time, nodeId: id,
-      }, [{ id, kind: 'workflow', label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time }], [], activityLimit, topologyLimit)
+      }, [...phaseNodes, { id, kind: 'workflow', label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time }], [], activityLimit, topologyLimit)
+      const workflowMembers = Object.fromEntries(Object.entries(next.workflowMembers)
+        .filter(([, member]) => member.runId !== String(event.data.runId)))
+      return { ...next, workflowMembers }
     }
     default:
       return state
@@ -138,13 +211,13 @@ function applyEvent(
 }
 
 function merge(
-  state: FabricActivityProjection,
+  state: FabricProjectionState,
   activity: FabricActivityRecord,
   nodes: readonly FabricProjectedNode[],
   edges: readonly FabricProjectedEdge[],
   activityLimit: number,
   topologyLimit: number,
-): FabricActivityProjection {
+): FabricProjectionState {
   const nextNodes = nodes.reduce((values, node) => upsert(values, node, topologyLimit), state.nodes)
   const nextEdges = edges.reduce((values, edge) => upsert(values, edge, topologyLimit), state.edges)
     .filter(edge => edge.source === '$session' || nextNodes.some(node => node.id === edge.source))
@@ -153,11 +226,16 @@ function merge(
     activities: [...state.activities.filter(item => item.id !== activity.id), activity].slice(-activityLimit),
     nodes: nextNodes,
     edges: nextEdges,
+    workflowMembers: state.workflowMembers,
   }
 }
 
 function upsert<T extends { id: string }>(values: readonly T[], value: T, limit: number): T[] {
   return [...values.filter(candidate => candidate.id !== value.id), value].slice(-limit)
+}
+
+function workflowMemberKey(runId: string, seq: number): string {
+  return `${runId.length}:${runId}:${seq}`
 }
 
 function workflowNodeId(runId: string): string {

@@ -11,6 +11,7 @@ import * as StorageDomain from '@deepseek-ai/dsh-storage-domain'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as HostPlugin from '@dsh-fabric/host'
+import QuickJsCodeRuntime from '@dsh-fabric/code-runtime-quickjs'
 import { StorageFabricMesh } from '../src/provider.ts'
 import * as MeshTool from '../src/tool.ts'
 
@@ -46,6 +47,15 @@ describe('fabric_mesh ToolRuntime composition', () => {
       expect(result.isError).toBe(false)
       expect(result.value).toMatchObject({ id: 'builder', label: 'Builder' })
       expect(ctx.fabricMesh.snapshot().actors).toEqual([expect.objectContaining({ id: 'builder' })])
+      const initialAssembly = await ctx.systemPrompt.assemble()
+      expect(initialAssembly.sections).toContainEqual(expect.objectContaining({
+        name: 'fabric:mesh-guidance',
+        text: expect.stringContaining('context compaction'),
+      }))
+      expect(initialAssembly.contexts).toContainEqual(expect.objectContaining({
+        name: 'fabric:mesh-state',
+        text: expect.stringMatching(/\"actors\".*\"builder\"/),
+      }))
       expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { kind: 'actor', action: 'created' } } })
       expect(ctx.sessionProjections.snapshot(session).values.fabricActivity).toMatchObject({
         activities: [expect.objectContaining({ nodeId: 'actor:builder' })],
@@ -62,10 +72,72 @@ describe('fabric_mesh ToolRuntime composition', () => {
       const replay = await ctx.tools.execute({ signal, callId: 'fabric-mesh-5' as never, name: 'fabric_mesh', arguments: { action: 'settle_actor_message', message_id: message.id, claim_token: message.claimToken, error: 'late retry' }, agent: agent as never })
 
       expect(replay.value).toMatchObject({ status: 'completed', result: { ok: true } })
+      const rehydratedAssembly = await ctx.systemPrompt.assemble()
+      expect(rehydratedAssembly.contexts.find(context => context.name === 'fabric:mesh-state')?.text)
+        .toMatch(/\"actorMessages\".*\"completed\"/)
+
+      const snapshot = await ctx.tools.execute({ signal, callId: 'fabric-mesh-6' as never, name: 'fabric_mesh', arguments: { action: 'snapshot', limit: 1 }, agent: agent as never })
+      expect(snapshot.value).toMatchObject({ totals: { actors: 1, actorMessages: 1 }, truncated: false })
+      const excessive = await ctx.tools.execute({ signal, callId: 'fabric-mesh-7' as never, name: 'fabric_mesh', arguments: { action: 'snapshot', limit: 501 }, agent: agent as never })
+      expect(excessive.isError).toBe(true)
       expect(session.events.at(-1)).toMatchObject({ type: 'fabric/activity', data: { activity: { action: 'completed', status: 'completed' } } })
     } finally {
       for (const fiber of fibers.reverse()) await fiber.dispose()
       await rm(root, { recursive: true, force: true })
     }
   })
+
+  it('routes run_code through fabric_mesh into durable storage and projection state', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-fabric-code-mesh-'))
+    const ctx = new Context()
+    const fibers = []
+    try {
+      fibers.push(await ctx.plugin(SessionStore))
+      fibers.push(await ctx.plugin(SessionProjectionRegistry))
+      fibers.push(await ctx.plugin(HostPlugin, { activityLimit: 20, topologyLimit: 20 }))
+      fibers.push(await ctx.plugin(SystemPrompt))
+      fibers.push(await ctx.plugin(QuickJsCodeRuntime, {
+        maxWallMs: 2_000,
+        memoryLimitBytes: 32 * 1024 * 1024,
+        maxStackBytes: 256 * 1024,
+        maxOutputBytes: 64 * 1024,
+      }))
+      fibers.push(await ctx.plugin(ToolRuntime, { mode: 'code', maxParallelSubCalls: 2 }))
+      fibers.push(await ctx.plugin(Storage))
+      fibers.push(await ctx.plugin(StorageJson, { root }))
+      fibers.push(await ctx.plugin(StorageDomain, { backend: 'json' }))
+      fibers.push(await ctx.plugin(StorageFabricMesh))
+      fibers.push(await ctx.plugin(MeshTool))
+
+      const session = ctx.sessions.create(SessionId('fabric-code-mesh'))
+      const agent = { id: session.id, session, ctx, options: {}, status: 'idle' }
+      const result = await ctx.tools.execute({
+        signal,
+        callId: 'fabric-code-mesh-1' as never,
+        name: 'run_code',
+        arguments: {
+          description: 'Create a durable actor and inspect the mesh',
+          code: `
+            await tools.fabric_mesh({ action: 'create_actor', id: 'code-builder', label: 'Code Builder' });
+            return await tools.fabric_mesh({ action: 'snapshot', limit: 10 });
+          `,
+        },
+        agent: agent as never,
+      })
+
+      expect(result.isError).toBe(false)
+      expect(result.value).toMatchObject({
+        result: { actors: [expect.objectContaining({ id: 'code-builder' })] },
+      })
+      expect(ctx.fabricMesh.snapshot().actors).toContainEqual(expect.objectContaining({ id: 'code-builder' }))
+      expect(session.events.some(event => event.type === 'tool/code-dispatch')).toBe(true)
+      expect(session.events.some(event => event.type === 'fabric/activity')).toBe(true)
+      expect(ctx.sessionProjections.snapshot(session).values.fabricActivity?.nodes)
+        .toContainEqual(expect.objectContaining({ id: 'actor:code-builder' }))
+    } finally {
+      for (const fiber of fibers.reverse()) await fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
 })

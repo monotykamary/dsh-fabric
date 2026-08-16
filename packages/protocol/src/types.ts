@@ -19,6 +19,7 @@ export type FabricNodeKind =
   | 'message'
   | 'state'
   | 'component'
+  | 'compaction'
 
 /** Portable lifecycle states used by Activity and Topology views. */
 export type FabricNodeStatus = 'pending' | 'running' | 'idle' | 'completed' | 'failed' | 'blocked' | 'stopped'
@@ -27,7 +28,7 @@ export type FabricNodeStatus = 'pending' | 'running' | 'idle' | 'completed' | 'f
 export type FabricEdgeKind = 'parent' | 'contains' | 'member' | 'publish' | 'message' | 'state' | 'route'
 
 /** Kinds of timeline facts retained in a compact activity projection. */
-export type FabricActivityKind = 'session' | 'workflow' | 'phase' | 'agent' | 'mesh' | 'topic' | 'state' | 'actor' | 'message'
+export type FabricActivityKind = 'session' | 'workflow' | 'phase' | 'agent' | 'mesh' | 'topic' | 'state' | 'actor' | 'message' | 'compaction'
 
 /** One timeline fact associated with a node when applicable. */
 export interface FabricActivityRecord {

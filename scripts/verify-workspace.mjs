@@ -55,12 +55,17 @@ const artifacts = [
 ]
 for (const artifact of artifacts) await access(resolve(artifact))
 
+await access(resolve('ADAPTATION_SWEEP.md'))
+
 const clientBundle = await readFile('packages/client-ui/lib/client.js', 'utf8')
 if (!clientBundle.startsWith('window.__ModuleLoader__.load(')) {
   throw new Error('client bundle is missing the DSH module-loader wrapper')
 }
 if (/require\(["']@dsh-fabric\//.test(clientBundle)) {
   throw new Error('client bundle contains an unresolved @dsh-fabric value import')
+}
+if (!/else\s+existing\.textContent\s*=\s*css/.test(clientBundle)) {
+  throw new Error('client bundle does not hot-replace existing package CSS')
 }
 
 console.log(`verified ${references.length} composition rows, ${packageDirs.length} packages, and ${artifacts.length} artifacts`)

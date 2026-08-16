@@ -9,8 +9,8 @@ The workspace root is an installable DSH bundle that composes five packages:
 | Package | Responsibility |
 |---|---|
 | `@dsh-fabric/protocol` | Host-independent activity, topology, mesh, and actor records. |
-| `@dsh-fabric/host` | Durable `fabric/activity` vocabulary and bounded `fabricActivity` session projection; also folds DSH's existing workflow events. |
-| `@dsh-fabric/mesh` | Storage-domain-backed topics, compare-and-swap state, crash-conservative actor mailboxes, and the `fabric_mesh` tool Consumer. |
+| `@dsh-fabric/host` | Required `fabric/activity` vocabulary and bounded `fabricActivity` session projection; also folds DSH workflow and compaction events. |
+| `@dsh-fabric/mesh` | Storage-domain-backed topics, compare-and-swap state, crash-conservative actor mailboxes, the `fabric_mesh` Consumer, and bounded continuation context. |
 | `@dsh-fabric/code-runtime-quickjs` | Fresh-context QuickJS WASM provider with TypeScript checking, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal. |
 | `@dsh-fabric/client-ui` | Fabric conversation tab, chronological Activity view, general directed Topology view, compact header popup, metrics, and authoritative subagent navigation. |
 
@@ -44,7 +44,7 @@ A registry installation of `dsh-fabric` pulls these packages through ordinary de
 DSH can hot-reload an already loaded client plugin only when both watchers run:
 
 1. The DeepSeek Harness checkout serving the GUI runs `pnpm run dev:web` so its client-module registry watches bundles.
-2. This workspace runs `pnpm run watch:client` so `packages/client-ui/lib/client.js` is rebuilt.
+2. This workspace runs `pnpm run watch:client` so `packages/client-ui/lib/client.js` is rebuilt. CSS modules ride that bundle and replace their package-owned style tags on hot evaluation.
 
 A running server by itself does not compile this repository, and adding a new profile row is not equivalent to reloading an active row.
 
@@ -57,7 +57,18 @@ A running server by itself does not compile this repository, and adding a new pr
 - `get_state` and revision-checked `cas_state` (`expected_version: 0` creates an absent key);
 - `create_actor`, `send_actor`, `read_mailbox`, `claim_actor_message`, and `settle_actor_message`.
 
-Actor claims are crash-conservative. A claimed command remains claimed after a process failure; settlement requires its opaque token, and repeating the same settlement token returns the stored result instead of executing twice.
+Actor claims are crash-conservative. A claimed command remains claimed after a process failure; settlement requires its opaque token, and repeating the same settlement token returns the stored result instead of executing twice. Snapshot and read counts are bounded; arbitrary payloads are fetched explicitly rather than copied into continuation context.
+
+## Compaction and continuation
+
+The bundle keeps DSH's existing compaction provider and lifecycle. Fabric does not replace or wrap the compaction engine.
+
+- The host projection folds DSH `compaction/*` lifecycle events into Activity and Topology.
+- `fabric_mesh` contributes a bounded, metadata-only DSH runtime-context snapshot. DSH reassembles it after compaction so models can rediscover durable state, actor, topic, and mailbox identifiers.
+- Model guidance requires inspecting durable state after compaction or `TOOL_OUTCOME_UNKNOWN`, then resuming with CAS revisions and claim tokens rather than conversational memory.
+- A real Code Mode composition test covers `run_code` → ToolRuntime sub-dispatch → `fabric_mesh` → storage → session event → client projection.
+
+See [ADAPTATION_SWEEP.md](ADAPTATION_SWEEP.md) for the reuse matrix, acceptance evidence, and deferred parity surfaces.
 
 ## Architecture
 
@@ -68,9 +79,11 @@ Actor claims are crash-conservative. A claimed command remains claimed after a p
 
 ## Known limitations
 
+- **Session persistence blocker:** DSH 0.1.0-rc.6 validates loaded logs against a static `KNOWN_SESSION_EVENT_TYPES` set that declaration merging cannot extend. A required `fabric/activity` event therefore works live and in detached replay, but stock persistence refuses to reload a session containing it. Mesh business state remains durable. This needs an upstream external-event registration/codec seam or native event recognition; marking the event ignorable would silently lose the projection.
 - DSH `CodeRunRequest` does not carry the generated detailed SDK declaration prelude. The QuickJS provider checks namespace/member existence and ordinary TypeScript semantics with generic JSON arguments and permissive result signatures; ToolRuntime still performs authoritative argument and result validation.
 - Actor mailboxes provide durable claim/settle semantics, not an always-resident autonomous actor host. A Consumer can drive claims through the service without changing the stored protocol.
 - DSH client discovery caches newly added package rows for the process lifetime; the first installation requires a later profile load. Source edits hot-reload after the row is active and both watchers are running.
+- This is a focused DSH adaptation, not literal pi-fabric parity. Schema certification, semantic recall, resident actor execution, cross-provider cost budgets, and the full Pi TUI remain deferred; see the sweep document.
 
 ## License
 
