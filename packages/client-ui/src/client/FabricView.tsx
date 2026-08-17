@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type {} from '@monotykamary/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsRuntime, TranslateNS } from '@monotykamary/dsh-client-ui-slots'
 import type { FabricActivityRecord, FabricGraphNode, FabricParticipantRecord } from '@dsh-fabric/protocol'
@@ -6,6 +6,12 @@ import { buildFabricClientModel, navigateFabricTopology, type FabricNavigationDi
 import { actionLabel, activityKindLabel, formatDuration, kindLabel, statusLabel, topologyNodeLabel } from './labels.ts'
 import type { FabricControls } from './types.ts'
 import css from './fabric.module.css'
+
+/** Zoom bounds and behavior for the topology canvas. */
+const MIN_SCALE = 0.1
+const MAX_SCALE = 3
+const ZOOM_STEP = 1.25
+const VIEWPORT_INSET = 24
 
 /** Props supplied by the conversation-view registry and Fabric control injection. */
 export type FabricViewProps = PropsRuntime<'conversation.view'> & InjectFace<FabricControls> & PropsLocale<'fabric'>
@@ -19,6 +25,14 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
   const [tab, setTab] = useState<FabricTab>('topology')
   const [selectedId, setSelectedId] = useState<string>()
   const nodeRefs = useRef(new Map<string, SVGGElement>())
+  const canvasRef = useRef<HTMLDivElement | null>(null)
+  const [viewport, setViewport] = useState<{ width: number; height: number } | null>(null)
+  const [scale, setScale] = useState<number>()
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const userZoomedRef = useRef(false)
+  const layoutKeyRef = useRef('')
+  const zoomAtRef = useRef<(target: number, anchorX: number, anchorY: number) => void>(() => {})
+  const scaleRef = useRef(1)
   const catalogIds = model?.graph.nodes
     .flatMap(node => node.sessionId === undefined ? [] : [node.sessionId])
     .toSorted() ?? []
@@ -33,6 +47,117 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
     if (selectedId !== undefined && model.graph.nodes.some(node => node.id === selectedId)) return
     setSelectedId(model.graph.rootId)
   }, [model, selectedId])
+
+  // --- viewport and zoom ---
+  const viewportObserverRef = useRef<ResizeObserver | null>(null)
+  const onCanvasWheelRef = useRef<(event: WheelEvent) => void>(() => {})
+
+  useEffect(() => {
+    onCanvasWheelRef.current = (event: WheelEvent): void => {
+      if (!event.ctrlKey && !event.metaKey) return
+      event.preventDefault()
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (rect === undefined) return
+      zoomAtRef.current(
+        scaleRef.current * Math.exp(-event.deltaY * 0.002),
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+      )
+    }
+  })
+
+  // Callback ref: (re)attach viewport measurement and the non-passive wheel
+  // listener whenever the canvas mounts, surviving late topology and tab swaps.
+  const attachCanvas = useCallback((element: HTMLDivElement | null): void => {
+    viewportObserverRef.current?.disconnect()
+    viewportObserverRef.current = null
+    const previous = canvasRef.current
+    if (previous !== null) previous.removeEventListener('wheel', onCanvasWheelRef.current)
+    canvasRef.current = element
+    if (element === null) return
+    const measure = (): void => {
+      setViewport(previousViewport => {
+        const width = element.clientWidth
+        const height = element.clientHeight
+        return previousViewport !== null && previousViewport.width === width && previousViewport.height === height
+          ? previousViewport
+          : { width, height }
+      })
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    viewportObserverRef.current = observer
+    element.addEventListener('wheel', onCanvasWheelRef.current, { passive: false })
+  }, [])
+
+  const layoutKey = model === null ? '' : `${model.layout.width}x${model.layout.height}`
+  const fitScale = model === null || viewport === null
+    ? undefined
+    : Math.min(1, Math.max(MIN_SCALE, Math.min(
+        (viewport.width - VIEWPORT_INSET * 2) / model.layout.width,
+        (viewport.height - VIEWPORT_INSET * 2) / model.layout.height,
+      )))
+
+  const zoomAt = (target: number, anchorX: number, anchorY: number): void => {
+    if (model === null || viewport === null) return
+    const current = scale ?? fitScale ?? 1
+    const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, target))
+    const contentX = (anchorX - offset.x) / current
+    const contentY = (anchorY - offset.y) / current
+    const boxWidth = model.layout.width * next
+    const boxHeight = model.layout.height * next
+    const x = boxWidth <= viewport.width
+      ? (viewport.width - boxWidth) / 2
+      : Math.min(Math.max(anchorX - contentX * next, 0), boxWidth - viewport.width)
+    const y = boxHeight <= viewport.height
+      ? (viewport.height - boxHeight) / 2
+      : Math.min(Math.max(anchorY - contentY * next, 0), boxHeight - viewport.height)
+    userZoomedRef.current = true
+    setScale(next)
+    setOffset({ x, y })
+  }
+  const zoomIn = (): void => {
+    if (viewport === null) return
+    zoomAt((scale ?? fitScale ?? 1) * ZOOM_STEP, viewport.width / 2, viewport.height / 2)
+  }
+  const zoomOut = (): void => {
+    if (viewport === null) return
+    zoomAt((scale ?? fitScale ?? 1) / ZOOM_STEP, viewport.width / 2, viewport.height / 2)
+  }
+  const fitView = (): void => {
+    if (model === null || viewport === null || fitScale === undefined) return
+    userZoomedRef.current = false
+    setScale(fitScale)
+    setOffset({
+      x: Math.max(0, (viewport.width - model.layout.width * fitScale) / 2),
+      y: Math.max(0, (viewport.height - model.layout.height * fitScale) / 2),
+    })
+  }
+
+  // Fit the whole graph by default; once the user zooms, keep their view and
+  // only reset to fit when the graph itself changes shape.
+  useEffect(() => {
+    if (model === null || viewport === null || fitScale === undefined) return
+    if (layoutKey !== layoutKeyRef.current) {
+      layoutKeyRef.current = layoutKey
+      userZoomedRef.current = false
+    }
+    if (scale === undefined || !userZoomedRef.current) {
+      userZoomedRef.current = false
+      setScale(fitScale)
+      setOffset({
+        x: Math.max(0, (viewport.width - model.layout.width * fitScale) / 2),
+        y: Math.max(0, (viewport.height - model.layout.height * fitScale) / 2),
+      })
+    }
+  }, [layoutKey, fitScale, viewport, scale, model])
+
+  // Keep refs current so the stable canvas listeners always call the latest zoom closure.
+  useEffect(() => {
+    zoomAtRef.current = zoomAt
+    scaleRef.current = scale ?? fitScale ?? 1
+  })
 
   if (model === null) {
     return <section className={css.empty} aria-label={t('view.aria')}>{t('view.empty')}</section>
@@ -86,8 +211,17 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
         ? <ActivityList records={model.activity} selectableNodeIds={graphNodeIds} onSelectNode={(id) => { setSelectedId(id); setTab('topology') }} t={t} />
         : (
           <div className={css.topologyShell}>
-            <div className={css.canvas}>
-              <svg role="tree" aria-label={t('graph.aria')} width={model.layout.width} height={model.layout.height} viewBox={['0 0', model.layout.width, model.layout.height].join(' ')}>
+            <div className={css.canvasColumn}>
+              <div ref={attachCanvas} className={css.canvas}>
+                <div
+                  className={css.graphViewport}
+                  style={{
+                    width: model.layout.width * (scale ?? 1),
+                    height: model.layout.height * (scale ?? 1),
+                    transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale ?? 1})`,
+                  }}
+                >
+                  <svg role="tree" aria-label={t('graph.aria')} width={model.layout.width} height={model.layout.height} viewBox={['0 0', model.layout.width, model.layout.height].join(' ')}>
                 {model.graph.edges.map((edge) => {
                   const source = model.layout.nodes.find(value => value.node.id === edge.source)
                   const target = model.layout.nodes.find(value => value.node.id === edge.target)
@@ -133,7 +267,15 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
                     />
                   )
                 })}
-              </svg>
+                  </svg>
+                </div>
+              </div>
+              <div className={css.zoomControls} role="group" aria-label={t('zoom.aria')} title={t('zoom.wheel')}>
+                <button type="button" onClick={zoomOut} aria-label={t('zoom.out')} title={t('zoom.out')}>−</button>
+                <span className={css.zoomLevel} aria-live="polite">{Math.round((scale ?? fitScale ?? 1) * 100)}%</span>
+                <button type="button" onClick={zoomIn} aria-label={t('zoom.in')} title={t('zoom.in')}>+</button>
+                <button type="button" className={css.zoomFitButton} onClick={fitView} aria-label={t('zoom.fit')} title={t('zoom.fit')}>{t('zoom.fit')}</button>
+              </div>
             </div>
             {selectedNode === undefined ? null : (
               <NodeDetails

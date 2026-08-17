@@ -4,6 +4,7 @@ import type { LocaleDictOf } from '@monotykamary/dsh-client-ui-slots'
 export type FabricLocaleKey =
   | 'view.tab' | 'view.empty' | 'view.aria' | 'view.summary' | 'view.keyboardHint'
   | 'tabs.aria' | 'tabs.activity' | 'tabs.topology' | 'graph.aria'
+  | 'zoom.aria' | 'zoom.in' | 'zoom.out' | 'zoom.fit' | 'zoom.wheel'
   | 'node.aria' | 'node.jobs'
   | 'details.aria' | 'details.status' | 'details.tokens' | 'details.duration' | 'details.jobs' | 'details.open'
   | 'details.residency' | 'details.capabilities' | 'residency.session' | 'residency.durable'
@@ -38,6 +39,11 @@ export const en: LocaleDictOf<'fabric'> = {
   'tabs.activity': 'Activity',
   'tabs.topology': 'Topology',
   'graph.aria': 'Fabric participant and mesh resource topology',
+  'zoom.aria': 'Graph zoom controls',
+  'zoom.in': 'Zoom in',
+  'zoom.out': 'Zoom out',
+  'zoom.fit': 'Fit to view',
+  'zoom.wheel': 'Ctrl/⌘ + scroll to zoom',
   'node.aria': '{label}, {status}',
   'node.jobs': '{count} jobs',
   'details.aria': 'Node details',
@@ -133,6 +139,11 @@ export const zh: LocaleDictOf<'fabric'> = {
   'tabs.activity': '活动',
   'tabs.topology': '拓扑',
   'graph.aria': 'Fabric 参与者与网格资源拓扑',
+  'zoom.aria': '图谱缩放控制',
+  'zoom.in': '放大',
+  'zoom.out': '缩小',
+  'zoom.fit': '适应视图',
+  'zoom.wheel': '按住 Ctrl/⌘ 并滚动以缩放',
   'node.aria': '{label}，{status}',
   'node.jobs': '{count} 个任务',
   'details.aria': '节点详情',
