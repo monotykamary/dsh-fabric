@@ -113,6 +113,9 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
     devDependencies:
+      '@dsh-fabric/system-prompt':
+        specifier: workspace:^
+        version: link:../system-prompt
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -271,12 +274,24 @@ importers:
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent':
+        specifier: link:../../../deepseek-harness/packages/core/agent
+        version: link:../../../deepseek-harness/packages/core/agent
       '@monotykamary/dsh-invariants':
         specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
         version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-llm':
+        specifier: link:../../../deepseek-harness/packages/llm/llm
+        version: link:../../../deepseek-harness/packages/llm/llm
       '@monotykamary/dsh-system-prompt':
         specifier: link:../../../deepseek-harness/packages/core/system-prompt
         version: link:../../../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tools':
+        specifier: link:../../../deepseek-harness/packages/core/tools
+        version: link:../../../deepseek-harness/packages/core/tools
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
 packages:
 

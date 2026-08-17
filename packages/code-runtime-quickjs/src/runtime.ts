@@ -406,8 +406,13 @@ function formatDump(value: unknown): string {
   if (typeof value === 'string') return value
   if (typeof value === 'object' && value !== null) {
     const record = value as Record<string, unknown>
-    if (typeof record.stack === 'string') return record.stack
-    if (typeof record.message === 'string') return record.message
+    const stack = typeof record.stack === 'string' ? record.stack : ''
+    const message = typeof record.message === 'string' ? record.message : ''
+    // Prefer the message when present and carry the stack after it, so a
+    // guest error never degrades to a bare stack frame (the message is the
+    // disclosure diagnostic: unknown tool names, binding failures, …).
+    if (message.length > 0) return stack.length > 0 ? message + '\n' + stack : message
+    if (stack.length > 0) return stack
   }
   try { return JSON.stringify(value) ?? String(value) } catch { return String(value) }
 }

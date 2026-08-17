@@ -59,3 +59,24 @@ describe('@dsh-fabric/system-prompt', () => {
     expect(assembly.variables.model).toBe('probe-model')
   })
 })
+
+describe('progressive disclosure wiring', () => {
+  it('splices the assembled tools:sdk catalog down to core tools', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { fileURLToPath } = await import('node:url')
+    const section = readFileSync(fileURLToPath(new URL('./fixtures/tools-sdk-section.txt', import.meta.url)), 'utf8')
+
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(FabricSystemPrompt)
+    ctx.systemPrompt.section({ name: 'tools:sdk', order: 150, text: section })
+
+    const assembly = await ctx.systemPrompt.assemble({})
+    const sdk = assembly.sections.find(entry => entry.name === 'tools:sdk')
+    expect(sdk?.text).toContain('The available tools:')
+    expect(sdk?.text).toContain('ask_user_question')
+    expect(sdk?.text).not.toContain('subagent')
+    expect(sdk?.text).not.toContain('fabric_mesh')
+    expect(sdk?.text).not.toContain('workflow')
+  })
+})

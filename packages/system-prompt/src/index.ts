@@ -13,18 +13,53 @@
  * and dynamic sections are preserved (persona, plan policy, cordis
  * toolset, subagent reporting, Code-Mode SDK/collapse rules, the mesh
  * guidance). Tool schemas and contexts are not filtered.
+ *
+ * Progressive disclosure: the generated `tools:sdk` catalog block is
+ * spliced down to the core tool set (see disclosure.ts), the remaining
+ * tools stay registered and callable, and the combustion advisory
+ * (see advisory.ts) fires bounded capability hints when the user prompt
+ * carries evidence — the pi-fabric capability pattern, ported.
  * @module @dsh-fabric/system-prompt
  */
 
 import type { Context } from '@monotykamary/cordis'
 import type { PromptAssembly } from '@monotykamary/dsh-system-prompt'
 import type {} from '@monotykamary/dsh-system-prompt'
+import type { PreStepDecision } from '@monotykamary/dsh-agent'
+import type {} from '@monotykamary/dsh-agent'
+import type {} from '@monotykamary/dsh-tools'
+import { createUserMessage } from '@monotykamary/dsh-llm'
+import type {} from '@monotykamary/dsh-llm'
+import { AdvisoryEngine, renderAdvisoryHints, type AdvisoryFire } from './advisory.ts'
+import { discloseSdkSection, DisclosureStore, DISCLOSURE_CORE_TOOLS, type DisclosureEntry } from './disclosure.ts'
+
+declare module '@monotykamary/cordis' {
+  interface Context {
+    fabricDisclosure: DisclosureStore
+  }
+}
+
+/** Durable source record for one advisory hint message (replay-safe). */
+declare module '@monotykamary/dsh-llm' {
+  interface MessageSourceMap {
+    'fabric-advisory': {
+      kind: 'fabric-advisory'
+      form: 'capabilities'
+      entries: readonly AdvisoryFire[]
+    }
+  }
+}
 
 /** Cordis plugin name. */
 export const name = '@dsh-fabric/system-prompt'
 
-/** The prompt registry this override contributes to and minimizes. */
+/** The prompt registry this override contributes to; the advisory's runtime seams (tool registry, agent pre-step) are resolved lazily so the minimization still mounts where they are absent. */
 export const inject = ['systemPrompt']
+
+export { DisclosureStore, discloseSdkSection, DISCLOSURE_CORE_TOOLS, SDK_CATALOG_MARKER, sdkBlockEntryNames, spliceSdkBlock } from './disclosure.ts'
+export { AdvisoryEngine, renderAdvisoryHints } from './advisory.ts'
+export type { AdvisoryEntry, AdvisoryConfig, AdvisoryFire } from './advisory.ts'
+export type { DisclosureEntry } from './disclosure.ts'
 
 /**
  * The Fabric operating prompt: the bare minimums of pi-fabric's
@@ -51,6 +86,7 @@ export const FABRIC_SYSTEM_PROMPT = [
   "Overlap independent read-only calls under 'Promise.all'; sequence dependent work.",
   "Only what you 'return' or print comes back — curate results, because intermediate tool output never enters context.",
   "Search before reading: 'grep'/'glob' first, then bounded 'read' with 'offset'/'limit'.",
+  "Tool contracts are progressively disclosed: 'tools.describe(name)' returns the exact arguments of a tool the prompt does not list. Match its shape before calling; retry from validation errors, never guess.",
   '',
   '## Delegation',
   "Delegate self-contained work to subagents in the background by default and start independent delegations together.",
@@ -88,25 +124,121 @@ export const PRESERVED_SECTIONS = new Set([
   'tools:sdk',
 ])
 
+/** Advisory hint budget, mirroring pi's default (≈512 tokens at chars/4). */
+const ADVISORY_BUDGET_CHARS = 2048
+
+/**
+ * Resolve the DSH tool registry lazily, tolerating compositions without it
+ * (the advisory degrades to dormant; the prompt override keeps working).
+ */
+function resolveTools(ctx: Context): { schemas(scope?: unknown): readonly { name: string; description: string; parameters?: unknown }[] } | undefined {
+  try {
+    return ctx.get('tools') as unknown as { schemas(scope?: unknown): readonly { name: string; description: string; parameters?: unknown }[] }
+  } catch {
+    return undefined
+  }
+}
+
+/** Cap on retained per-agent advisory engines (one per session agent). */
+const MAX_ENGINES = 64
+
 /**
  * Register the Fabric operating prompt and minimize the assembled
- * native prose. The listener defers through 'next()' so it sees the
- * waterfall's authoritative result, then keeps only PRESERVED_SECTIONS.
+ * native prose, then apply progressive disclosure to the generated SDK
+ * block. The listener defers through 'next()' so it sees the
+ * waterfall's authoritative result, then keeps only PRESERVED_SECTIONS
+ * and splices the `tools:sdk` catalog down to the core tool set.
  * Tool schemas, dynamic runtime context, and prompt variables pass
  * through untouched.
+ *
+ * The agent pre-step listener publishes the agent-scoped tool catalog
+ * for `tools.describe()` and runs the combustion advisory on each
+ * user turn, injecting bounded capability hints as plugin-source
+ * user messages (the same seam the skill catalog uses).
  * @param ctx - host context carrying the prompt registry.
  */
 export function apply(ctx: Context): void {
+  const store = new DisclosureStore()
+  ctx.provide('fabricDisclosure', store)
+
   ctx.systemPrompt.section({
     name: 'fabric:system-prompt',
     order: 10,
     text: FABRIC_SYSTEM_PROMPT,
   })
-  ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
+  ctx.on('system-prompt/assemble', async (_assembly: PromptAssembly, _context, next) => {
     const assembled = await next()
     return {
       ...assembled,
-      sections: assembled.sections.filter(section => PRESERVED_SECTIONS.has(section.name)),
+      sections: assembled.sections
+        .filter(section => PRESERVED_SECTIONS.has(section.name))
+        .map(section => section.name === 'tools:sdk'
+          ? { ...section, text: discloseSdkSection(section.text, DISCLOSURE_CORE_TOOLS) }
+          : section),
     }
   }, { global: true, prepend: true })
+
+  const engines = new Map<string, AdvisoryEngine>()
+  const engineFor = (agentId: string): AdvisoryEngine => {
+    const existing = engines.get(agentId)
+    if (existing !== undefined) return existing
+    const engine = new AdvisoryEngine()
+    if (engines.size >= MAX_ENGINES) engines.delete(engines.keys().next().value as string)
+    engines.set(agentId, engine)
+    return engine
+  }
+
+  ctx.on('agent/pre-step', async (
+    { agent, messages, signal },
+    next,
+  ): Promise<PreStepDecision> => {
+    const decision = await next()
+    if (decision.kind === 'reject') return decision
+    signal.throwIfAborted()
+
+    // Publish the agent-scoped catalog so tools.describe() resolves
+    // contracts for tools the disclosed prompt no longer lists. The
+    // registry is read lazily: in compositions without the tools service
+    // the advisory stays dormant instead of blocking the prompt override.
+    let entries: DisclosureEntry[] = []
+    const registry = resolveTools(ctx)
+    if (registry !== undefined) {
+      entries = registry.schemas(agent)
+        .filter(schema => schema.name !== 'run_code')
+        .map(schema => ({
+          name: schema.name,
+          description: schema.description,
+          parameters: schema.parameters as Record<string, unknown> | undefined,
+        }))
+      store.update(agent.id, entries)
+    }
+
+    // Score the current user turn and fire bounded capability hints.
+    const text = messages
+      .filter(message => message.source.kind === 'user')
+      .flatMap(message => message.content)
+      .map(block => block.type === 'text' ? block.text : '')
+      .join('\n')
+    if (text.trim().length === 0) return decision
+
+    const engine = engineFor(agent.id)
+    engine.setCatalog(entries.map(entry => ({
+      name: entry.name,
+      description: entry.description,
+      kind: 'tool',
+      disclosed: DISCLOSURE_CORE_TOOLS.has(entry.name),
+    })))
+    const fires = engine.scorePrompt(text)
+    if (fires.length === 0) return decision
+
+    const rendered = renderAdvisoryHints(fires, ADVISORY_BUDGET_CHARS)
+    if (rendered.length === 0) return decision
+    return {
+      kind: 'enter',
+      messages: [...decision.messages, createUserMessage({
+        content: [{ type: 'text', text: rendered }],
+        source: { kind: 'fabric-advisory', form: 'capabilities', entries: fires },
+      })],
+    }
+  })
 }

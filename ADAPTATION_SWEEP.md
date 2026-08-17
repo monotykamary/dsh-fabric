@@ -36,6 +36,16 @@ The bundle installs one Fabric compaction backend and masks every stock DSH back
 6. `@dsh-fabric/mesh/tool` contributes count- and byte-bounded, metadata-only durable coordination context through DSH SystemPrompt. DSH materializes that context after a compacted checkpoint, so the model can rediscover topic, state, actor, and mailbox identifiers.
 7. Removing the bundle restores exact pre-existing direct dependency specifications, removes only locally owned links, and reveals the inherited DSH preset roster and stock per-preset compaction composition without overriding independent overlays.
 
+## Progressive tool disclosure
+
+The `@dsh-fabric/system-prompt` row now applies progressive disclosure to the generated `tools:sdk` catalog block, porting pi-fabric's split between always-on ambient guidance and on-demand references:
+
+1. **Tiered SDK block** (`src/disclosure.ts`): the assemble listener splices the rendered type block down to the core tool set (`DISCLOSURE_CORE_TOOLS` — bash, read, grep, glob, edit, write, ask_user_question, job_*, exit_plan_mode). Removed tools stay registered and callable; only the prompt shrinks. The guest type checker is built from the binding map, so programs may still call every tool. The intro, fences, and all other sections stay byte-identical.
+2. **Runtime discovery** (`@dsh-fabric/code-runtime-quickjs`): the QuickJS provider wraps the DSH-built `tools` namespace with `tools.describe(name)` (contract lookup against the per-agent catalog published at `agent/pre-step`) and `tools.call({ name, args })` (dispatch through the exact binding closures, preserving ordering and exclusive-call policy). Guest errors now carry their message beside the stack, and the ported pi `typeErrorRecoveryHint` names edit/write payload syntax failures.
+3. **Capability advisory with combustion** (`src/advisory.ts`): the pi-fabric hint engine — 1/df scoring over tool name + first-sentence descriptions, pi's exact stopword list and tokenizer, the two-word gate, phrase window 2τ, warmth EWMA with retention 1 − 1/τ, scatter cap q = 1, threshold θ = 0.9, and a burned-namespace fire budget (default 3 per session branch). Fired hints are injected as bounded `fabric-advisory` user messages (budget ≈512 tokens) listing matched tools with `tools.describe()` pointers.
+
+Documented v1 divergences from pi: the advisor scores current user messages only (not the assembled prompt); habituation episodes, the script-boundary exception, and smoke feedback are not ported; ash state is per-agent in-memory (not yet transcript- or CAS-derived); skills are carried by the entry model but not yet scored.
+
 ## Native persistence and legacy logs
 
 New Fabric activity does not append a plugin-owned event family. Top-level mesh calls attach validated presentation metadata to DSH-native `tool/result` events, Code Mode contributes native `tool/code-dispatch*` events, and the host projection folds those together with DSH workflow and compaction events. `packages/host/tests/persistence-compat.spec.ts` verifies the native event path survives JSON round-trip and projection rebuild.

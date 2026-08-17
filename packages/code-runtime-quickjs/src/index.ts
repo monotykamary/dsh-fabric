@@ -11,12 +11,16 @@ import {
 } from '@monotykamary/dsh-code-runtime'
 import type {
   CodeBindingNamespace,
+  CodeJsonValue,
   CodeRunFailure,
   CodeRunRequest,
   CodeRunResult,
 } from '@monotykamary/dsh-code-runtime'
 import { compileQuickJsProgram } from './type-checker.ts'
 import { executeQuickJs } from './runtime.ts'
+// Type-only: pulls the `fabricDisclosure` Context augmentation owned by
+// @dsh-fabric/system-prompt (erased at runtime — no runtime dependency).
+import type {} from '@dsh-fabric/system-prompt'
 
 /** QuickJS runtime budgets. */
 export interface Config {
@@ -64,16 +68,18 @@ export class QuickJsCodeRuntime extends CodeRuntime {
   async run(request: CodeRunRequest): Promise<CodeRunResult> {
     if (this.disposed) throw new Error('dsh-fabric QuickJS run() after disposal')
     const deadline = Date.now() + this.config.maxWallMs
-    const bindings = validateBindings(request.bindings)
+    const bindings = withDisclosure(validateBindings(request.bindings), this.ctx)
     if (request.signal?.aborted) return failure('abort', abortMessage(request.signal))
-    const sourceBytes = compilationInputBytes(request.program, request.bindings)
+    const sourceBytes = compilationInputBytes(request.program, [...bindings.values()])
     if (sourceBytes > this.config.maxSourceBytes) {
       return failure('exception', `TypeScript input exceeds the configured source limit (${sourceBytes} > ${this.config.maxSourceBytes} bytes)`)
     }
 
     let checked: ReturnType<typeof compileQuickJsProgram>
     try {
-      checked = compileQuickJsProgram(request.program, request.bindings)
+      // The wrapped bindings carry the describe/call disclosure members, so
+      // the guest type checker declares them exactly like any other binding.
+      checked = compileQuickJsProgram(request.program, [...bindings.values()])
     } catch (error: unknown) {
       return failure('exception', `TypeScript check failed: ${messageOf(error)}`)
     }
@@ -110,6 +116,57 @@ export class QuickJsCodeRuntime extends CodeRuntime {
     for (const run of runs) run.controller.abort(new Error('runtime disposed'))
     await Promise.allSettled(runs.map(run => run.promise))
   }
+}
+
+/**
+ * Add the progressive-disclosure surface to the `tools` namespace:
+ * `tools.describe(name)` resolves the contract of a tool the prompt no
+ * longer lists (fed by @dsh-fabric/system-prompt's per-agent catalog), and
+ * `tools.call({ name, args })` dispatches any bound tool by name through
+ * the exact binding closures DSH built for this run — same ordering,
+ * exclusive-call, and policy barriers as a direct member call. Both members
+ * join the guest type checker through the ordinary namespace shape, and
+ * every other namespace passes through untouched.
+ */
+function withDisclosure(bindings: Map<string, CodeBindingNamespace>, ctx: Context): Map<string, CodeBindingNamespace> {
+  const tools = bindings.get('tools')
+  if (tools === undefined) return bindings
+  const next = new Map(bindings)
+  // Lazy: the disclosure catalog is optional — without the
+  // @dsh-fabric/system-prompt provider, describe() reports unavailable
+  // while call() keeps working through the ordinary binding map.
+  const disclosure = (): { describe(name: string): { name: string; description: string; parameters: Record<string, unknown> | undefined } | undefined } | undefined => {
+    try {
+      return ctx.get('fabricDisclosure')
+    } catch {
+      return undefined
+    }
+  }
+  next.set('tools', {
+    ...tools,
+    functions: {
+      ...tools.functions,
+      describe: async (args) => {
+        const name = typeof args === 'string' ? args : (args as { name?: unknown } | null)?.name
+        if (typeof name !== 'string') throw new Error('tools.describe(name) requires the tool name')
+        const entry = disclosure()?.describe(name)
+        if (entry === undefined) {
+          throw new Error(`unknown tool ${JSON.stringify(name)}: the disclosure catalog does not list it`)
+        }
+        const parameters = (entry.parameters ?? {}) as Record<string, CodeJsonValue>
+        return { name: entry.name, description: entry.description, parameters }
+      },
+      call: async (args) => {
+        const record = args as { name?: unknown; args?: unknown } | null
+        const name = record?.name
+        if (typeof name !== 'string') throw new Error('tools.call({ name, args }) requires the tool name')
+        const binding = tools.functions[name]
+        if (typeof binding !== 'function') throw new Error(`unknown tool ${JSON.stringify(name)}`)
+        return binding(record?.args ?? null)
+      },
+    },
+  })
+  return next
 }
 
 function validateBindings(namespaces: readonly CodeBindingNamespace[]): Map<string, CodeBindingNamespace> {

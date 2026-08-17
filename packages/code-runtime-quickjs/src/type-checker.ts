@@ -14,6 +14,24 @@ export type QuickJsCompileResult =
   | { code: string }
   | { errors: readonly QuickJsTypeError[] }
 
+// Ported from pi-fabric's type-error-guidance: a syntax error in a program
+// that calls edit/write is often embedded payload text, not bad code.
+const PAYLOAD_CALL_PATTERN = /\btools\.(?:edit|write)\s*\(/
+const SYNTAX_ERROR_PATTERN = /expected|unterminated|unexpected|invalid character/i
+
+/**
+ * One recovery hint for syntax-shaped diagnostics when the program embeds
+ * edit/write payloads, mirroring pi-fabric's guest-side error magic.
+ * @param code - the submitted program text.
+ * @param errors - the diagnostics that failed the check.
+ * @returns the hint to append, or undefined when the pattern does not apply.
+ */
+export function typeErrorRecoveryHint(code: string, errors: readonly QuickJsTypeError[]): string | undefined {
+  if (!PAYLOAD_CALL_PATTERN.test(code)) return undefined
+  if (!errors.some(error => SYNTAX_ERROR_PATTERN.test(error.message))) return undefined
+  return 'Recovery hint: if edit/write payload text embedded in the program caused the syntax error, build the payload as a separate string value (for example a const assembled from smaller pieces, or JSON.stringify of an object) instead of inlining it inside the call.'
+}
+
 const compilerOptions: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES2022,
   module: ts.ModuleKind.ESNext,
@@ -73,7 +91,9 @@ export function compileQuickJsProgram(
     ...compiler.getSemanticDiagnostics(source),
   ]
   if (diagnostics.length > 0) {
-    return { errors: diagnostics.map(diagnostic => diagnosticOf(diagnostic, source)) }
+    const errors = diagnostics.map(diagnostic => diagnosticOf(diagnostic, source))
+    const hint = typeErrorRecoveryHint(program, errors)
+    return { errors: hint === undefined ? errors : [...errors, { line: 0, column: 0, message: hint }] }
   }
 
   let code: string | undefined
