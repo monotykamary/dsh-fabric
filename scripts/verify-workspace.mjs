@@ -16,7 +16,6 @@ await access(resolve('scripts/install-local.mjs'))
 const patch = await readFile('cordis.patch.yml', 'utf8')
 const references = [...patch.matchAll(/^\s+name:\s+['"]([^'"]+)['"]\s*$/gm)].map(match => match[1])
 const expectedReferences = [
-  '@monotykamary/dsh-agent-presets',
   '@dsh-fabric/client-ui',
   '@dsh-fabric/code-runtime-quickjs',
   '@dsh-fabric/compaction',
@@ -25,6 +24,7 @@ const expectedReferences = [
   '@dsh-fabric/mesh/provider',
   '@dsh-fabric/mesh/tool',
   '@dsh-fabric/system-prompt',
+  '@monotykamary/dsh-agent-presets',
 ]
 if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
   throw new Error('cordis.patch.yml does not contain the exact Fabric composition rows')
