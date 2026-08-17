@@ -16,9 +16,9 @@
  * @module @dsh-fabric/system-prompt
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { PromptAssembly } from '@deepseek-ai/dsh-system-prompt'
-import type {} from '@deepseek-ai/dsh-system-prompt'
+import type { Context } from '@monotykamary/cordis'
+import type { PromptAssembly } from '@monotykamary/dsh-system-prompt'
+import type {} from '@monotykamary/dsh-system-prompt'
 
 /** Cordis plugin name. */
 export const name = '@dsh-fabric/system-prompt'

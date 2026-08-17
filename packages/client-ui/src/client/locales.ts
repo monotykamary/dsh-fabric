@@ -1,24 +1,28 @@
 /** Locale bundles for Fabric Activity and Topology surfaces. */
-import type { LocaleDictOf } from '@deepseek-ai/dsh-client-ui-slots'
+import type { LocaleDictOf } from '@monotykamary/dsh-client-ui-slots'
 
 export type FabricLocaleKey =
-  | 'view.tab' | 'view.empty' | 'view.aria' | 'view.summary'
+  | 'view.tab' | 'view.empty' | 'view.aria' | 'view.summary' | 'view.keyboardHint'
   | 'tabs.aria' | 'tabs.activity' | 'tabs.topology' | 'graph.aria'
   | 'node.aria' | 'node.jobs'
   | 'details.aria' | 'details.status' | 'details.tokens' | 'details.duration' | 'details.jobs' | 'details.open'
+  | 'details.residency' | 'details.capabilities' | 'residency.session' | 'residency.durable'
+  | 'capability.openSession' | 'capability.sendMessage'
   | 'header.aria' | 'header.popover.aria' | 'header.title' | 'header.summary.one' | 'header.summary.many'
   | 'status.running' | 'status.completed' | 'status.failed' | 'status.blocked'
   | 'status.stopped' | 'status.pending' | 'status.idle'
-  | 'kind.main' | 'kind.session' | 'kind.subagent' | 'kind.workflow' | 'kind.phase' | 'kind.job'
+  | 'kind.main' | 'kind.group' | 'kind.session' | 'kind.agent' | 'kind.subagent' | 'kind.workflow' | 'kind.phase' | 'kind.job'
   | 'kind.actor' | 'kind.topic' | 'kind.message' | 'kind.state' | 'kind.component' | 'kind.compaction'
+  | 'group.main' | 'group.participants' | 'group.sessions' | 'group.agents' | 'group.actors' | 'group.mesh' | 'group.topics'
+  | 'group.topicFabric' | 'group.topicProject' | 'group.state' | 'group.stateWorld' | 'group.stateSchema' | 'group.stateProject' | 'group.components'
   | 'activity.kind.session' | 'activity.kind.workflow' | 'activity.kind.phase' | 'activity.kind.agent' | 'activity.kind.mesh'
   | 'activity.kind.topic' | 'activity.kind.state' | 'activity.kind.actor' | 'activity.kind.message' | 'activity.kind.compaction'
   | 'action.created' | 'action.published' | 'action.compareAndSwap' | 'action.sent' | 'action.claimed'
   | 'action.failed' | 'action.completed' | 'action.started' | 'action.summarized' | 'action.pruned'
-  | 'action.updated' | 'action.cancelled' | 'action.running' | 'action.idle' | 'action.error'
+  | 'action.updated' | 'action.cancelled' | 'action.running' | 'action.blocked' | 'action.idle' | 'action.error'
   | 'duration.seconds' | 'duration.minutes' | 'duration.hours'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@monotykamary/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     fabric: FabricLocaleKey
   }
@@ -28,11 +32,12 @@ export const en: LocaleDictOf<'fabric'> = {
   'view.tab': 'Fabric',
   'view.empty': 'No Fabric topology is available for this session yet.',
   'view.aria': 'Fabric orchestration view',
-  'view.summary': '{nodes} topology nodes · {active} active nodes',
+  'view.summary': '{participants} participants · {active} active · {resources} mesh resources',
+  'view.keyboardHint': '←/→ parent or child · ↑/↓ siblings · H/J/K/L also work',
   'tabs.aria': 'Fabric views',
   'tabs.activity': 'Activity',
   'tabs.topology': 'Topology',
-  'graph.aria': 'Session, workflow, and Fabric Mesh topology',
+  'graph.aria': 'Fabric participant and mesh resource topology',
   'node.aria': '{label}, {status}',
   'node.jobs': '{count} jobs',
   'details.aria': 'Node details',
@@ -41,11 +46,17 @@ export const en: LocaleDictOf<'fabric'> = {
   'details.duration': 'Duration',
   'details.jobs': 'Background jobs',
   'details.open': 'Open session',
-  'header.aria': 'Fabric overview: {count} related, {running} running',
-  'header.popover.aria': 'Fabric topology overview',
-  'header.title': 'Fabric overview',
-  'header.summary.one': '{count} related node · {running} running',
-  'header.summary.many': '{count} related nodes · {running} running',
+  'details.residency': 'Residency',
+  'details.capabilities': 'Capabilities',
+  'residency.session': 'Session-scoped',
+  'residency.durable': 'Durable',
+  'capability.openSession': 'Open session',
+  'capability.sendMessage': 'Receive messages',
+  'header.aria': 'Fabric overview: {count} related participants, {running} running',
+  'header.popover.aria': 'Fabric participant overview',
+  'header.title': 'Fabric participants',
+  'header.summary.one': '{count} related participant · {running} running',
+  'header.summary.many': '{count} related participants · {running} running',
   'status.running': 'Running',
   'status.completed': 'Completed',
   'status.failed': 'Failed',
@@ -53,8 +64,10 @@ export const en: LocaleDictOf<'fabric'> = {
   'status.stopped': 'Stopped',
   'status.pending': 'Pending',
   'status.idle': 'Idle',
-  'kind.main': 'Main session',
+  'kind.main': 'Main participant',
+  'kind.group': 'Group',
   'kind.session': 'Session',
+  'kind.agent': 'Agent',
   'kind.subagent': 'Subagent',
   'kind.workflow': 'Workflow',
   'kind.phase': 'Phase',
@@ -65,6 +78,20 @@ export const en: LocaleDictOf<'fabric'> = {
   'kind.state': 'State',
   'kind.component': 'Component',
   'kind.compaction': 'Context compaction',
+  'group.main': 'Main',
+  'group.participants': 'Participants',
+  'group.sessions': 'Sessions',
+  'group.agents': 'Agents',
+  'group.actors': 'Actors',
+  'group.mesh': 'Mesh',
+  'group.topics': 'Topics',
+  'group.topicFabric': 'Fabric',
+  'group.topicProject': 'Project topics',
+  'group.state': 'State',
+  'group.stateWorld': 'World state',
+  'group.stateSchema': 'Schema',
+  'group.stateProject': 'Project state',
+  'group.components': 'Components',
   'activity.kind.session': 'Session',
   'activity.kind.workflow': 'Workflow',
   'activity.kind.phase': 'Phase',
@@ -88,6 +115,7 @@ export const en: LocaleDictOf<'fabric'> = {
   'action.updated': 'Updated',
   'action.cancelled': 'Cancelled',
   'action.running': 'Running',
+  'action.blocked': 'Blocked',
   'action.idle': 'Idle',
   'action.error': 'Error',
   'duration.seconds': '{count}s',
@@ -99,11 +127,12 @@ export const zh: LocaleDictOf<'fabric'> = {
   'view.tab': 'Fabric',
   'view.empty': '当前会话尚无可用的 Fabric 拓扑。',
   'view.aria': 'Fabric 编排视图',
-  'view.summary': '{nodes} 个拓扑节点 · {active} 个活动节点',
+  'view.summary': '{participants} 个参与者 · {active} 个活跃 · {resources} 个网格资源',
+  'view.keyboardHint': '←/→ 跳转父级或子级 · ↑/↓ 跳转同级 · 也可使用 H/J/K/L',
   'tabs.aria': 'Fabric 视图',
   'tabs.activity': '活动',
   'tabs.topology': '拓扑',
-  'graph.aria': '会话、工作流与 Fabric Mesh 拓扑',
+  'graph.aria': 'Fabric 参与者与网格资源拓扑',
   'node.aria': '{label}，{status}',
   'node.jobs': '{count} 个任务',
   'details.aria': '节点详情',
@@ -112,11 +141,17 @@ export const zh: LocaleDictOf<'fabric'> = {
   'details.duration': '时长',
   'details.jobs': '后台任务',
   'details.open': '打开会话',
-  'header.aria': 'Fabric 概览：{count} 个相关节点，{running} 个运行中',
-  'header.popover.aria': 'Fabric 拓扑概览',
-  'header.title': 'Fabric 概览',
-  'header.summary.one': '{count} 个相关节点 · {running} 个运行中',
-  'header.summary.many': '{count} 个相关节点 · {running} 个运行中',
+  'details.residency': '驻留方式',
+  'details.capabilities': '能力',
+  'residency.session': '会话级',
+  'residency.durable': '持久',
+  'capability.openSession': '打开会话',
+  'capability.sendMessage': '接收消息',
+  'header.aria': 'Fabric 概览：{count} 个相关参与者，{running} 个运行中',
+  'header.popover.aria': 'Fabric 参与者概览',
+  'header.title': 'Fabric 参与者',
+  'header.summary.one': '{count} 个相关参与者 · {running} 个运行中',
+  'header.summary.many': '{count} 个相关参与者 · {running} 个运行中',
   'status.running': '运行中',
   'status.completed': '已完成',
   'status.failed': '失败',
@@ -124,8 +159,10 @@ export const zh: LocaleDictOf<'fabric'> = {
   'status.stopped': '已停止',
   'status.pending': '等待中',
   'status.idle': '非活动',
-  'kind.main': '主会话',
+  'kind.main': '主参与者',
+  'kind.group': '分组',
   'kind.session': '会话',
+  'kind.agent': '代理',
   'kind.subagent': '子代理',
   'kind.workflow': '工作流',
   'kind.phase': '阶段',
@@ -136,6 +173,20 @@ export const zh: LocaleDictOf<'fabric'> = {
   'kind.state': '状态',
   'kind.component': '组件',
   'kind.compaction': '上下文压缩',
+  'group.main': '主节点',
+  'group.participants': '参与者',
+  'group.sessions': '会话',
+  'group.agents': '代理',
+  'group.actors': '角色',
+  'group.mesh': '网格',
+  'group.topics': '主题',
+  'group.topicFabric': 'Fabric',
+  'group.topicProject': '项目主题',
+  'group.state': '状态',
+  'group.stateWorld': '世界状态',
+  'group.stateSchema': '模式',
+  'group.stateProject': '项目状态',
+  'group.components': '组件',
   'activity.kind.session': '会话',
   'activity.kind.workflow': '工作流',
   'activity.kind.phase': '阶段',
@@ -159,6 +210,7 @@ export const zh: LocaleDictOf<'fabric'> = {
   'action.updated': '已更新',
   'action.cancelled': '已取消',
   'action.running': '运行中',
+  'action.blocked': '已阻塞',
   'action.idle': '非活动',
   'action.error': '错误',
   'duration.seconds': '{count} 秒',

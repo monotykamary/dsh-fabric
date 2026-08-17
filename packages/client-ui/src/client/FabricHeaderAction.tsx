@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@monotykamary/dsh-client-ui-conversation/client'
+import { IconChevronDownOutline14 } from '@monotykamary/dsh-client-ui-primitives'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@monotykamary/dsh-client-ui-slots'
 import { buildFabricClientModel } from './model.ts'
 import { statusLabel } from './labels.ts'
 import type { FabricControls } from './types.ts'
@@ -41,10 +41,10 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
     }
   }, [expanded])
 
-  if (model === null || model.graph.nodes.length <= 1) return null
+  if (model === null || model.participants.length <= 1) return null
 
-  const running = model.graph.nodes.filter(node => node.status === 'running')
-  const related = model.graph.nodes.filter(node => node.sessionId !== sessionId)
+  const related = model.participants.filter(participant => participant.sessionId !== sessionId)
+  const running = related.filter(participant => participant.status === 'running')
   return (
     <div ref={rootRef} className={css.headerAction}>
       <button
@@ -63,21 +63,21 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
           <strong>{t('header.title')}</strong>
           <p className={css.headerSummary}>{t(related.length === 1 ? 'header.summary.one' : 'header.summary.many', { count: related.length, running: running.length })}</p>
           <ul>
-            {related.map(node => (
-              <li key={node.id}>
-                {node.sessionId === undefined
+            {related.map(participant => (
+              <li key={participant.id}>
+                {participant.sessionId === undefined
                   ? (
                     <div className={css.headerNode}>
-                      <span className={css.headerNodeDot} data-status={node.status} />
-                      <span>{node.label}</span>
-                      <small>{statusLabel(node.status, t)}</small>
+                      <span className={css.headerNodeDot} data-status={participant.status} />
+                      <span>{participant.name}</span>
+                      <small>{statusLabel(participant.status, t)}</small>
                     </div>
                   )
                   : (
-                    <button type="button" onClick={() => { void openNode(node.sessionId as string); setExpanded(false) }}>
-                      <span className={css.headerNodeDot} data-status={node.status} />
-                      <span>{node.label}</span>
-                      <small>{statusLabel(node.status, t)}</small>
+                    <button type="button" onClick={() => { void openNode(participant.sessionId as string); setExpanded(false) }}>
+                      <span className={css.headerNodeDot} data-status={participant.status} />
+                      <span>{participant.name}</span>
+                      <small>{statusLabel(participant.status, t)}</small>
                     </button>
                   )}
               </li>

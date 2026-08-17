@@ -1,8 +1,8 @@
 /** DSH session-event and projection adapter for Fabric activity. */
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@monotykamary/cordis'
+import z from '@monotykamary/schemastery'
 import { createFabricActivityProjection } from './projection.ts'
-import type {} from '@deepseek-ai/dsh-tool-workflow/types'
+import type {} from '@monotykamary/dsh-tool-workflow/types'
 
 export type { FabricActivityEventData } from './types.ts'
 export { createFabricActivityProjection } from './projection.ts'

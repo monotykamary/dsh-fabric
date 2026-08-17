@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime, { defineTool } from '@deepseek-ai/dsh-tools'
+import { Context } from '@monotykamary/cordis'
+import SessionStore, { SessionId } from '@monotykamary/dsh-session'
+import SystemPrompt from '@monotykamary/dsh-system-prompt'
+import ToolRuntime, { defineTool } from '@monotykamary/dsh-tools'
 import QuickJsCodeRuntime from '../src/index.ts'
 
 const config = {

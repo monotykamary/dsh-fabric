@@ -25,7 +25,7 @@ _Deterministic compaction, checked code execution, durable coordination, and liv
 | ⚡ | **Checked Code Mode** | TypeScript validation followed by isolated QuickJS execution with strict budgets. |
 | 🕸️ | **Durable mesh** | Topics, compare-and-swap state, and crash-conservative actor mailboxes. |
 | 📡 | **Unified activity** | Fabric, workflow, and compaction events projected into one chronological surface. |
-| 🗺️ | **Live topology** | Sessions, agents, actors, topics, state, and messages in one directed graph. |
+| 🗺️ | **Live topology** | Portable participants and mesh resources in a grouped tree, with message flow kept as traffic overlays. |
 | 🧩 | **Native composition** | External DSH plugins — no second tool registry, lifecycle, or React business-state store. |
 
 ## How it fits
@@ -49,9 +49,11 @@ The installable workspace bundle masks the inherited code runtime, stock compact
 
 | Package | Responsibility |
 | --- | --- |
-| [`@dsh-fabric/protocol`](packages/protocol) | Host-independent activity, topology, mesh, and actor records. |
+| [`@dsh-fabric/protocol`](packages/protocol) | Host-independent participant, activity, topology, mesh, and actor records. |
 | [`@dsh-fabric/compaction`](packages/compaction) | Deterministic summary compiler, DSH `CompactionEngine`, and masked preset roster. |
 | [`@dsh-fabric/host`](packages/host) | Durable-event adapter and bounded session projection. |
+| [`@dsh-fabric/system-prompt`](packages/system-prompt) | Fabric-owned system prompt override and native-prose minimization. |
+
 | [`@dsh-fabric/mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
 | [`@dsh-fabric/code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
 | [`@dsh-fabric/client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |
@@ -92,6 +94,14 @@ Use the same `--profile` or `DSH_HOME` selection when uninstalling. Without its 
 
 </details>
 
+## System prompt and DSH masks
+
+Installing the bundle replaces the verbose native DSH prompt prose with a minimized Fabric operating prompt:
+
+- A `fabric:system-prompt` section (right after the persona) captures pi-fabric's well-tuned long-horizon disciplines — durable `fabric_mesh` coordination, deterministic compaction recovery, Code-Mode economy, delegation fan-out, and error recovery — adapted to DSH's `run_code`, `fabric_mesh`, subagent, and workflow surfaces.
+- A `system-prompt/assemble` waterfall listener drops the native per-tool guidance one-liners whose content the tool schemas already carry, while preserving the persona, plan policy, cordis toolset guidance, subagent reporting, the Code-Mode SDK/collapse sections, and the mesh guidance. Tool schemas and the runtime-context snapshot are never filtered.
+- DSH's todo ledger and goal system (`todo_write`, `create_goal`/`get_goal`/`update_goal`, `/goal`, the goal round driver, and the goal bar) are masked. Long-horizon objectives and progress belong in `fabric_mesh` instead of same-session todo/goal records.
+
 ## The `fabric_mesh` tool
 
 One Consumer exposes durable coordination through a compact action protocol:
@@ -125,9 +135,13 @@ See [`ADAPTATION_SWEEP.md`](ADAPTATION_SWEEP.md) for the reuse matrix, acceptanc
 Fabric adds a conversation tab with:
 
 - a chronological **Activity** view for agent, workflow, mesh, and compaction events;
-- a directed **Topology** view spanning sessions, actors, topics, CAS state, and routed messages;
-- a compact header popup with status and metrics;
-- native navigation to authoritative DSH subagent sessions.
+- a left-to-right **Topology** tree: `Main → Participants → {Sessions, Agents, Actors}` and `Main → Mesh → {Topics, State}`;
+- dashed traffic overlays for topic publication, actor routing, and state access rather than message nodes in the hierarchy;
+- deterministic arrow-key or H/J/K/L navigation with focus-aware scrolling;
+- a compact header popup containing participants only;
+- native navigation to authoritative DSH sessions.
+
+`FabricParticipantRecord` is the portable semantic identity used by the UI. The DSH session mirror and Fabric actor records remain lifecycle authorities; the adapter does not introduce a second executor, registry, or client business-state store. Workflow, phase, message, and compaction facts remain available in Activity without crowding the topology.
 
 Business state remains in DSH and storage-domain. Client-local state is limited to view selection, filters, expansion, and viewport state.
 

@@ -1,13 +1,13 @@
 import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import { realpathSync } from 'node:fs'
-import type { Context } from '@deepseek-ai/cordis'
-import type { AssembleContext } from '@deepseek-ai/dsh-system-prompt'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-workspace'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-session'
-import type { JsonValue } from '@deepseek-ai/dsh-session'
+import type { Context } from '@monotykamary/cordis'
+import type { AssembleContext } from '@monotykamary/dsh-system-prompt'
+import type { Agent } from '@monotykamary/dsh-agent'
+import type {} from '@monotykamary/dsh-workspace'
+import { defineTool } from '@monotykamary/dsh-tools'
+import { snapshotJsonValue } from '@monotykamary/dsh-session'
+import type { JsonValue } from '@monotykamary/dsh-session'
 import {
   FabricActorClaimToken,
   FabricActorId,

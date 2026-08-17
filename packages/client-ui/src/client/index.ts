@@ -1,8 +1,8 @@
 /** Browser entry for dsh-fabric's Activity and Topology surfaces. */
-import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
-import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type { ChatStore } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ClientContext, SessionId } from '@monotykamary/dsh-client-runtime/client'
+import type { BoundActions } from '@monotykamary/dsh-client-ui-slots'
+import type {} from '@monotykamary/dsh-client-locale/client'
+import type { ChatStore } from '@monotykamary/dsh-client-ui-conversation/client'
 import { FabricHeaderAction } from './FabricHeaderAction.tsx'
 import { en, zh } from './locales.ts'
 import { createFabricControls } from './navigation.ts'

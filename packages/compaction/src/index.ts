@@ -1,7 +1,7 @@
 /** Deterministic Fabric compaction provider for DeepSeek Harness. */
-import { BasicCompactionEngine } from '@deepseek-ai/dsh-compaction-basic'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { ContentBlock, Message, TokenUsage, ToolSchema } from '@deepseek-ai/dsh-llm'
+import { BasicCompactionEngine } from '@monotykamary/dsh-compaction-basic'
+import type { Agent } from '@monotykamary/dsh-agent'
+import type { ContentBlock, Message, TokenUsage, ToolSchema } from '@monotykamary/dsh-llm'
 import {
   compileFabricSummary,
   FABRIC_COMPACTION_MODEL,
@@ -29,7 +29,7 @@ interface SummaryResult {
 /** DSH-native transaction policy with pi-fabric's deterministic projection compiler. */
 export class FabricCompactionEngine extends BasicCompactionEngine {
   static override inject = BasicCompactionEngine.inject
-  static override Config = BasicCompactionEngine.Config
+  static override Config: typeof BasicCompactionEngine.Config = BasicCompactionEngine.Config
 
   protected override async summarize(
     input: SummarizationInput,

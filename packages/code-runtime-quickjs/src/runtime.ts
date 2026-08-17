@@ -1,13 +1,13 @@
 import { Buffer } from 'node:buffer'
 import releaseSyncVariant from '@jitl/quickjs-singlefile-mjs-release-sync'
 import { newQuickJSWASMModuleFromVariant } from 'quickjs-emscripten-core'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-session'
+import { snapshotJsonValue } from '@monotykamary/dsh-session'
 import type {
   CodeBindingNamespace,
   CodeJsonValue,
   CodeRunFailure,
   CodeRunResult,
-} from '@deepseek-ai/dsh-code-runtime'
+} from '@monotykamary/dsh-code-runtime'
 
 export interface QuickJsExecutionOptions {
   maxWallMs: number

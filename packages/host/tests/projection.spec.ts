@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import type { SessionEvent } from '@monotykamary/dsh-session'
 import { createFabricActivityProjection } from '../src/projection.ts'
 import type {} from '../src/types.ts'
-import type {} from '@deepseek-ai/dsh-tool-workflow/types'
-import type {} from '@deepseek-ai/dsh-compaction'
+import type {} from '@monotykamary/dsh-tool-workflow/types'
+import type {} from '@monotykamary/dsh-compaction'
 
 function event(type: SessionEvent['type'], data: unknown, seq: number): SessionEvent {
   return { type, data, seq, time: 100 + seq } as SessionEvent

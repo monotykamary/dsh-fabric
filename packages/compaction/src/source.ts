@@ -1,7 +1,7 @@
 /** Source-backed selection for deterministic Fabric compaction. */
-import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
-import type { Message } from '@deepseek-ai/dsh-llm'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
+import { isCompactCheckpointSource } from '@monotykamary/dsh-compaction'
+import type { Message } from '@monotykamary/dsh-llm'
+import type { Session, SessionEvent } from '@monotykamary/dsh-session'
 import type { SessionActivityInput } from './normalize.ts'
 
 /** Raw messages and non-surface activity causally covered by one selected DSH surface region. */

@@ -13,6 +13,18 @@
 - id: agent-presets
   disabled: true
 
+# Fabric masks the DSH todo ledger, goal tools, goal round driver, slash
+# command, and goal surface: long-horizon objectives and progress live in
+# fabric_mesh instead of same-session todo/goal records.
+- id: command-goal
+  disabled: true
+
+- id: goal-round-driver
+  disabled: true
+
+- id: ui-goal
+  disabled: true
+
 # Code Mode keeps DSH ToolRuntime's ordering and exclusive-call barriers, but
 # Fabric does not throttle independent run_code sub-calls to DSH's default 10.
 - id: tools
@@ -32,7 +44,7 @@
       name: '@dsh-fabric/compaction/presets'
 
     - id: dsh-fabric-agent-presets
-      name: '@deepseek-ai/dsh-agent-presets'
+      name: '@monotykamary/dsh-agent-presets'
       inject:
         - fabricPresetRoot
       config:

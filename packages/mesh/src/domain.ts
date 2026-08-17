@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineDomain, domainTable } from '@deepseek-ai/dsh-storage-domain'
+import { defineDomain, domainTable } from '@monotykamary/dsh-storage-domain'
 import type {
   FabricActorId,
   FabricActorMessage,

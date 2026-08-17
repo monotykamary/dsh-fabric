@@ -1,8 +1,8 @@
 /** DSH message normalization for deterministic Fabric compaction. */
-import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
+import { isCompactCheckpointSource } from '@monotykamary/dsh-compaction'
 import { projectFabricMeshActivity, readFabricMeshResultMeta } from '@dsh-fabric/protocol'
 import type { FabricActivityRecord, FabricJsonValue } from '@dsh-fabric/protocol'
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, Message } from '@monotykamary/dsh-llm'
 import { clipUtf8 } from './bounds.ts'
 
 export type FabricTraceJsonValue = null | boolean | number | string | FabricTraceJsonValue[] | { [key: string]: FabricTraceJsonValue }

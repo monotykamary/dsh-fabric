@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CallId, createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import { compactCheckpointSource } from '@deepseek-ai/dsh-compaction'
+import { CallId, createAssistantMessage, createToolResultMessage, createUserMessage } from '@monotykamary/dsh-llm'
+import { Session, SessionId } from '@monotykamary/dsh-session'
+import { compactCheckpointSource } from '@monotykamary/dsh-compaction'
 import { fabricMeshResultMeta } from '@dsh-fabric/protocol'
 import {
   compileFabricSummary,

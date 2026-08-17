@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import { createUserMessage } from '@monotykamary/dsh-llm'
+import { Session, SessionId } from '@monotykamary/dsh-session'
 import { selectFabricCompactionSource } from '../src/source.ts'
 
 describe('selectFabricCompactionSource', () => {

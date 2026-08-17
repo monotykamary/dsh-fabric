@@ -1,8 +1,8 @@
 import { Buffer } from 'node:buffer'
 import { createHash, randomUUID } from 'node:crypto'
-import type { Context } from '@deepseek-ai/cordis'
-import { Service } from '@deepseek-ai/cordis'
-import type { Domain, KvTable } from '@deepseek-ai/dsh-storage-domain'
+import type { Context } from '@monotykamary/cordis'
+import { Service } from '@monotykamary/cordis'
+import type { Domain, KvTable } from '@monotykamary/dsh-storage-domain'
 import {
   FabricActorClaimToken,
   FabricActorId,

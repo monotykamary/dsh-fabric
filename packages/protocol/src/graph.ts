@@ -169,6 +169,7 @@ function findRoot(byId: ReadonlyMap<string, FabricSessionInput>, selectedSession
 }
 
 function sessionStatus(session: FabricSessionInput): FabricNodeStatus {
+  if (session.blocked === true) return 'blocked'
   if (session.running) return 'running'
   if (session.completed === true) return 'completed'
   return 'idle'

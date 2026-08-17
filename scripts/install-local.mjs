@@ -6,7 +6,7 @@ import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const DSH_PACKAGE = '@deepseek-ai/dsh@0.1.0-rc.6'
+const DSH_PACKAGE = '@monotykamary/dsh@0.1.0-rc.6'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LOCAL_STATE_FILE = '.dsh-fabric-local-install.json'
 const LINK_PATHS = [
@@ -15,6 +15,7 @@ const LINK_PATHS = [
   'packages/compaction',
   'packages/host',
   'packages/mesh',
+  'packages/system-prompt',
   'packages/code-runtime-quickjs',
   'packages/client-ui',
 ]
@@ -25,6 +26,7 @@ const EXPECTED_ROWS = [
   '@dsh-fabric/host',
   '@dsh-fabric/mesh/provider',
   '@dsh-fabric/mesh/tool',
+  '@dsh-fabric/system-prompt',
   '@dsh-fabric/client-ui',
 ]
 const REQUIRED_ARTIFACTS = [
@@ -35,6 +37,7 @@ const REQUIRED_ARTIFACTS = [
   'packages/host/lib/index.js',
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
+  'packages/system-prompt/lib/index.js',
   'packages/code-runtime-quickjs/lib/index.js',
   'packages/client-ui/lib/client.js',
 ]
@@ -294,6 +297,8 @@ function verifyInstalled(config, profile) {
     throw new Error(`profile ${JSON.stringify(profile)} did not remove the default Code Mode parallel sub-call throttle`)
   }
   verifyInstalledCompactionMask(config, profile)
+  verifyInstalledTodoGoalMask(config, profile)
+  verifyInstalledSystemPrompt(config, profile)
 }
 
 function verifyUninstalled(config, profile) {
@@ -315,6 +320,22 @@ function verifyUninstalled(config, profile) {
   return inheritedRows[0]
 }
 
+function verifyInstalledTodoGoalMask(config, profile) {
+  for (const id of ['command-goal', 'goal-round-driver', 'ui-goal']) {
+    const rows = rowsById(config, id)
+    if (rows.length !== 1 || rows[0].disabled !== true) {
+      throw new Error('profile ' + JSON.stringify(profile) + ' must contain exactly one disabled inherited ' + id + ' row')
+    }
+  }
+}
+
+function verifyInstalledSystemPrompt(config, profile) {
+  const rows = rowsById(config, 'dsh-fabric-system-prompt')
+  if (rows.length !== 1 || rows[0].name !== '@dsh-fabric/system-prompt' || rows[0].disabled === true) {
+    throw new Error('profile ' + JSON.stringify(profile) + ' did not activate the Fabric system-prompt row')
+  }
+}
+
 function verifyInstalledCompactionMask(config, profile) {
   for (const id of ['compaction-basic', 'tool-result-pruner', 'agent-presets']) {
     const rows = rowsById(config, id)
@@ -327,17 +348,17 @@ function verifyInstalledCompactionMask(config, profile) {
   const presets = rowsById(config, 'dsh-fabric-agent-presets')
   if (engine.length !== 1 || engine[0].name !== '@dsh-fabric/compaction' || engine[0].disabled === true
     || presetRoot.length !== 1 || presetRoot[0].name !== '@dsh-fabric/compaction/presets' || presetRoot[0].disabled === true
-    || presets.length !== 1 || presets[0].name !== '@deepseek-ai/dsh-agent-presets' || presets[0].disabled === true) {
+    || presets.length !== 1 || presets[0].name !== '@monotykamary/dsh-agent-presets' || presets[0].disabled === true) {
     throw new Error(`profile ${JSON.stringify(profile)} did not activate the exclusive Fabric compaction engine and host-native roster`)
   }
 }
 
 function verifyRestoredCompaction(config, profile) {
-  if (!hasNamedRow(config, '@deepseek-ai/dsh-compaction-basic')) {
+  if (!hasNamedRow(config, '@monotykamary/dsh-compaction-basic')) {
     throw new Error(`profile ${JSON.stringify(profile)} does not retain the inherited DSH compaction capability`)
   }
   const roster = rowsById(config, 'agent-presets')
-  if (roster.length !== 1 || roster[0].name !== '@deepseek-ai/dsh-agent-presets') {
+  if (roster.length !== 1 || roster[0].name !== '@monotykamary/dsh-agent-presets') {
     throw new Error(`profile ${JSON.stringify(profile)} did not retain the inherited DSH preset roster`)
   }
 }

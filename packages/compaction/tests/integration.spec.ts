@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import CommandRuntime from '@deepseek-ai/dsh-commands'
-import * as CommandCompact from '@deepseek-ai/dsh-command-compact'
-import { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import SessionStore, { Session, SessionId } from '@deepseek-ai/dsh-session'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
+import { Context } from '@monotykamary/cordis'
+import type { Agent } from '@monotykamary/dsh-agent'
+import CommandRuntime from '@monotykamary/dsh-commands'
+import * as CommandCompact from '@monotykamary/dsh-command-compact'
+import { createAssistantMessage, createUserMessage } from '@monotykamary/dsh-llm'
+import LlmRuntime from '@monotykamary/dsh-llm'
+import SessionStore, { Session, SessionId } from '@monotykamary/dsh-session'
+import TokenMeter from '@monotykamary/dsh-token-meter'
 import { FabricCompactionEngine } from '../src/index.ts'
 import { FABRIC_COMPACTION_MODEL, readLatestFabricSnapshot } from '../src/compiler.ts'
-import AgentPresets from '@deepseek-ai/dsh-agent-presets'
+import AgentPresets from '@monotykamary/dsh-agent-presets'
 import { apply as provideFabricPresetRoot, FABRIC_PRESET_ROOT } from '../src/presets.ts'
 
 const SIGNAL = new AbortController().signal
@@ -100,8 +100,8 @@ describe('Fabric /compact composition', () => {
       for (const preset of listed) {
         const composition = await presets.read(preset.id)
         expect(composition).toContain("name: '@dsh-fabric/compaction'")
-        expect(composition).not.toContain('@deepseek-ai/dsh-compaction-basic')
-        expect(composition).not.toContain('@deepseek-ai/dsh-compaction-tool-result-pruner')
+        expect(composition).not.toContain('@monotykamary/dsh-compaction-basic')
+        expect(composition).not.toContain('@monotykamary/dsh-compaction-tool-result-pruner')
       }
     } finally {
       await ctx.fiber.dispose()

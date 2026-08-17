@@ -2,7 +2,7 @@
 
 Browser feature plugin contributing a full `Fabric` conversation tab and compact session-header action.
 
-The Activity view combines session summaries with the host's bounded durable timeline. The Topology view renders general directed graphs containing sessions, workflow phases/members, topics, state, actors, and routed messages. Its session-header overview lists every related node with status, including non-navigable topology records, instead of opening an empty session-only list. The full tab follows DSH's composer-overlay contract, keeps scrolling inside the available viewport, lets pane backgrounds blend through the host's composer fade, and renders sparse graphs at their intrinsic layout size. While mounted, it lazily refreshes standard DSH subagent catalogs for visible session nodes and uses authoritative catalog addresses for navigation. Opening the already-current session selects the host-owned Chat view through the conversation's existing scoped store; opening another node retains normal session/subagent routing.
+The Activity view combines session summaries with the host's bounded durable timeline. The Topology view projects those facts into portable participants and observed mesh resources, then renders a single-parent tree under Main, Participants, and Mesh groups. Workflow, phase, message, and compaction records stay in Activity; publication, actor routing, and state access appear as dashed traffic overlays. The layout runs left-to-right, centers parents over vertically stacked children, and shares one deterministic child order with Arrow or H/J/K/L keyboard navigation. Its session-header overview lists participants only. The full tab follows DSH's composer-overlay contract and keeps scrolling and focus movement inside the available viewport. While mounted, it lazily refreshes standard DSH subagent catalogs for visible session participants and uses authoritative catalog addresses for navigation.
 
 ## Model Experience
 
@@ -21,4 +21,4 @@ None.
 ## Known Limitations and Deferred Work
 
 - Durations advance when another session snapshot causes a render. A shared clock source belongs to DSH's projection/runtime layer.
-- The topology is a deterministic layered SVG layout, not an interactive force simulation; viewport interaction remains client-local future work.
+- The topology is a deterministic structural SVG tree, not an interactive force simulation. Traffic edges do not influence placement.

@@ -1,6 +1,6 @@
 import path from 'node:path'
 import ts from 'typescript'
-import type { CodeBindingNamespace } from '@deepseek-ai/dsh-code-runtime'
+import type { CodeBindingNamespace } from '@monotykamary/dsh-code-runtime'
 
 /** One model-feedable TypeScript diagnostic. */
 export interface QuickJsTypeError {

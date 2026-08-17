@@ -1,5 +1,5 @@
-import type { Context } from '@deepseek-ai/cordis'
-import { Service } from '@deepseek-ai/cordis'
+import type { Context } from '@monotykamary/cordis'
+import { Service } from '@monotykamary/cordis'
 import type {
   FabricActorClaimToken,
   FabricActorId,
@@ -27,7 +27,7 @@ export class FabricMeshError extends Error {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@monotykamary/cordis' {
   interface Context {
     fabricMesh: FabricMesh
   }

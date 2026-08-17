@@ -1,6 +1,7 @@
 /** Deterministic Fabric compaction compiler over DSH messages. */
-import type { ContentBlock, Message } from '@deepseek-ai/dsh-llm'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { ContentBlock, Message } from '@monotykamary/dsh-llm'
+import type { Session } from '@monotykamary/dsh-session'
+import type {} from '@monotykamary/dsh-compaction'
 import { utf8Bytes } from './bounds.ts'
 import { countReasoningBlocks, normalizeMessages } from './normalize.ts'
 import type { CompactionEvent, SessionActivityInput } from './normalize.ts'

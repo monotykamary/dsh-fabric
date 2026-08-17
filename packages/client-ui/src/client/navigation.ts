@@ -1,4 +1,4 @@
-import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ClientContext, SessionId } from '@monotykamary/dsh-client-runtime/client'
 import type { FabricControls } from './types.ts'
 
 export interface FabricNavigationContext {

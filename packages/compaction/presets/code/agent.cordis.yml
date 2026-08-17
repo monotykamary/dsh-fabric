@@ -28,13 +28,13 @@
 # The preset's own persona, shadowing the deployment default for this agent.
 # `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
 - id: persona
-  name: '@deepseek-ai/dsh-persona'
+  name: '@monotykamary/dsh-persona'
   config:
     text: >-
       You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
 
 - id: agent-instructions
-  name: '@deepseek-ai/dsh-agent-instructions'
+  name: '@monotykamary/dsh-agent-instructions'
   config:
     maxBytes: 65536
 
@@ -47,21 +47,21 @@
 # registry from here; their executors (`bash-sandbox`/`pwsh-sandbox`) are
 # host-plane too.
 - id: tool-bash
-  name: '@deepseek-ai/dsh-tool-bash'
+  name: '@monotykamary/dsh-tool-bash'
   disabled: !!js process.platform === 'win32'
 
 - id: tool-pwsh
-  name: '@deepseek-ai/dsh-tool-pwsh'
+  name: '@monotykamary/dsh-tool-pwsh'
   disabled: !!js process.platform !== 'win32'
 
 
 # Both register into the host `tools` registry and provide nothing, so
 # they need no realm. The `fs` service and its policy stay in the host.
 - id: tool-fs
-  name: '@deepseek-ai/dsh-tool-fs'
+  name: '@monotykamary/dsh-tool-fs'
 
 - id: tool-fs-search
-  name: '@deepseek-ai/dsh-tool-fs-search'
+  name: '@monotykamary/dsh-tool-fs-search'
   config:
     sampleOverCapGlobResults: false
 
@@ -74,7 +74,7 @@
 # owning agent anyway, so one host instance serves every session. What a preset
 # chooses is whether its agent can collect and stop background work at all.
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: '@monotykamary/dsh-tool-jobs'
 
 
 # The skill REGISTRY lives in the host composition and is layered per scope:
@@ -83,10 +83,10 @@
 # `tool-skill` gives them the catalog and loader; the merged catalog also
 # carries whatever the deployment registered globally (repository plugins).
 - id: skill-filesystem
-  name: '@deepseek-ai/dsh-skill-filesystem'
+  name: '@monotykamary/dsh-skill-filesystem'
 
 - id: tool-skill
-  name: '@deepseek-ai/dsh-tool-skill'
+  name: '@monotykamary/dsh-tool-skill'
 
 
 # Only the model-facing tool. The goal SERVICE, its session driver, and the
@@ -95,8 +95,10 @@
 # resolves `goals` on the host and an entry-local realm here would hide it. The
 # registry is keyed by session anyway, so one host instance serves every
 # session. What a preset chooses is whether its agent can call the goal tool.
+# Fabric masks DSH goal tools and the /goal surface; long-horizon objectives live in fabric_mesh.
 - id: tool-goal
-  name: '@deepseek-ai/dsh-tool-goal'
+  name: '@monotykamary/dsh-tool-goal'
+  disabled: true
 
 
 # Plan state is per-agent by nature, so an entry-local realm is not a
@@ -108,7 +110,7 @@
     planMode: true
   config:
     - id: plan-mode
-      name: '@deepseek-ai/dsh-plan-mode'
+      name: '@monotykamary/dsh-plan-mode'
       config:
         section: |
               You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
@@ -134,7 +136,7 @@
       name: '@dsh-fabric/compaction'
 
     - id: command-compact
-      name: '@deepseek-ai/dsh-command-compact'
+      name: '@monotykamary/dsh-command-compact'
 
 
 
@@ -154,20 +156,20 @@
     workflowEngine: true
   config:
     - id: tool-subagent-control
-      name: '@deepseek-ai/dsh-tool-subagent-control'
+      name: '@monotykamary/dsh-tool-subagent-control'
 
     - id: tool-subagent-list-agents
-      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+      name: '@monotykamary/dsh-tool-subagent-control/list-agents'
 
     - id: tool-subagent
-      name: '@deepseek-ai/dsh-tool-subagent'
+      name: '@monotykamary/dsh-tool-subagent'
       config:
         provider: spawn
         toolName: subagent
         backgroundMode: continuable
 
     - id: tool-subagent-fork
-      name: '@deepseek-ai/dsh-tool-subagent'
+      name: '@monotykamary/dsh-tool-subagent'
       config:
         provider: fork
         toolName: subagent_fork
@@ -177,7 +179,7 @@
     # remove `disabled` from either ordinary tool row to expose that product
     # only to agents composed from the copy.
     - id: tool-subagent-codex
-      name: '@deepseek-ai/dsh-tool-subagent'
+      name: '@monotykamary/dsh-tool-subagent'
       disabled: true
       config:
         provider: codex
@@ -186,7 +188,7 @@
         maxDepth: provider-managed
 
     - id: tool-subagent-claude-code
-      name: '@deepseek-ai/dsh-tool-subagent'
+      name: '@monotykamary/dsh-tool-subagent'
       disabled: true
       config:
         provider: claude-code
@@ -195,32 +197,33 @@
         maxDepth: provider-managed
 
     - id: workflow-worker-thread
-      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      name: '@monotykamary/dsh-workflow-worker-thread'
       config:
         provider: spawn
 
     - id: tool-workflow
-      name: '@deepseek-ai/dsh-tool-workflow'
+      name: '@monotykamary/dsh-tool-workflow'
 
     - id: tool-ralph
-      name: '@deepseek-ai/dsh-tool-ralph'
+      name: '@monotykamary/dsh-tool-ralph'
       config:
         subagentProvider: spawn
         maxRounds: 64
 
 
 - id: tool-ask-user
-  name: '@deepseek-ai/dsh-tool-ask-user'
-
+  name: '@monotykamary/dsh-tool-ask-user'
+# Fabric masks the DSH todo ledger; long-horizon progress lives in fabric_mesh.
 - id: tool-todo
-  name: '@deepseek-ai/dsh-tool-todo'
+  name: '@monotykamary/dsh-tool-todo'
+  disabled: true
   config:
     allowParallelInProgress: true
 
 # The `web` service and its search provider stay in the host composition; only
 # the model-facing tool is per-session.
 - id: tool-web
-  name: '@deepseek-ai/dsh-tool-web'
+  name: '@monotykamary/dsh-tool-web'
   config:
     fetch: false
     searchTimeoutMs: 60000
@@ -230,6 +233,6 @@
 # rather than assuming it: a deployment that composes no TypeScript runtime
 # fails this preset at mount, naming this id, instead of at the first request.
 - id: tool-presentation
-  name: '@deepseek-ai/dsh-agent-tool-presentation'
+  name: '@monotykamary/dsh-agent-tool-presentation'
   config:
     mode: code

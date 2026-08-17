@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@monotykamary/cordis'
 import { FabricActorId, FabricStateKey } from '@dsh-fabric/protocol'
 import { StorageFabricMesh } from '../src/provider.ts'
 import type { FabricMeshWorkspace } from '../src/index.ts'

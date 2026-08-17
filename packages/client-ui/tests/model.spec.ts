@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionListState, SessionSummary } from '@monotykamary/dsh-client-runtime/client'
 import type {} from '@dsh-fabric/host/types'
-import { buildFabricClientModel, layoutFabricTree } from '../src/client/model.ts'
+import { buildFabricClientModel, layoutFabricTree, navigateFabricTopology } from '../src/client/model.ts'
 
 function summary(id: string, parentId?: string): SessionSummary {
   return {
@@ -38,23 +38,120 @@ function state(): SessionListState {
 }
 
 describe('buildFabricClientModel', () => {
-  it('projects lineage and host activity into one deterministic layout', () => {
+  it('projects semantic participants while retaining operational activity', () => {
     const model = buildFabricClientModel(state(), 'child', 1_000)
-    expect(model?.graph.nodes.map(node => node.id)).toEqual(['session:main', 'session:child', 'workflow:1'])
-    expect(model?.active.map(node => node.id)).toEqual(['workflow:1', 'session:child'])
-    expect(model?.activity[0]?.label).toBe('audit')
-    expect(model?.layout.nodes.find(node => node.node.id === 'session:main')?.y)
-      .toBeLessThan(model?.layout.nodes.find(node => node.node.id === 'session:child')?.y ?? 0)
+    expect(model?.graph.nodes.map(node => node.id)).toEqual([
+      'session:main',
+      'session:child',
+      'group:participants',
+      'group:participants:agents',
+    ])
+    expect(model?.participants.map(participant => [participant.id, participant.kind])).toEqual([
+      ['session:main', 'root'],
+      ['session:child', 'agent'],
+    ])
+    expect(model?.active.map(participant => participant.id)).toEqual(['session:child'])
+    expect(model?.activity[0]).toMatchObject({ label: 'audit', nodeId: 'session:main' })
   })
 
-  it('lays out cyclic traffic without recursive traversal', () => {
+  it('places hierarchy left-to-right and shares its child order with keyboard navigation', () => {
+    const model = buildFabricClientModel(state(), 'child', 1_000)
+    if (model === null) throw new Error('missing model')
+    const x = (id: string) => model.layout.nodes.find(value => value.node.id === id)?.x ?? 0
+    expect(model.layout.nodes.map(value => value.node.id)).toEqual([
+      'session:main',
+      'group:participants',
+      'group:participants:agents',
+      'session:child',
+    ])
+    expect(x('session:main')).toBeLessThan(x('group:participants'))
+    expect(x('group:participants')).toBeLessThan(x('group:participants:agents'))
+    expect(x('group:participants:agents')).toBeLessThan(x('session:child'))
+    expect(navigateFabricTopology(model.layout, 'session:main', 'child')).toBe('group:participants')
+    expect(navigateFabricTopology(model.layout, 'session:child', 'parent')).toBe('group:participants:agents')
+  })
+
+  it('stacks a wide sibling level vertically instead of expanding canvas width', () => {
+    const children = Array.from({ length: 12 }, (_, index) => ({
+      id: ('session:child-' + index) as never,
+      sessionId: 'child-' + index,
+      kind: 'agent' as const,
+      label: 'Child ' + index,
+      status: 'idle' as const,
+      updatedAt: index,
+      order: 0,
+      jobCount: 0,
+    }))
+    const root = {
+      id: 'session:root' as never,
+      sessionId: 'root',
+      kind: 'main' as const,
+      label: 'Root',
+      status: 'idle' as const,
+      updatedAt: 0,
+      order: 0,
+      jobCount: 0,
+    }
+    const layout = layoutFabricTree({
+      rootId: root.id,
+      nodes: [root, ...children],
+      edges: children.map((child, index) => ({
+        id: ('edge:' + index) as never,
+        source: root.id,
+        target: child.id,
+        kind: 'contains' as const,
+        role: 'structure' as const,
+      })),
+      activities: [],
+    })
+    const positionedChildren = layout.nodes.filter(value => value.node.kind === 'agent')
+    expect(new Set(positionedChildren.map(value => value.x))).toHaveLength(1)
+    expect(new Set(positionedChildren.map(value => value.y))).toHaveLength(children.length)
+    expect(layout.width).toBe(640)
+    expect(navigateFabricTopology(layout, positionedChildren[0]?.node.id ?? '', 'next')).toBe(positionedChildren[1]?.node.id)
+  })
+
+  it('lays out deeply nested structural trees without recursive overflow', () => {
+    const depth = 3_000
+    const nodes = Array.from({ length: depth }, (_, index) => ({
+      id: ('deep:' + index) as never,
+      kind: (index === 0 ? 'main' : 'session') as 'main' | 'session',
+      label: 'Deep ' + index,
+      status: 'idle' as const,
+      updatedAt: index,
+      jobCount: 0,
+    }))
+    const layout = layoutFabricTree({
+      rootId: nodes[0]?.id ?? '' as never,
+      nodes,
+      edges: nodes.slice(1).map((node, index) => ({
+        id: ('deep-edge:' + index) as never,
+        source: nodes[index]?.id ?? '' as never,
+        target: node.id,
+        kind: 'parent' as const,
+        role: 'structure' as const,
+      })),
+      activities: [],
+    })
+    expect(layout.nodes).toHaveLength(depth)
+    expect(layout.nodes.find(value => value.node.id === 'deep:' + (depth - 1))?.depth).toBe(depth - 1)
+  })
+
+  it('ignores cyclic traffic when laying out the structural tree', () => {
     const model = buildFabricClientModel(state(), 'child', 1_000)
     const graph = model?.graph
     if (graph === undefined) throw new Error('missing graph')
     const layout = layoutFabricTree({
       ...graph,
-      edges: [...graph.edges, { id: 'cycle' as never, source: 'workflow:1' as never, target: 'session:main' as never, kind: 'route' }],
+      edges: [...graph.edges, {
+        id: 'cycle' as never,
+        source: 'session:child' as never,
+        target: 'session:main' as never,
+        kind: 'route',
+        role: 'traffic',
+      }],
     })
     expect(layout.nodes).toHaveLength(graph.nodes.length)
+    expect(layout.nodes.find(value => value.node.id === 'session:child')?.depth).toBe(3)
   })
 })

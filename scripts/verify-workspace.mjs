@@ -2,6 +2,8 @@ import { access, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+const nl = '\n'
+
 const root = JSON.parse(await readFile('package.json', 'utf8'))
 if (root.scripts?.['install:local'] !== 'node scripts/install-local.mjs') {
   throw new Error('package.json does not expose the local installer')
@@ -14,7 +16,7 @@ await access(resolve('scripts/install-local.mjs'))
 const patch = await readFile('cordis.patch.yml', 'utf8')
 const references = [...patch.matchAll(/^\s+name:\s+['"]([^'"]+)['"]\s*$/gm)].map(match => match[1])
 const expectedReferences = [
-  '@deepseek-ai/dsh-agent-presets',
+  '@monotykamary/dsh-agent-presets',
   '@dsh-fabric/client-ui',
   '@dsh-fabric/code-runtime-quickjs',
   '@dsh-fabric/compaction',
@@ -22,6 +24,7 @@ const expectedReferences = [
   '@dsh-fabric/host',
   '@dsh-fabric/mesh/provider',
   '@dsh-fabric/mesh/tool',
+  '@dsh-fabric/system-prompt',
 ]
 if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
   throw new Error('cordis.patch.yml does not contain the exact Fabric composition rows')
@@ -37,13 +40,21 @@ for (const id of ['compaction-basic', 'tool-result-pruner', 'agent-presets']) {
     throw new Error(`cordis.patch.yml must disable the inherited ${id} row`)
   }
 }
+for (const id of ['command-goal', 'goal-round-driver', 'ui-goal']) {
+  if (!patch.includes('- id: ' + id + nl + '  disabled: true')) {
+    throw new Error('cordis.patch.yml must disable the inherited ' + id + ' row')
+  }
+}
+if (!patch.includes('- id: dsh-fabric-system-prompt' + nl + "      name: '@dsh-fabric/system-prompt'")) {
+  throw new Error('cordis.patch.yml must insert the Fabric system-prompt override')
+}
 if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]@dsh-fabric\/compaction['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric compaction engine')
 }
 if (!/^    - id: dsh-fabric-preset-root\r?\n      name: ['"]@dsh-fabric\/compaction\/presets['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric preset-root provider')
 }
-if (!/^    - id: dsh-fabric-agent-presets\r?\n      name: ['"]@deepseek-ai\/dsh-agent-presets['"]$/m.test(patch)
+if (!/^    - id: dsh-fabric-agent-presets\r?\n      name: ['"]@monotykamary\/dsh-agent-presets['"]$/m.test(patch)
   || !/^          - path: !!js ctx\.fabricPresetRoot\r?\n            trust: system$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the host-native Fabric preset roster with a system-trusted package root')
 }
@@ -57,7 +68,7 @@ for (const reference of references) {
   }
 }
 
-const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'code-runtime-quickjs', 'client-ui']
+const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
 for (const directory of packageDirs) {
   const manifestPath = `packages/${directory}/package.json`
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
@@ -74,7 +85,7 @@ for (const directory of packageDirs) {
   if (hasClientExport !== hasClientDeclaration) {
     throw new Error(`${manifest.name} must declare both exports["./client"] and dsh.client, or neither`)
   }
-  if (directory === 'client-ui' && !manifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-locale')) {
+  if (directory === 'client-ui' && !manifest.dsh.client.inject.includes('@monotykamary/dsh-client-locale')) {
     throw new Error(`${manifest.name} must inject the DSH client locale service`)
   }
   if ((directory === 'host' || directory === 'client-ui') && !manifest.files.includes('THIRD_PARTY_NOTICES.md')) {
@@ -93,6 +104,8 @@ const artifacts = [
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
   'packages/mesh/lib/invariant.js',
+  'packages/system-prompt/lib/index.js',
+  'packages/system-prompt/lib/invariant.js',
   'packages/code-runtime-quickjs/lib/index.js',
   'packages/code-runtime-quickjs/lib/invariant.js',
   'packages/client-ui/lib/index.js',
@@ -108,6 +121,7 @@ for (const artifact of [
   'packages/host/lib/index.js',
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
+  'packages/system-prompt/lib/index.js',
   'packages/client-ui/lib/index.js',
 ]) {
   const module = await import(pathToFileURL(resolve(artifact)).href)
@@ -120,14 +134,25 @@ for (const artifact of [
 for (const preset of ['standard', 'code', 'cordis', 'minimal']) {
   const composition = await readFile(`packages/compaction/presets/${preset}/agent.cordis.yml`, 'utf8')
   if ((composition.match(/@dsh-fabric\/compaction/g) ?? []).length !== 1
-    || !composition.includes('@deepseek-ai/dsh-command-compact')
-    || composition.includes('@deepseek-ai/dsh-compaction-basic')
-    || composition.includes('@deepseek-ai/dsh-compaction-tool-result-pruner')
+    || !composition.includes('@monotykamary/dsh-command-compact')
+    || composition.includes('@monotykamary/dsh-compaction-basic')
+    || composition.includes('@monotykamary/dsh-compaction-tool-result-pruner')
     || /@dsh-fabric\/compaction[\s\S]{0,120}auto:\s*false/.test(composition)) {
     throw new Error(`Fabric preset ${preset} does not exclusively compose Fabric compaction`)
   }
 }
 
+for (const preset of ['standard', 'code', 'cordis', 'minimal']) {
+  const composition = await readFile('packages/compaction/presets/' + preset + '/agent.cordis.yml', 'utf8')
+  const todoMasked = composition.includes('- id: tool-todo' + nl + "  name: '@monotykamary/dsh-tool-todo'" + nl + '  disabled: true')
+  const goalMasked = composition.includes('- id: tool-goal' + nl + "  name: '@monotykamary/dsh-tool-goal'" + nl + '  disabled: true')
+  if (composition.includes('@monotykamary/dsh-tool-todo') && !todoMasked) {
+    throw new Error('Fabric preset ' + preset + ' composes the DSH todo tool without masking it')
+  }
+  if (composition.includes('@monotykamary/dsh-tool-goal') && !goalMasked) {
+    throw new Error('Fabric preset ' + preset + ' composes the DSH goal tool without masking it')
+  }
+}
 for (const asset of [
   'packages/host/THIRD_PARTY_NOTICES.md',
   'packages/client-ui/THIRD_PARTY_NOTICES.md',

@@ -9,17 +9,17 @@ import type {
   FabricProjectedEdge,
   FabricProjectedNode,
 } from '@dsh-fabric/protocol'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import type { WorkflowAgentOutcome, WorkflowStopReason } from '@deepseek-ai/dsh-workflow'
-import type {} from '@deepseek-ai/dsh-compaction'
-import type {} from '@deepseek-ai/dsh-tool-workflow/types'
-import type {} from '@deepseek-ai/dsh-tools'
+import type { ProjectionDefinition } from '@monotykamary/dsh-session-projection'
+import { snapshotJsonValue } from '@monotykamary/dsh-session'
+import type { SessionEvent } from '@monotykamary/dsh-session'
+import type { WorkflowAgentOutcome, WorkflowStopReason } from '@monotykamary/dsh-workflow'
+import type {} from '@monotykamary/dsh-compaction'
+import type {} from '@monotykamary/dsh-tool-workflow/types'
+import type {} from '@monotykamary/dsh-tools'
 import type {} from './types.ts'
 
 const nodeStatusSchema = z.enum(['pending', 'running', 'idle', 'completed', 'failed', 'blocked', 'stopped'])
-const nodeKindSchema = z.enum(['main', 'session', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction'])
+const nodeKindSchema = z.enum(['main', 'group', 'session', 'agent', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction'])
 const edgeKindSchema = z.enum(['parent', 'contains', 'member', 'publish', 'message', 'state', 'route'])
 const activityKindSchema = z.enum(['session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction'])
 

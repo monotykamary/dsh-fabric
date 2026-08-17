@@ -32,7 +32,7 @@
     "@dsh-fabric/mesh": "workspace:^",
     "@dsh-fabric/protocol": "workspace:^",
     "@dsh-fabric/system-prompt": "workspace:^",
-    "@deepseek-ai/dsh-agent-presets": "0.1.0-rc.6"
+    "@monotykamary/dsh-agent-presets": "link:../deepseek-harness/packages/preset/agent-presets"
   },
   "scripts": {
     "clean": "node scripts/clean.mjs",

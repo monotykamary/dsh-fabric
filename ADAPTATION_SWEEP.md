@@ -6,7 +6,7 @@ This document records the completion sweep for the focused DeepSeek Harness adap
 
 The adaptation reuses DSH as the authority for tools, workflows, sessions, the compaction service/transaction seam, client navigation, and Cordis lifecycle. It adds a deterministic Fabric compaction provider and a host-native roster restricted to Fabric-owned presets, a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, and Activity/Topology presentation.
 
-It is not a line-for-line port of pi-fabric's component system, workflow engine, agent transports, or TUI.
+It is not a line-for-line port of pi-fabric's component system, workflow engine, agent transports, or TUI. FabricParticipantRecord is a host-independent read projection over the DSH session mirror and Fabric actors; it does not create a second participant directory, executor, or control plane.
 
 ## Reuse and composition matrix
 
@@ -14,11 +14,13 @@ It is not a line-for-line port of pi-fabric's component system, workflow engine,
 |---|---|---|---|---|
 | Tool registration, policy, nested calls | DSH ToolRuntime | `fabric_mesh` Consumer | Native and Code Mode composition tests | Verified |
 | Code Mode orchestration | DSH `run_code` and CodeRuntime seam | QuickJS WASM provider | `run_code` dispatches `fabric_mesh`, commits storage and session projection | Verified |
-| Workflows and subagents | DSH workflow/subagent services | Projection of `tool-workflow/*` into Fabric topology | Fold tests include phases, bounded member correlation, and settlement | Verified |
+| Workflows and subagents | DSH workflow/subagent services | Activity projection plus semantic agent participants | Fold tests include phases, bounded member correlation, settlement, and participant derivation | Verified |
 | Mesh business state | DSH `storage-domain` | Topics, CAS state, actor mailboxes | Restart composition tests and claim-token replay tests | Verified |
 | Session-derived Fabric UI | DSH SessionProjectionRegistry | Bounded `fabricActivity` fold over native `tool/result.meta`, `tool/code-dispatch`, workflow, and compaction events | Live composition, native-event serialized replay, checkpoint restore | Verified |
 | Context compaction | DSH service, token meter, command, durable transaction, invariants | Exclusive Fabric deterministic compiler/provider, source-event reconstruction, bounded typed snapshots, masked preset roster, lifecycle projection, reassembled mesh context | Real `/compact`, recursive source recovery, compiler/activity/provenance, preset-mask, standing-mount, fold/replay, and system-prompt tests | Verified |
-| Browser slots and navigation | DSH client slots and sessions service | Activity, Topology, header action | Uses `sessions.subagentAddress()` and `openSubagent()` | Verified |
+| System prompt and continuation surfaces | DSH SystemPrompt registry and assemble waterfall | Fabric-owned operating prompt section plus a waterfall listener that minimizes native prose; DSH todo ledger, goal tools, `/goal`, goal round driver, and goal bar masked | Preserved structural/dynamic sections, dropped per-tool one-liners, and masked todo/goal rows verified by `scripts/verify-workspace.mjs` | Verified |
+
+| Browser slots and navigation | DSH client slots and sessions service | Activity, grouped participant/mesh Topology, header action | Left-to-right structural layout, deterministic keyboard navigation, and authoritative session opening | Verified |
 | Client HMR | DSH client module loader | Package-owned CSS module update | Rebuilt bundles replace existing style-tag text | Verified by build contract |
 | Component lifecycle | Cordis | Ordinary plugins/effects | No second registry or lifecycle | Verified by workspace structure |
 
@@ -66,4 +68,7 @@ The sweep is complete when all of the following remain true:
 - prompt assembly re-emits current count- and byte-bounded mesh metadata from detached authoritative records;
 - topology settlement survives bounded edge/node eviction;
 - the rc.6 incompatibility of legacy logs containing the retired `fabric/activity` event stays explicit;
+- `cordis.patch.yml` disables `command-goal`, `goal-round-driver`, and `ui-goal`, and every Fabric preset either masks `tool-todo`/`tool-goal` or omits them (`minimal`);
+- prompt assembly keeps the Fabric operating prompt plus the persona, plan policy, cordis toolset, subagent reporting, Code-Mode SDK/collapse sections, and mesh guidance while dropping the native per-tool prose, with tool schemas and the runtime-context snapshot untouched.
+
 - package manifests, licenses, exclusive compaction masks, localized client dictionaries, bundle rows, and client artifacts pass `scripts/verify-workspace.mjs`.

@@ -1,6 +1,6 @@
 /** Package-owned invariant companion for @dsh-fabric/system-prompt. */
-import type { Context } from '@deepseek-ai/cordis'
-import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
+import type { Context } from '@monotykamary/cordis'
+import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
 const PACKAGE_NAME = '@dsh-fabric/system-prompt'
 

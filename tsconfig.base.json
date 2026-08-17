@@ -13,7 +13,7 @@
     "rewriteRelativeImportExtensions": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "preserveSymlinks": true,
+    "preserveSymlinks": false,
     "resolveJsonModule": true
   }
 }

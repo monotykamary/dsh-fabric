@@ -201,7 +201,7 @@ const ACTIVITY_KINDS = new Set<FabricActivityKind>([
   'session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction',
 ])
 const NODE_KINDS = new Set<FabricNodeKind>([
-  'main', 'session', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction',
+  'main', 'group', 'session', 'agent', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction',
 ])
 const NODE_STATUSES = new Set<FabricNodeStatus>([
   'pending', 'running', 'idle', 'completed', 'failed', 'blocked', 'stopped',

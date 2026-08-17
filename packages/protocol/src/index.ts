@@ -1,5 +1,16 @@
 /** Host-independent dsh-fabric activity, topology, and mesh protocol. */
 export { buildLineageGraph, fabricSessionNodeId } from './graph.ts'
+export { buildParticipantDirectory } from './participant.ts'
+export type {
+  FabricParticipantCapability,
+  FabricParticipantDirectory,
+  FabricParticipantKind,
+  FabricParticipantRecord,
+  FabricParticipantResidency,
+  FabricParticipantSource,
+} from './participant.ts'
+export { buildFabricTopology } from './topology.ts'
+export type { FabricTopologySnapshot } from './topology.ts'
 export {
   FABRIC_MESH_RESULT_META_KIND,
   FABRIC_MESH_RESULT_META_VERSION,
@@ -34,6 +45,7 @@ export type {
   FabricEdgeKind,
   FabricGraph,
   FabricGraphEdge,
+  FabricGraphEdgeRole,
   FabricGraphNode,
   FabricJsonValue,
   FabricNodeId,
@@ -42,4 +54,5 @@ export type {
   FabricProjectedEdge,
   FabricProjectedNode,
   FabricSessionInput,
+  FabricTopologyGroupKind,
 } from './types.ts'

@@ -12,13 +12,13 @@ const CLIENT_EXTERNALS = [
   'react/jsx-runtime',
   'react-dom',
   'react-dom/client',
-  '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-client-ui-slots',
-  '@deepseek-ai/dsh-client-web-react',
-  '@deepseek-ai/dsh-client-ui-primitives',
-  '@deepseek-ai/dsh-client-ui-attachment',
-  '@deepseek-ai/dsh-client-schema-form',
-  '@deepseek-ai/dsh-client-runtime/client',
+  '@monotykamary/cordis',
+  '@monotykamary/dsh-client-ui-slots',
+  '@monotykamary/dsh-client-web-react',
+  '@monotykamary/dsh-client-ui-primitives',
+  '@monotykamary/dsh-client-ui-attachment',
+  '@monotykamary/dsh-client-schema-form',
+  '@monotykamary/dsh-client-runtime/client',
 ] as const
 
 /** Build one DSH browser plugin's host marker and lazy client bundle. */
@@ -59,7 +59,7 @@ export function clientPlugin(id: string): UserConfig[] {
         {
           name: 'dsh-fabric-client-purity',
           resolveId(source: string) {
-            if (!source.startsWith('@deepseek-ai/')) return null
+            if (!source.startsWith('@monotykamary/')) return null
             if (CLIENT_EXTERNALS.includes(source as typeof CLIENT_EXTERNALS[number])) return null
             throw new Error(
               `client bundle purity: "${source}" is not a DSH platform module; use a Cordis service or a type-only import`,

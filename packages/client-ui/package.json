@@ -36,9 +36,9 @@
     "client": {
       "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@monotykamary/dsh-client-runtime",
+        "@monotykamary/dsh-client-locale",
+        "@monotykamary/dsh-client-ui-conversation"
       ]
     }
   },
@@ -52,30 +52,30 @@
     "react": "^18.2.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-client-connection": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-locale": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-ui-conversation": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-token-meter": "0.1.0-rc.6"
+    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@monotykamary/dsh-client-connection": "link:../../../deepseek-harness/packages/client/connection",
+    "@monotykamary/dsh-client-runtime": "link:../../../deepseek-harness/packages/client/runtime",
+    "@monotykamary/dsh-client-locale": "link:../../../deepseek-harness/packages/client/locale",
+    "@monotykamary/dsh-client-ui-conversation": "link:../../../deepseek-harness/packages/client/ui-conversation",
+    "@monotykamary/dsh-client-ui-primitives": "link:../../../deepseek-harness/packages/client/ui-primitives",
+    "@monotykamary/dsh-client-ui-slots": "link:../../../deepseek-harness/packages/client/ui-slots",
+    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
+    "@monotykamary/dsh-subagent": "link:../../../deepseek-harness/packages/subagent/subagent",
+    "@monotykamary/dsh-token-meter": "link:../../../deepseek-harness/packages/llm/token-meter"
   },
   "devDependencies": {
     "@dsh-fabric/host": "workspace:^",
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-client-connection": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-locale": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-ui-conversation": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-host-apiproxy": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-token-meter": "0.1.0-rc.6",
+    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@monotykamary/dsh-client-connection": "link:../../../deepseek-harness/packages/client/connection",
+    "@monotykamary/dsh-client-runtime": "link:../../../deepseek-harness/packages/client/runtime",
+    "@monotykamary/dsh-client-locale": "link:../../../deepseek-harness/packages/client/locale",
+    "@monotykamary/dsh-client-ui-conversation": "link:../../../deepseek-harness/packages/client/ui-conversation",
+    "@monotykamary/dsh-client-ui-primitives": "link:../../../deepseek-harness/packages/client/ui-primitives",
+    "@monotykamary/dsh-client-ui-slots": "link:../../../deepseek-harness/packages/client/ui-slots",
+    "@monotykamary/dsh-host-apiproxy": "link:../../../deepseek-harness/packages/host/apiproxy",
+    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
+    "@monotykamary/dsh-subagent": "link:../../../deepseek-harness/packages/subagent/subagent",
+    "@monotykamary/dsh-token-meter": "link:../../../deepseek-harness/packages/llm/token-meter",
     "@types/react": "~18.3.0"
   }
 }

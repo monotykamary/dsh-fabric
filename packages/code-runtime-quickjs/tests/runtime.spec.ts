@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@monotykamary/cordis'
 import { QuickJsCodeRuntime } from '../src/index.ts'
 import { executeQuickJs, internals } from '../src/runtime.ts'
 

@@ -20,28 +20,28 @@
   },
   "dependencies": {
     "@dsh-fabric/protocol": "workspace:^",
-    "@deepseek-ai/schemastery": "^3.18.1",
+    "@monotykamary/schemastery": "link:../../../deepseek-harness/vendor/schemastery",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-compaction": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-session": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-tool-workflow": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-workflow": "0.1.0-rc.6"
+    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@monotykamary/dsh-compaction": "link:../../../deepseek-harness/packages/compaction/compaction",
+    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
+    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
+    "@monotykamary/dsh-session-projection": "link:../../../deepseek-harness/packages/session/session-projection",
+    "@monotykamary/dsh-tool-workflow": "link:../../../deepseek-harness/packages/workflow/tool-workflow",
+    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
+    "@monotykamary/dsh-workflow": "link:../../../deepseek-harness/packages/workflow/workflow"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-compaction": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-llm": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-session": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-session-projection": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-tool-workflow": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-workflow": "0.1.0-rc.6"
+    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@monotykamary/dsh-compaction": "link:../../../deepseek-harness/packages/compaction/compaction",
+    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
+    "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
+    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
+    "@monotykamary/dsh-session-projection": "link:../../../deepseek-harness/packages/session/session-projection",
+    "@monotykamary/dsh-tool-workflow": "link:../../../deepseek-harness/packages/workflow/tool-workflow",
+    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
+    "@monotykamary/dsh-workflow": "link:../../../deepseek-harness/packages/workflow/workflow"
   }
 }

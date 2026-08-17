@@ -9,7 +9,9 @@ export type FabricEdgeId = string & { readonly __fabricEdgeId: unique symbol }
 /** Node classes shared by host projections and browser renderers. */
 export type FabricNodeKind =
   | 'main'
+  | 'group'
   | 'session'
+  | 'agent'
   | 'subagent'
   | 'workflow'
   | 'phase'
@@ -26,6 +28,26 @@ export type FabricNodeStatus = 'pending' | 'running' | 'idle' | 'completed' | 'f
 
 /** Relationships rendered by the topology view. */
 export type FabricEdgeKind = 'parent' | 'contains' | 'member' | 'publish' | 'message' | 'state' | 'route'
+
+/** Layout significance of a normalized topology edge. */
+export type FabricGraphEdgeRole = 'structure' | 'traffic'
+
+/** Semantic branch represented by a synthetic topology group node. */
+export type FabricTopologyGroupKind =
+  | 'participants'
+  | 'sessions'
+  | 'agents'
+  | 'actors'
+  | 'mesh'
+  | 'topics'
+  | 'topic-fabric'
+  | 'topic-project'
+  | 'state'
+  | 'state-world'
+  | 'state-schema'
+  | 'state-project'
+  | 'components'
+  | 'namespace'
 
 /** Kinds of timeline facts retained in a compact activity projection. */
 export type FabricActivityKind = 'session' | 'workflow' | 'phase' | 'agent' | 'mesh' | 'topic' | 'state' | 'actor' | 'message' | 'compaction'
@@ -76,8 +98,11 @@ export interface FabricSessionInput {
   parentId?: string
   origin?: 'subagent'
   running: boolean
+  blocked?: boolean
   completed?: boolean
   updatedAt: number
+  cwd?: string
+  preset?: string
   jobCount?: number
   tokens?: number
   durationMs?: number
@@ -87,11 +112,14 @@ export interface FabricSessionInput {
 /** One normalized node in a Fabric topology snapshot. */
 export interface FabricGraphNode {
   id: FabricNodeId
+  participantId?: FabricNodeId
   sessionId?: string
+  group?: FabricTopologyGroupKind
   kind: FabricNodeKind
   label: string
   status: FabricNodeStatus
   updatedAt: number
+  order?: number
   jobCount: number
   tokens?: number
   durationMs?: number
@@ -104,6 +132,7 @@ export interface FabricGraphEdge {
   source: FabricNodeId
   target: FabricNodeId
   kind: FabricEdgeKind
+  role?: FabricGraphEdgeRole
   updatedAt?: number
 }
 

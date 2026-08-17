@@ -1,20 +1,20 @@
 /** QuickJS WASM implementation of DSH's existing CodeRuntime service. */
 import { Buffer } from 'node:buffer'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@monotykamary/cordis'
+import z from '@monotykamary/schemastery'
 import {
   CodeRuntime,
   DUNDER_MEMBER,
   PORTABLE_RESERVED_WORDS,
   RESERVED_BINDING_GLOBALS,
   RESERVED_ERROR_MEMBERS,
-} from '@deepseek-ai/dsh-code-runtime'
+} from '@monotykamary/dsh-code-runtime'
 import type {
   CodeBindingNamespace,
   CodeRunFailure,
   CodeRunRequest,
   CodeRunResult,
-} from '@deepseek-ai/dsh-code-runtime'
+} from '@monotykamary/dsh-code-runtime'
 import { compileQuickJsProgram } from './type-checker.ts'
 import { executeQuickJs } from './runtime.ts'
 

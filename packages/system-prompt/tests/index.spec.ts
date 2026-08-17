@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
+import { Context } from '@monotykamary/cordis'
+import SystemPrompt from '@monotykamary/dsh-system-prompt'
 import * as FabricSystemPrompt from '../src/index.ts'
 
 describe('@dsh-fabric/system-prompt', () => {

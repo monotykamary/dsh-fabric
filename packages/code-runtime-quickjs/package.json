@@ -18,23 +18,23 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "^3.18.1",
+    "@monotykamary/schemastery": "link:../../../deepseek-harness/vendor/schemastery",
     "@jitl/quickjs-singlefile-mjs-release-sync": "^0.32.0",
     "quickjs-emscripten-core": "^0.32.0",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-code-runtime": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-session": "0.1.0-rc.6"
+    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@monotykamary/dsh-code-runtime": "link:../../../deepseek-harness/packages/code-runtime/code-runtime",
+    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
+    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-code-runtime": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-invariants": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-session": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-tools": "0.1.0-rc.6"
+    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@monotykamary/dsh-code-runtime": "link:../../../deepseek-harness/packages/code-runtime/code-runtime",
+    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
+    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
+    "@monotykamary/dsh-system-prompt": "link:../../../deepseek-harness/packages/core/system-prompt",
+    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools"
   }
 }

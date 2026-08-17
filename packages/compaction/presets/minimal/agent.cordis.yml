@@ -6,7 +6,7 @@
 # persistent `bash` and `str_replace_editor`. Fabric compaction remains available through `/compact` and automatic pressure handling.
 
 - id: persona
-  name: '@deepseek-ai/dsh-persona'
+  name: '@monotykamary/dsh-persona'
   config:
     text: You are a helpful software engineer assistant.
     complete: true
@@ -22,15 +22,15 @@
     terminals: true
   config:
     - id: pty
-      name: '@deepseek-ai/dsh-terminal'
+      name: '@monotykamary/dsh-terminal'
 
     - id: terminal-bash
-      name: '@deepseek-ai/dsh-terminal-bash'
+      name: '@monotykamary/dsh-terminal-bash'
       config:
         timeoutMs: 300000
 
     - id: persistent-bash
-      name: '@deepseek-ai/dsh-tool-bash-persistent'
+      name: '@monotykamary/dsh-tool-bash-persistent'
       config:
         timeoutMs: 300000
         description: |-
@@ -52,12 +52,12 @@
     fs: true
   config:
     - id: fs-local
-      name: '@deepseek-ai/dsh-fs-local'
+      name: '@monotykamary/dsh-fs-local'
       config:
         cwd: !!js process.env.DSH_CWD ?? process.cwd()
 
     - id: str-replace-editor
-      name: '@deepseek-ai/dsh-tool-str-replace-editor'
+      name: '@monotykamary/dsh-tool-str-replace-editor'
       config:
         maxOutputChars: 16000
 
@@ -72,4 +72,4 @@
       name: '@dsh-fabric/compaction'
 
     - id: command-compact
-      name: '@deepseek-ai/dsh-command-compact'
+      name: '@monotykamary/dsh-command-compact'
