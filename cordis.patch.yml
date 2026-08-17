@@ -51,5 +51,8 @@
     - id: dsh-fabric-mesh-tool
       name: '@dsh-fabric/mesh/tool'
 
+    - id: dsh-fabric-system-prompt
+      name: '@dsh-fabric/system-prompt'
+
     - id: dsh-fabric-ui
       name: '@dsh-fabric/client-ui'
