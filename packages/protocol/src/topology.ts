@@ -296,14 +296,17 @@ function stateGroupPath(key: string): GroupSegment[] {
   }
   if (parts[0] === 'schema') {
     const path: GroupSegment[] = [{ id: 'schema', label: 'Schema', group: 'state-schema' }]
-    let prefix = 'schema'
-    for (const directory of parts.slice(1, -1)) {
-      prefix += `:${segmentId(directory)}`
-      path.push({
-        id: prefix,
-        label: directory === 'hypothesis' ? 'Hypotheses' : directory === 'certificate' ? 'Certificates' : titleSegment(directory),
-        group: 'namespace',
-      })
+    const family = parts[1]
+    if (family === 'hypothesis') {
+      path.push({ id: 'schema:hypotheses', label: 'Hypotheses', group: 'namespace' })
+    } else if (family === 'certificate') {
+      path.push({ id: 'schema:certificates', label: 'Certificates', group: 'namespace' })
+    } else {
+      let prefix = 'schema'
+      for (const directory of parts.slice(1, -1)) {
+        prefix += `:${segmentId(directory)}`
+        path.push({ id: prefix, label: titleSegment(directory), group: 'namespace' })
+      }
     }
     return path
   }

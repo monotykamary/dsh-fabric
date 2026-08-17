@@ -105,6 +105,51 @@ describe('buildFabricTopology', () => {
     expect(snapshot?.graph.edges.filter(edge => edge.role === 'structure')).toHaveLength((snapshot?.graph.nodes.length ?? 0) - 1)
   })
 
+  it('groups schema state the same way pi-fabric does', () => {
+    const sessions: FabricSessionInput[] = [{
+      id: 'root',
+      label: 'Main',
+      running: true,
+      updatedAt: 100,
+      activity: {
+        nodes: [
+          { id: 'state:schema/hypothesis/h1', kind: 'state', label: 'schema/hypothesis/h1', status: 'idle', updatedAt: 90 },
+          { id: 'state:schema/certificate/c1', kind: 'state', label: 'schema/certificate/c1', status: 'idle', updatedAt: 91 },
+          { id: 'state:schema/workspace/backup', kind: 'state', label: 'schema/workspace/backup', status: 'idle', updatedAt: 92 },
+          { id: 'state:schema/foo/hypothesis/x', kind: 'state', label: 'schema/foo/hypothesis/x', status: 'idle', updatedAt: 93 },
+        ],
+        edges: [],
+        activities: [],
+      },
+    }]
+    const graph = buildFabricTopology(sessions, 'root')?.graph
+    expect(graph).toBeDefined()
+    const structural = (graph?.edges ?? []).filter(edge => edge.role === 'structure')
+    const parentOf = new Map(structural.map(edge => [edge.target, edge.source]))
+    const nodeById = new Map((graph?.nodes ?? []).map(node => [node.id, node]))
+    const chain = (id: string): string[] => {
+      const labels: string[] = []
+      let current: string | undefined = parentOf.get(id)
+      while (current !== undefined) {
+        const node = nodeById.get(current)
+        if (node === undefined) break
+        labels.push(node.label)
+        current = parentOf.get(current)
+      }
+      return labels
+    }
+
+    // pi-fabric maps only the first segment after "schema/" to a family group,
+    // and flattens every record under that group.
+    expect(chain('state:schema/hypothesis/h1').slice(0, 3)).toEqual(['Hypotheses', 'Schema', 'State'])
+    expect(chain('state:schema/certificate/c1').slice(0, 3)).toEqual(['Certificates', 'Schema', 'State'])
+
+    // Non-family schema segments keep pi-fabric's generic title-cased nesting,
+    // and deeper "hypothesis" directories are not treated as families.
+    expect(chain('state:schema/workspace/backup').slice(0, 3)).toEqual(['Workspace', 'Schema', 'State'])
+    expect(chain('state:schema/foo/hypothesis/x').slice(0, 4)).toEqual(['Hypothesis', 'Foo', 'Schema', 'State'])
+  })
+
   it('gives every non-root node one structural parent and keeps traffic separate', () => {
     const graph = buildFabricTopology(fixture(), 'root')?.graph
     expect(graph).toBeDefined()
