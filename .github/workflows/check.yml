@@ -8,6 +8,16 @@ on:
 permissions:
   contents: read
 
+env:
+  # dsh-fabric resolves every @monotykamary/* import through live `link:`
+  # entries into a sibling checkout of the DeepSeek Harness monorepo (see
+  # packages/*/package.json and tsconfig.base.json: declaration merging
+  # requires shared module identity, so the harness cannot come from npm).
+  # CI reproduces the local layout: check the harness out one level above
+  # this repo, install it, and build the two lib faces dsh-fabric links to.
+  # Bump DSH_HARNESS_REF when the local harness checkout advances.
+  DSH_HARNESS_REF: 000a0722a37451ccc19ca57394eebc91527fd0e1
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,5 +30,20 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Checkout DeepSeek Harness (live link target)
+        uses: actions/checkout@v4
+        with:
+          repository: monotykamary/deepseek-harness
+          ref: ${{ env.DSH_HARNESS_REF }}
+          # The link: specs resolve relative to this repo's root and each
+          # package (link:../deepseek-harness and link:../../../deepseek-harness),
+          # so the harness must sit beside the workspace, not inside it.
+          path: ../deepseek-harness
+      - name: Install harness workspace
+        working-directory: ../deepseek-harness
+        run: pnpm install --frozen-lockfile
+      - name: Build harness lib faces
+        working-directory: ../deepseek-harness
+        run: pnpm run build:lib:host && pnpm run build:lib:client
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
