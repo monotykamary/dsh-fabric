@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type {} from '@monotykamary/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsRuntime, TranslateNS } from '@monotykamary/dsh-client-ui-slots'
 import type { FabricActivityRecord, FabricGraphNode, FabricParticipantRecord } from '@dsh-fabric/protocol'
@@ -92,7 +92,9 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
   }, [])
 
   const layoutKey = model === null ? '' : `${model.layout.width}x${model.layout.height}`
-  const fitScale = model === null || viewport === null
+  // A degenerate viewport (canvas hidden or not yet laid out) is "unmeasured":
+  // fitting into 0x0 would clamp to MIN_SCALE and paint a shrunken graph.
+  const fitScale = model === null || viewport === null || viewport.width <= 0 || viewport.height <= 0
     ? undefined
     : Math.min(1, Math.max(MIN_SCALE, Math.min(
         (viewport.width - VIEWPORT_INSET * 2) / model.layout.width,
@@ -136,8 +138,11 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
   }
 
   // Fit the whole graph by default; once the user zooms, keep their view and
-  // only reset to fit when the graph itself changes shape.
-  useEffect(() => {
+  // only reset to fit when the graph itself changes shape. Runs as a layout
+  // effect so the fit lands before the browser paints: the canvas mounts at
+  // scale 1, and a passive effect would paint an uncentered, unscaled graph
+  // for a frame (the flash when opening the Fabric tab).
+  useLayoutEffect(() => {
     if (model === null || viewport === null || fitScale === undefined) return
     if (layoutKey !== layoutKeyRef.current) {
       layoutKeyRef.current = layoutKey
@@ -213,6 +218,7 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
           <div className={css.topologyShell}>
             <div className={css.canvasColumn}>
               <div ref={attachCanvas} className={css.canvas}>
+                {scale === undefined ? null : (
                 <div
                   className={css.graphViewport}
                   style={{
@@ -269,6 +275,7 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
                 })}
                   </svg>
                 </div>
+                )}
               </div>
               <div className={css.zoomControls} role="group" aria-label={t('zoom.aria')} title={t('zoom.wheel')}>
                 <button type="button" onClick={zoomOut} aria-label={t('zoom.out')} title={t('zoom.out')}>−</button>
