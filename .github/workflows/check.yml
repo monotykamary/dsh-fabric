@@ -31,14 +31,16 @@ jobs:
           node-version: 24
           cache: pnpm
       - name: Checkout DeepSeek Harness (live link target)
-        uses: actions/checkout@v4
-        with:
-          repository: monotykamary/deepseek-harness
-          ref: ${{ env.DSH_HARNESS_REF }}
-          # The link: specs resolve relative to this repo's root and each
-          # package (link:../deepseek-harness and link:../../../deepseek-harness),
-          # so the harness must sit beside the workspace, not inside it.
-          path: ../deepseek-harness
+        # The link: specs resolve relative to this repo's root and each package
+        # (link:../deepseek-harness, link:../../../deepseek-harness), so the
+        # harness must sit beside the workspace, not inside it. actions/checkout
+        # refuses paths outside the workspace, so clone it directly at the ref.
+        run: |
+          git init --quiet ../deepseek-harness
+          git -C ../deepseek-harness remote add origin https://github.com/monotykamary/deepseek-harness.git
+          git -C ../deepseek-harness fetch --depth 1 --quiet origin "$DSH_HARNESS_REF"
+          git -C ../deepseek-harness checkout --quiet --detach FETCH_HEAD
+          git -C ../deepseek-harness log -1 --oneline
       - name: Install harness workspace
         working-directory: ../deepseek-harness
         run: pnpm install --frozen-lockfile
