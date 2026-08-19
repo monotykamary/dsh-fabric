@@ -30,21 +30,21 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
-    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
-    "@monotykamary/dsh-agent": "link:../../../deepseek-harness/packages/core/agent",
-    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
-    "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
-    "@monotykamary/dsh-system-prompt": "link:../../../deepseek-harness/packages/core/system-prompt",
-    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools"
+    "@monotykamary/cordis": "^4.0.1",
+    "@monotykamary/dsh-agent": "^0.1.0-rc.7",
+    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
+    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
+    "@monotykamary/dsh-system-prompt": "^0.1.0-rc.7",
+    "@monotykamary/dsh-tools": "^0.1.0-rc.7"
   },
   "devDependencies": {
-    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
-    "@monotykamary/dsh-agent": "link:../../../deepseek-harness/packages/core/agent",
-    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
-    "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
-    "@monotykamary/dsh-scope": "link:../../../deepseek-harness/packages/core/scope",
-    "@monotykamary/dsh-system-prompt": "link:../../../deepseek-harness/packages/core/system-prompt",
-    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
+    "@monotykamary/cordis": "^4.0.1",
+    "@monotykamary/dsh-agent": "^0.1.0-rc.7",
+    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
+    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
+    "@monotykamary/dsh-scope": "^0.1.0-rc.7",
+    "@monotykamary/dsh-system-prompt": "^0.1.0-rc.7",
+    "@monotykamary/dsh-tools": "^0.1.0-rc.7",
     "typescript": "^6.0.3"
   }
 }

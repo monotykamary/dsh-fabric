@@ -1,7 +1,9 @@
 {
   "name": "@dsh-fabric/protocol",
   "version": "0.1.0",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Host-independent activity and topology records for dsh-fabric",
   "type": "module",
   "license": "MIT",
@@ -14,7 +16,11 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib", "README.md", "LICENSE"],
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit -p tsconfig.json"

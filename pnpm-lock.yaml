@@ -4,6 +4,39 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+  '@monotykamary/dsh-agent': link:../deepseek-harness/packages/core/agent
+  '@monotykamary/dsh-agent-presets': link:../deepseek-harness/packages/preset/agent-presets
+  '@monotykamary/dsh-client-connection': link:../deepseek-harness/packages/client/connection
+  '@monotykamary/dsh-client-locale': link:../deepseek-harness/packages/client/locale
+  '@monotykamary/dsh-client-runtime': link:../deepseek-harness/packages/client/runtime
+  '@monotykamary/dsh-client-ui-conversation': link:../deepseek-harness/packages/client/ui-conversation
+  '@monotykamary/dsh-client-ui-primitives': link:../deepseek-harness/packages/client/ui-primitives
+  '@monotykamary/dsh-client-ui-slots': link:../deepseek-harness/packages/client/ui-slots
+  '@monotykamary/dsh-code-runtime': link:../deepseek-harness/packages/code-runtime/code-runtime
+  '@monotykamary/dsh-command-compact': link:../deepseek-harness/packages/compaction/command-compact
+  '@monotykamary/dsh-commands': link:../deepseek-harness/packages/interaction/commands
+  '@monotykamary/dsh-compaction': link:../deepseek-harness/packages/compaction/compaction
+  '@monotykamary/dsh-compaction-basic': link:../deepseek-harness/packages/compaction/compaction-basic
+  '@monotykamary/dsh-host-apiproxy': link:../deepseek-harness/packages/host/apiproxy
+  '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+  '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
+  '@monotykamary/dsh-scope': link:../deepseek-harness/packages/core/scope
+  '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
+  '@monotykamary/dsh-session-projection': link:../deepseek-harness/packages/session/session-projection
+  '@monotykamary/dsh-storage': link:../deepseek-harness/packages/storage/storage
+  '@monotykamary/dsh-storage-domain': link:../deepseek-harness/packages/storage/storage-domain
+  '@monotykamary/dsh-storage-json': link:../deepseek-harness/packages/storage/storage-json
+  '@monotykamary/dsh-subagent': link:../deepseek-harness/packages/subagent/subagent
+  '@monotykamary/dsh-system-prompt': link:../deepseek-harness/packages/core/system-prompt
+  '@monotykamary/dsh-token-meter': link:../deepseek-harness/packages/llm/token-meter
+  '@monotykamary/dsh-tool-workflow': link:../deepseek-harness/packages/workflow/tool-workflow
+  '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
+  '@monotykamary/dsh-workflow': link:../deepseek-harness/packages/workflow/workflow
+  '@monotykamary/dsh-workspace': link:../deepseek-harness/packages/workspace/workspace
+  '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
+
 importers:
 
   .:
@@ -54,13 +87,6 @@ importers:
       '@dsh-fabric/protocol':
         specifier: workspace:^
         version: link:../protocol
-      react:
-        specifier: ^18.2.0
-        version: 18.3.1
-    devDependencies:
-      '@dsh-fabric/host':
-        specifier: workspace:^
-        version: link:../host
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -82,9 +108,6 @@ importers:
       '@monotykamary/dsh-client-ui-slots':
         specifier: link:../../../deepseek-harness/packages/client/ui-slots
         version: link:../../../deepseek-harness/packages/client/ui-slots
-      '@monotykamary/dsh-host-apiproxy':
-        specifier: link:../../../deepseek-harness/packages/host/apiproxy
-        version: link:../../../deepseek-harness/packages/host/apiproxy
       '@monotykamary/dsh-invariants':
         specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
         version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
@@ -94,6 +117,16 @@ importers:
       '@monotykamary/dsh-token-meter':
         specifier: link:../../../deepseek-harness/packages/llm/token-meter
         version: link:../../../deepseek-harness/packages/llm/token-meter
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+    devDependencies:
+      '@dsh-fabric/host':
+        specifier: workspace:^
+        version: link:../host
+      '@monotykamary/dsh-host-apiproxy':
+        specifier: link:../../../deepseek-harness/packages/host/apiproxy
+        version: link:../../../deepseek-harness/packages/host/apiproxy
       '@types/react':
         specifier: ~18.3.0
         version: 18.3.31
@@ -103,6 +136,18 @@ importers:
       '@jitl/quickjs-singlefile-mjs-release-sync':
         specifier: ^0.32.0
         version: 0.32.0
+      '@monotykamary/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-code-runtime':
+        specifier: link:../../../deepseek-harness/packages/code-runtime/code-runtime
+        version: link:../../../deepseek-harness/packages/code-runtime/code-runtime
+      '@monotykamary/dsh-invariants':
+        specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+        version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-session':
+        specifier: link:../../../deepseek-harness/packages/core/session
+        version: link:../../../deepseek-harness/packages/core/session
       '@monotykamary/schemastery':
         specifier: link:../../../deepseek-harness/vendor/schemastery
         version: link:../../../deepseek-harness/vendor/schemastery
@@ -116,18 +161,6 @@ importers:
       '@dsh-fabric/system-prompt':
         specifier: workspace:^
         version: link:../system-prompt
-      '@monotykamary/cordis':
-        specifier: link:../../../deepseek-harness/vendor/cordis
-        version: link:../../../deepseek-harness/vendor/cordis
-      '@monotykamary/dsh-code-runtime':
-        specifier: link:../../../deepseek-harness/packages/code-runtime/code-runtime
-        version: link:../../../deepseek-harness/packages/code-runtime/code-runtime
-      '@monotykamary/dsh-invariants':
-        specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
-        version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
-      '@monotykamary/dsh-session':
-        specifier: link:../../../deepseek-harness/packages/core/session
-        version: link:../../../deepseek-harness/packages/core/session
       '@monotykamary/dsh-system-prompt':
         specifier: link:../../../deepseek-harness/packages/core/system-prompt
         version: link:../../../deepseek-harness/packages/core/system-prompt
@@ -140,7 +173,6 @@ importers:
       '@dsh-fabric/protocol':
         specifier: workspace:^
         version: link:../protocol
-    devDependencies:
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -183,13 +215,6 @@ importers:
       '@dsh-fabric/system-prompt':
         specifier: workspace:^
         version: link:../system-prompt
-      '@monotykamary/schemastery':
-        specifier: link:../../../deepseek-harness/vendor/schemastery
-        version: link:../../../deepseek-harness/vendor/schemastery
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -199,9 +224,6 @@ importers:
       '@monotykamary/dsh-invariants':
         specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
         version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
-      '@monotykamary/dsh-llm':
-        specifier: link:../../../deepseek-harness/packages/llm/llm
-        version: link:../../../deepseek-harness/packages/llm/llm
       '@monotykamary/dsh-session':
         specifier: link:../../../deepseek-harness/packages/core/session
         version: link:../../../deepseek-harness/packages/core/session
@@ -217,12 +239,46 @@ importers:
       '@monotykamary/dsh-workflow':
         specifier: link:../../../deepseek-harness/packages/workflow/workflow
         version: link:../../../deepseek-harness/packages/workflow/workflow
+      '@monotykamary/schemastery':
+        specifier: link:../../../deepseek-harness/vendor/schemastery
+        version: link:../../../deepseek-harness/vendor/schemastery
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@monotykamary/dsh-llm':
+        specifier: link:../../../deepseek-harness/packages/llm/llm
+        version: link:../../../deepseek-harness/packages/llm/llm
 
   packages/mesh:
     dependencies:
       '@dsh-fabric/protocol':
         specifier: workspace:^
         version: link:../protocol
+      '@monotykamary/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent':
+        specifier: link:../../../deepseek-harness/packages/core/agent
+        version: link:../../../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-invariants':
+        specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+        version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-session':
+        specifier: link:../../../deepseek-harness/packages/core/session
+        version: link:../../../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-storage-domain':
+        specifier: link:../../../deepseek-harness/packages/storage/storage-domain
+        version: link:../../../deepseek-harness/packages/storage/storage-domain
+      '@monotykamary/dsh-system-prompt':
+        specifier: link:../../../deepseek-harness/packages/core/system-prompt
+        version: link:../../../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tools':
+        specifier: link:../../../deepseek-harness/packages/core/tools
+        version: link:../../../deepseek-harness/packages/core/tools
+      '@monotykamary/dsh-workspace':
+        specifier: link:../../../deepseek-harness/packages/workspace/workspace
+        version: link:../../../deepseek-harness/packages/workspace/workspace
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -233,47 +289,23 @@ importers:
       '@dsh-fabric/host':
         specifier: workspace:^
         version: link:../host
-      '@monotykamary/cordis':
-        specifier: link:../../../deepseek-harness/vendor/cordis
-        version: link:../../../deepseek-harness/vendor/cordis
-      '@monotykamary/dsh-agent':
-        specifier: link:../../../deepseek-harness/packages/core/agent
-        version: link:../../../deepseek-harness/packages/core/agent
-      '@monotykamary/dsh-invariants':
-        specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
-        version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
       '@monotykamary/dsh-llm':
         specifier: link:../../../deepseek-harness/packages/llm/llm
         version: link:../../../deepseek-harness/packages/llm/llm
-      '@monotykamary/dsh-session':
-        specifier: link:../../../deepseek-harness/packages/core/session
-        version: link:../../../deepseek-harness/packages/core/session
       '@monotykamary/dsh-session-projection':
         specifier: link:../../../deepseek-harness/packages/session/session-projection
         version: link:../../../deepseek-harness/packages/session/session-projection
       '@monotykamary/dsh-storage':
         specifier: link:../../../deepseek-harness/packages/storage/storage
         version: link:../../../deepseek-harness/packages/storage/storage
-      '@monotykamary/dsh-storage-domain':
-        specifier: link:../../../deepseek-harness/packages/storage/storage-domain
-        version: link:../../../deepseek-harness/packages/storage/storage-domain
       '@monotykamary/dsh-storage-json':
         specifier: link:../../../deepseek-harness/packages/storage/storage-json
         version: link:../../../deepseek-harness/packages/storage/storage-json
-      '@monotykamary/dsh-system-prompt':
-        specifier: link:../../../deepseek-harness/packages/core/system-prompt
-        version: link:../../../deepseek-harness/packages/core/system-prompt
-      '@monotykamary/dsh-tools':
-        specifier: link:../../../deepseek-harness/packages/core/tools
-        version: link:../../../deepseek-harness/packages/core/tools
-      '@monotykamary/dsh-workspace':
-        specifier: link:../../../deepseek-harness/packages/workspace/workspace
-        version: link:../../../deepseek-harness/packages/workspace/workspace
 
   packages/protocol: {}
 
   packages/system-prompt:
-    devDependencies:
+    dependencies:
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -286,15 +318,16 @@ importers:
       '@monotykamary/dsh-llm':
         specifier: link:../../../deepseek-harness/packages/llm/llm
         version: link:../../../deepseek-harness/packages/llm/llm
-      '@monotykamary/dsh-scope':
-        specifier: link:../../../deepseek-harness/packages/core/scope
-        version: link:../../../deepseek-harness/packages/core/scope
       '@monotykamary/dsh-system-prompt':
         specifier: link:../../../deepseek-harness/packages/core/system-prompt
         version: link:../../../deepseek-harness/packages/core/system-prompt
       '@monotykamary/dsh-tools':
         specifier: link:../../../deepseek-harness/packages/core/tools
         version: link:../../../deepseek-harness/packages/core/tools
+    devDependencies:
+      '@monotykamary/dsh-scope':
+        specifier: link:../../../deepseek-harness/packages/core/scope
+        version: link:../../../deepseek-harness/packages/core/scope
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

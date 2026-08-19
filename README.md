@@ -60,7 +60,7 @@ The installable workspace bundle masks the inherited code runtime, stock compact
 
 ## Install
 
-Requirements: Node.js `^22.19.0 || >=24`, pnpm 11, and DSH `0.1.0-rc.6`.
+Requirements: Node.js `^22.19.0 || >=24`, pnpm 11, and DSH `0.1.0-rc.7`.
 
 Clone the repository and install it into your local DSH `web` profile:
 

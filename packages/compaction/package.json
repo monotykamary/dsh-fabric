@@ -1,20 +1,40 @@
 {
   "name": "@dsh-fabric/compaction",
   "version": "0.1.0",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Deterministic Fabric compaction provider and preset roster for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./compiler": { "types": "./lib/types/compiler.d.ts", "default": "./lib/compiler.js" },
-    "./presets": { "types": "./lib/types/presets.d.ts", "default": "./lib/presets.js" },
-    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./compiler": {
+      "types": "./lib/types/compiler.d.ts",
+      "default": "./lib/compiler.js"
+    },
+    "./presets": {
+      "types": "./lib/types/presets.d.ts",
+      "default": "./lib/presets.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib", "presets", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "files": [
+    "lib",
+    "presets",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsdown",
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -23,29 +43,29 @@
     "@dsh-fabric/protocol": "workspace:^"
   },
   "peerDependencies": {
-    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
-    "@monotykamary/dsh-agent": "link:../../../deepseek-harness/packages/core/agent",
-    "@monotykamary/dsh-agent-presets": "link:../../../deepseek-harness/packages/preset/agent-presets",
-    "@monotykamary/dsh-compaction": "link:../../../deepseek-harness/packages/compaction/compaction",
-    "@monotykamary/dsh-compaction-basic": "link:../../../deepseek-harness/packages/compaction/compaction-basic",
-    "@monotykamary/dsh-command-compact": "link:../../../deepseek-harness/packages/compaction/command-compact",
-    "@monotykamary/dsh-commands": "link:../../../deepseek-harness/packages/interaction/commands",
-    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
-    "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
-    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
-    "@monotykamary/dsh-token-meter": "link:../../../deepseek-harness/packages/llm/token-meter"
+    "@monotykamary/cordis": "^4.0.1",
+    "@monotykamary/dsh-agent": "^0.1.0-rc.7",
+    "@monotykamary/dsh-agent-presets": "^0.1.0-rc.7",
+    "@monotykamary/dsh-compaction": "^0.1.0-rc.7",
+    "@monotykamary/dsh-compaction-basic": "^0.1.0-rc.7",
+    "@monotykamary/dsh-command-compact": "^0.1.0-rc.7",
+    "@monotykamary/dsh-commands": "^0.1.0-rc.7",
+    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
+    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
+    "@monotykamary/dsh-session": "^0.1.0-rc.7",
+    "@monotykamary/dsh-token-meter": "^0.1.0-rc.7"
   },
   "devDependencies": {
-    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
-    "@monotykamary/dsh-agent": "link:../../../deepseek-harness/packages/core/agent",
-    "@monotykamary/dsh-agent-presets": "link:../../../deepseek-harness/packages/preset/agent-presets",
-    "@monotykamary/dsh-compaction": "link:../../../deepseek-harness/packages/compaction/compaction",
-    "@monotykamary/dsh-compaction-basic": "link:../../../deepseek-harness/packages/compaction/compaction-basic",
-    "@monotykamary/dsh-command-compact": "link:../../../deepseek-harness/packages/compaction/command-compact",
-    "@monotykamary/dsh-commands": "link:../../../deepseek-harness/packages/interaction/commands",
-    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
-    "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
-    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
-    "@monotykamary/dsh-token-meter": "link:../../../deepseek-harness/packages/llm/token-meter"
+    "@monotykamary/cordis": "^4.0.1",
+    "@monotykamary/dsh-agent": "^0.1.0-rc.7",
+    "@monotykamary/dsh-agent-presets": "^0.1.0-rc.7",
+    "@monotykamary/dsh-compaction": "^0.1.0-rc.7",
+    "@monotykamary/dsh-compaction-basic": "^0.1.0-rc.7",
+    "@monotykamary/dsh-command-compact": "^0.1.0-rc.7",
+    "@monotykamary/dsh-commands": "^0.1.0-rc.7",
+    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
+    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
+    "@monotykamary/dsh-session": "^0.1.0-rc.7",
+    "@monotykamary/dsh-token-meter": "^0.1.0-rc.7"
   }
 }

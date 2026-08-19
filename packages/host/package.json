@@ -1,19 +1,35 @@
 {
   "name": "@dsh-fabric/host",
   "version": "0.1.0",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "DSH session-event and activity projection adapter for dsh-fabric",
   "type": "module",
   "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
-    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsdown",
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -21,28 +37,28 @@
   "dependencies": {
     "@dsh-fabric/protocol": "workspace:^",
     "@dsh-fabric/system-prompt": "workspace:^",
-    "@monotykamary/schemastery": "link:../../../deepseek-harness/vendor/schemastery",
+    "@monotykamary/schemastery": "^3.18.1",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
-    "@monotykamary/dsh-compaction": "link:../../../deepseek-harness/packages/compaction/compaction",
-    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
-    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
-    "@monotykamary/dsh-session-projection": "link:../../../deepseek-harness/packages/session/session-projection",
-    "@monotykamary/dsh-tool-workflow": "link:../../../deepseek-harness/packages/workflow/tool-workflow",
-    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
-    "@monotykamary/dsh-workflow": "link:../../../deepseek-harness/packages/workflow/workflow"
+    "@monotykamary/cordis": "^4.0.1",
+    "@monotykamary/dsh-compaction": "^0.1.0-rc.7",
+    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
+    "@monotykamary/dsh-session": "^0.1.0-rc.7",
+    "@monotykamary/dsh-session-projection": "^0.1.0-rc.7",
+    "@monotykamary/dsh-tool-workflow": "^0.1.0-rc.7",
+    "@monotykamary/dsh-tools": "^0.1.0-rc.7",
+    "@monotykamary/dsh-workflow": "^0.1.0-rc.7"
   },
   "devDependencies": {
-    "@monotykamary/cordis": "link:../../../deepseek-harness/vendor/cordis",
-    "@monotykamary/dsh-compaction": "link:../../../deepseek-harness/packages/compaction/compaction",
-    "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
-    "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
-    "@monotykamary/dsh-session": "link:../../../deepseek-harness/packages/core/session",
-    "@monotykamary/dsh-session-projection": "link:../../../deepseek-harness/packages/session/session-projection",
-    "@monotykamary/dsh-tool-workflow": "link:../../../deepseek-harness/packages/workflow/tool-workflow",
-    "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
-    "@monotykamary/dsh-workflow": "link:../../../deepseek-harness/packages/workflow/workflow"
+    "@monotykamary/cordis": "^4.0.1",
+    "@monotykamary/dsh-compaction": "^0.1.0-rc.7",
+    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
+    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
+    "@monotykamary/dsh-session": "^0.1.0-rc.7",
+    "@monotykamary/dsh-session-projection": "^0.1.0-rc.7",
+    "@monotykamary/dsh-tool-workflow": "^0.1.0-rc.7",
+    "@monotykamary/dsh-tools": "^0.1.0-rc.7",
+    "@monotykamary/dsh-workflow": "^0.1.0-rc.7"
   }
 }

@@ -7,7 +7,7 @@ import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const DSH_PACKAGE = '@monotykamary/dsh@0.1.0-rc.6'
+const DSH_PACKAGE = '@monotykamary/dsh@0.1.0-rc.7'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LOCAL_STATE_FILE = '.dsh-fabric-local-install.json'
 const LINK_PATHS = [

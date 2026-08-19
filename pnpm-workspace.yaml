@@ -5,3 +5,39 @@ linkWorkspacePackages: true
 
 allowBuilds:
   esbuild: true
+
+# Published manifests carry semver ranges for every @monotykamary/* package;
+# these overrides keep the dev install pinned to the sibling harness checkout
+# (the same targets the manifests previously linked with the link: protocol).
+overrides:
+  '@monotykamary/cordis': 'link:../deepseek-harness/vendor/cordis'
+  '@monotykamary/dsh-agent': 'link:../deepseek-harness/packages/core/agent'
+  '@monotykamary/dsh-agent-presets': 'link:../deepseek-harness/packages/preset/agent-presets'
+  '@monotykamary/dsh-client-connection': 'link:../deepseek-harness/packages/client/connection'
+  '@monotykamary/dsh-client-locale': 'link:../deepseek-harness/packages/client/locale'
+  '@monotykamary/dsh-client-runtime': 'link:../deepseek-harness/packages/client/runtime'
+  '@monotykamary/dsh-client-ui-conversation': 'link:../deepseek-harness/packages/client/ui-conversation'
+  '@monotykamary/dsh-client-ui-primitives': 'link:../deepseek-harness/packages/client/ui-primitives'
+  '@monotykamary/dsh-client-ui-slots': 'link:../deepseek-harness/packages/client/ui-slots'
+  '@monotykamary/dsh-code-runtime': 'link:../deepseek-harness/packages/code-runtime/code-runtime'
+  '@monotykamary/dsh-command-compact': 'link:../deepseek-harness/packages/compaction/command-compact'
+  '@monotykamary/dsh-commands': 'link:../deepseek-harness/packages/interaction/commands'
+  '@monotykamary/dsh-compaction': 'link:../deepseek-harness/packages/compaction/compaction'
+  '@monotykamary/dsh-compaction-basic': 'link:../deepseek-harness/packages/compaction/compaction-basic'
+  '@monotykamary/dsh-host-apiproxy': 'link:../deepseek-harness/packages/host/apiproxy'
+  '@monotykamary/dsh-invariants': 'link:../deepseek-harness/packages/runtime-diagnostics/invariants'
+  '@monotykamary/dsh-llm': 'link:../deepseek-harness/packages/llm/llm'
+  '@monotykamary/dsh-scope': 'link:../deepseek-harness/packages/core/scope'
+  '@monotykamary/dsh-session': 'link:../deepseek-harness/packages/core/session'
+  '@monotykamary/dsh-session-projection': 'link:../deepseek-harness/packages/session/session-projection'
+  '@monotykamary/dsh-storage': 'link:../deepseek-harness/packages/storage/storage'
+  '@monotykamary/dsh-storage-domain': 'link:../deepseek-harness/packages/storage/storage-domain'
+  '@monotykamary/dsh-storage-json': 'link:../deepseek-harness/packages/storage/storage-json'
+  '@monotykamary/dsh-subagent': 'link:../deepseek-harness/packages/subagent/subagent'
+  '@monotykamary/dsh-system-prompt': 'link:../deepseek-harness/packages/core/system-prompt'
+  '@monotykamary/dsh-token-meter': 'link:../deepseek-harness/packages/llm/token-meter'
+  '@monotykamary/dsh-tool-workflow': 'link:../deepseek-harness/packages/workflow/tool-workflow'
+  '@monotykamary/dsh-tools': 'link:../deepseek-harness/packages/core/tools'
+  '@monotykamary/dsh-workflow': 'link:../deepseek-harness/packages/workflow/workflow'
+  '@monotykamary/dsh-workspace': 'link:../deepseek-harness/packages/workspace/workspace'
+  '@monotykamary/schemastery': 'link:../deepseek-harness/vendor/schemastery'
