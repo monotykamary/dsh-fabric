@@ -79,5 +79,9 @@
     "@monotykamary/dsh-subagent": "^0.1.0-rc.7",
     "@monotykamary/dsh-token-meter": "^0.1.0-rc.7",
     "@types/react": "~18.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/monotykamary/dsh-fabric.git"
   }
 }
