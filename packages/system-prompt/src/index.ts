@@ -19,6 +19,14 @@
  * tools stay registered and callable, and the combustion advisory
  * (see advisory.ts) fires bounded capability hints when the user prompt
  * carries evidence — the pi-fabric capability pattern, ported.
+ *
+ * Scoping: the plugin mounts inside the `fabric` agent preset (see
+ * cordis.patch.yml / presets/fabric/agent.cordis.yml), so the section,
+ * the assemble listener, and the pre-step listener are scope-filtered to
+ * fabric agents and their subagents. Other presets' assemblies are never
+ * minimized, spliced, or hinted. The disclosure catalog service itself is
+ * provided by the host-plane @dsh-fabric/host row (so the host code
+ * runtime can resolve it) and consumed here.
  * @module @dsh-fabric/system-prompt
  */
 
@@ -139,6 +147,19 @@ function resolveTools(ctx: Context): { schemas(scope?: unknown): readonly { name
   }
 }
 
+/**
+ * Resolve the host-provided disclosure catalog, tolerating compositions
+ * without it (the advisory degrades to dormant and `tools.describe()`
+ * reports unavailable, matching the code runtime's contract).
+ */
+function resolveDisclosureStore(ctx: Context): DisclosureStore | undefined {
+  try {
+    return ctx.get('fabricDisclosure')
+  } catch {
+    return undefined
+  }
+}
+
 /** Cap on retained per-agent advisory engines (one per session agent). */
 const MAX_ENGINES = 64
 
@@ -151,6 +172,12 @@ const MAX_ENGINES = 64
  * Tool schemas, dynamic runtime context, and prompt variables pass
  * through untouched.
  *
+ * Fabric-scoped: this plugin mounts inside the `fabric` agent preset,
+ * so the section registration and both listeners resolve to that
+ * preset's standing scope. The assemble listener omits the `global`
+ * flag on purpose — a global listener would receive every preset's
+ * assemblies and minimize their prompts too.
+ *
  * The agent pre-step listener publishes the agent-scoped tool catalog
  * for `tools.describe()` and runs the combustion advisory on each
  * user turn, injecting bounded capability hints as plugin-source
@@ -158,8 +185,10 @@ const MAX_ENGINES = 64
  * @param ctx - host context carrying the prompt registry.
  */
 export function apply(ctx: Context): void {
-  const store = new DisclosureStore()
-  ctx.provide('fabricDisclosure', store)
+  // The disclosure catalog is provided by the host-plane @dsh-fabric/host
+  // row so the host code runtime can resolve it; this preset-scoped plugin
+  // consumes it and publishes per-agent catalogs.
+  const store = resolveDisclosureStore(ctx)
 
   ctx.systemPrompt.section({
     name: 'fabric:system-prompt',
@@ -176,7 +205,7 @@ export function apply(ctx: Context): void {
           ? { ...section, text: discloseSdkSection(section.text, DISCLOSURE_CORE_TOOLS) }
           : section),
     }
-  }, { global: true, prepend: true })
+  }, { prepend: true })
 
   const engines = new Map<string, AdvisoryEngine>()
   const engineFor = (agentId: string): AdvisoryEngine => {
@@ -202,7 +231,7 @@ export function apply(ctx: Context): void {
     // the advisory stays dormant instead of blocking the prompt override.
     let entries: DisclosureEntry[] = []
     const registry = resolveTools(ctx)
-    if (registry !== undefined) {
+    if (store !== undefined && registry !== undefined) {
       entries = registry.schemas(agent)
         .filter(schema => schema.name !== 'run_code')
         .map(schema => ({

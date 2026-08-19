@@ -1,6 +1,8 @@
 # This layer replaces the default CodeRuntime provider and adds Fabric-owned
-# host, mesh, tool, and browser plugins. DSH ToolRuntime and Cordis remain the
-# execution-policy and component-lifecycle authorities.
+# host, mesh, and browser plugins. DSH ToolRuntime and Cordis remain the
+# execution-policy and component-lifecycle authorities. The mesh Consumer and
+# the system-prompt overlay are NOT here: they mount inside the `fabric`
+# preset so their model-facing surfaces stay fabric-scoped.
 - id: code-runtime
   disabled: true
 
@@ -59,12 +61,6 @@
 
     - id: dsh-fabric-mesh
       name: '@dsh-fabric/mesh/provider'
-
-    - id: dsh-fabric-mesh-tool
-      name: '@dsh-fabric/mesh/tool'
-
-    - id: dsh-fabric-system-prompt
-      name: '@dsh-fabric/system-prompt'
 
     - id: dsh-fabric-ui
       name: '@dsh-fabric/client-ui'

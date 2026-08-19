@@ -42,6 +42,7 @@
     "@monotykamary/dsh-agent": "link:../../../deepseek-harness/packages/core/agent",
     "@monotykamary/dsh-invariants": "link:../../../deepseek-harness/packages/runtime-diagnostics/invariants",
     "@monotykamary/dsh-llm": "link:../../../deepseek-harness/packages/llm/llm",
+    "@monotykamary/dsh-scope": "link:../../../deepseek-harness/packages/core/scope",
     "@monotykamary/dsh-system-prompt": "link:../../../deepseek-harness/packages/core/system-prompt",
     "@monotykamary/dsh-tools": "link:../../../deepseek-harness/packages/core/tools",
     "typescript": "^6.0.3"

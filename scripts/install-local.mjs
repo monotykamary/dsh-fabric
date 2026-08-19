@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { access, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -19,14 +20,15 @@ const LINK_PATHS = [
   'packages/code-runtime-quickjs',
   'packages/client-ui',
 ]
+// Host-plane rows only: the mesh Consumer (@dsh-fabric/mesh/tool) and the
+// system-prompt overlay (@dsh-fabric/system-prompt) mount inside the `fabric`
+// preset composition, so they are verified against that file instead.
 const EXPECTED_ROWS = [
   '@dsh-fabric/code-runtime-quickjs',
   '@dsh-fabric/compaction',
   '@dsh-fabric/compaction/presets',
   '@dsh-fabric/host',
   '@dsh-fabric/mesh/provider',
-  '@dsh-fabric/mesh/tool',
-  '@dsh-fabric/system-prompt',
   '@dsh-fabric/client-ui',
 ]
 const REQUIRED_ARTIFACTS = [
@@ -298,7 +300,7 @@ function verifyInstalled(config, profile) {
   }
   verifyInstalledCompactionMask(config, profile)
   verifyInstalledTodoGoalMask(config, profile)
-  verifyInstalledSystemPrompt(config, profile)
+  verifyInstalledFabricPreset(profile)
 }
 
 function verifyUninstalled(config, profile) {
@@ -329,10 +331,17 @@ function verifyInstalledTodoGoalMask(config, profile) {
   }
 }
 
-function verifyInstalledSystemPrompt(config, profile) {
-  const rows = rowsById(config, 'dsh-fabric-system-prompt')
-  if (rows.length !== 1 || rows[0].name !== '@dsh-fabric/system-prompt' || rows[0].disabled === true) {
-    throw new Error('profile ' + JSON.stringify(profile) + ' did not activate the Fabric system-prompt row')
+function verifyInstalledFabricPreset(profile) {
+  const presetPath = resolve(ROOT, 'packages/compaction/presets/fabric/agent.cordis.yml')
+  const composition = readFileSync(presetPath, 'utf8')
+  for (const row of [
+    { id: 'dsh-fabric-mesh-tool', name: '@dsh-fabric/mesh/tool' },
+    { id: 'dsh-fabric-system-prompt', name: '@dsh-fabric/system-prompt' },
+  ]) {
+    const anchored = '- id: ' + row.id + '\n  name: ' + JSON.stringify(row.name)
+    if (!composition.includes(anchored)) {
+      throw new Error('profile ' + JSON.stringify(profile) + ' fabric preset does not mount ' + row.id + ' (' + row.name + ')')
+    }
   }
 }
 

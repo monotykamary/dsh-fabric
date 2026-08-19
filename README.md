@@ -43,7 +43,7 @@ flowchart LR
   DSH --> Compiler
 ```
 
-The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh Consumer, host projection, and client surfaces under seven composed rows.
+The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh provider, host projection, and client surfaces under seven composed rows. The Fabric mesh Consumer and the Fabric system-prompt overlay are NOT host rows: they mount inside the `fabric` preset itself, so their prompt surfaces stay fabric-scoped and no other preset's system prompt is touched. The Fabric-owned roster keeps the four pinned DSH modes and adds a fifth, `fabric`: Fabric mode composes the same Code Mode SDK presentation as `code` (PTC) under its own preset identity, so Fabric sessions record and display as Fabric mode instead of reusing PTC mode.
 
 ## Packages
 

@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@dsh-fabric/protocol": "workspace:^",
+    "@dsh-fabric/system-prompt": "workspace:^",
     "@monotykamary/schemastery": "link:../../../deepseek-harness/vendor/schemastery",
     "zod": "^4.4.3"
   },

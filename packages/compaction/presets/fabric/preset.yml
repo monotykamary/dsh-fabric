@@ -1,0 +1,3 @@
+name: Fabric mode
+description: Fabric agent with durable mesh coordination, deterministic compaction, and the Code Mode SDK for multi-step TypeScript orchestration.
+order: 2

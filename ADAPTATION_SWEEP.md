@@ -29,7 +29,7 @@ It is not a line-for-line port of pi-fabric's component system, workflow engine,
 The bundle installs one Fabric compaction backend and masks every stock DSH backend/pruner composition row. DSH still owns the abstract service contract, token meter, `/compact` command, durable lock and surface-replacement transaction, persistence flush, and compaction invariants.
 
 1. `@dsh-fabric/compaction` subclasses DSH's supported `BasicCompactionEngine` extension point, replacing its model summarizer with a deterministic Fabric compiler while reusing the audited range selection and durable transaction.
-2. The root layer disables `compaction-basic`, `tool-result-pruner`, and `agent-presets`, then inserts the Fabric engine plus a Fabric-owned roster. All four pinned presets compose one isolated Fabric engine and the backend-independent DSH command; none composes the stock backend or pruner.
+2. The root layer disables `compaction-basic`, `tool-result-pruner`, and `agent-presets`, then inserts the Fabric engine plus a Fabric-owned roster. All five pinned presets compose one isolated Fabric engine and the backend-independent DSH command; none composes the stock backend or pruner.
 3. Typed DSH messages are normalized without reasoning blocks. Native `tool/result.meta`, paired `tool/code-dispatch-start`/`tool/code-dispatch`, and `tool-workflow/*` lifecycle events supply structured Fabric runs, phases, and operations. Graded projections preserve goals, exact file operations, Fabric activity, unresolved and resolved failures, earlier turns, current status, and a bounded recent transcript.
 4. The adapter reconstructs cumulative originals by recursively following immutable `sourceEventSeqs` citations and excludes generated checkpoint prose. Each summary still carries a bounded strict snapshot in `rawOutput` for diagnostics and detached compiler callers, but the adapter never trusts that snapshot as the next compaction source.
 5. `@dsh-fabric/host` folds `compaction/start`, `compaction/summary`, and `compaction/end` into bounded Activity/Topology records without deleting existing Fabric facts. Stock `compaction/prune` is no longer emitted while Fabric is active because the stock pruner is masked.
@@ -73,7 +73,7 @@ The sweep is complete when all of the following remain true:
 - native ToolRuntime and QuickJS Code Mode both execute `fabric_mesh` end to end;
 - mesh state reopens through DSH storage composition;
 - `/compact` commits a deterministic Fabric summary without an auxiliary LLM call, and later compaction recursively reconstructs the cited original source events rather than checkpoint prose;
-- all four Fabric preset compositions contain exactly one automatic Fabric compactor and no stock compactor/pruner, and a linked no-server profile can standing-mount all four through the host-native roster;
+- all five Fabric preset compositions contain exactly one automatic Fabric compactor and no stock compactor/pruner, and a linked no-server profile can standing-mount all five through the host-native roster;
 - a JSON-round-tripped session log reconstructs Fabric and compaction projections;
 - prompt assembly re-emits current count- and byte-bounded mesh metadata from detached authoritative records;
 - topology settlement survives bounded edge/node eviction;

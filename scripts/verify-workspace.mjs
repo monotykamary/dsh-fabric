@@ -22,8 +22,6 @@ const expectedReferences = [
   '@dsh-fabric/compaction/presets',
   '@dsh-fabric/host',
   '@dsh-fabric/mesh/provider',
-  '@dsh-fabric/mesh/tool',
-  '@dsh-fabric/system-prompt',
   '@monotykamary/dsh-agent-presets',
 ]
 if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
@@ -45,8 +43,12 @@ for (const id of ['command-goal', 'goal-round-driver', 'ui-goal']) {
     throw new Error('cordis.patch.yml must disable the inherited ' + id + ' row')
   }
 }
-if (!patch.includes('- id: dsh-fabric-system-prompt' + nl + "      name: '@dsh-fabric/system-prompt'")) {
-  throw new Error('cordis.patch.yml must insert the Fabric system-prompt override')
+const fabricPreset = await readFile('packages/compaction/presets/fabric/agent.cordis.yml', 'utf8')
+if (!fabricPreset.includes('- id: dsh-fabric-mesh-tool' + nl + "  name: '@dsh-fabric/mesh/tool'")) {
+  throw new Error('fabric preset must mount the Fabric mesh Consumer')
+}
+if (!fabricPreset.includes('- id: dsh-fabric-system-prompt' + nl + "  name: '@dsh-fabric/system-prompt'")) {
+  throw new Error('fabric preset must mount the Fabric system-prompt overlay')
 }
 if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]@dsh-fabric\/compaction['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric compaction engine')
@@ -131,7 +133,7 @@ for (const artifact of [
   }
 }
 
-for (const preset of ['standard', 'code', 'cordis', 'minimal']) {
+for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   const composition = await readFile(`packages/compaction/presets/${preset}/agent.cordis.yml`, 'utf8')
   if ((composition.match(/@dsh-fabric\/compaction/g) ?? []).length !== 1
     || !composition.includes('@monotykamary/dsh-command-compact')
@@ -142,7 +144,7 @@ for (const preset of ['standard', 'code', 'cordis', 'minimal']) {
   }
 }
 
-for (const preset of ['standard', 'code', 'cordis', 'minimal']) {
+for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   const composition = await readFile('packages/compaction/presets/' + preset + '/agent.cordis.yml', 'utf8')
   const todoMasked = composition.includes('- id: tool-todo' + nl + "  name: '@monotykamary/dsh-tool-todo'" + nl + '  disabled: true')
   const goalMasked = composition.includes('- id: tool-goal' + nl + "  name: '@monotykamary/dsh-tool-goal'" + nl + '  disabled: true')

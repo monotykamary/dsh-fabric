@@ -93,9 +93,9 @@ describe('Fabric /compact composition', () => {
         includeUserRoot: false,
       })
       const listed = await presets.list()
-      expect(listed.map(preset => preset.id)).toEqual(['standard', 'code', 'minimal', 'cordis'])
+      expect(listed.map(preset => preset.id)).toEqual(['standard', 'code', 'fabric', 'minimal', 'cordis'])
       expect(listed.map(preset => preset.name)).toEqual([
-        'Standard mode', 'Code mode', 'Minimal mode', 'Creation mode',
+        'Standard mode', 'Code mode', 'Fabric mode', 'Minimal mode', 'Creation mode',
       ])
       for (const preset of listed) {
         const composition = await presets.read(preset.id)

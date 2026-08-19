@@ -180,6 +180,9 @@ importers:
       '@dsh-fabric/protocol':
         specifier: workspace:^
         version: link:../protocol
+      '@dsh-fabric/system-prompt':
+        specifier: workspace:^
+        version: link:../system-prompt
       '@monotykamary/schemastery':
         specifier: link:../../../deepseek-harness/vendor/schemastery
         version: link:../../../deepseek-harness/vendor/schemastery
@@ -283,6 +286,9 @@ importers:
       '@monotykamary/dsh-llm':
         specifier: link:../../../deepseek-harness/packages/llm/llm
         version: link:../../../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-scope':
+        specifier: link:../../../deepseek-harness/packages/core/scope
+        version: link:../../../deepseek-harness/packages/core/scope
       '@monotykamary/dsh-system-prompt':
         specifier: link:../../../deepseek-harness/packages/core/system-prompt
         version: link:../../../deepseek-harness/packages/core/system-prompt
