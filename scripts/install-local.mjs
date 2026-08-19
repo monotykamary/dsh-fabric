@@ -338,7 +338,7 @@ function verifyInstalledFabricPreset(profile) {
     { id: 'dsh-fabric-mesh-tool', name: 'dsh-fabric-mesh/tool' },
     { id: 'dsh-fabric-system-prompt', name: 'dsh-fabric-system-prompt' },
   ]) {
-    const anchored = '- id: ' + row.id + '\n  name: ' + JSON.stringify(row.name)
+    const anchored = '- id: ' + row.id + '\n  name: \'' + row.name + '\''
     if (!composition.includes(anchored)) {
       throw new Error('profile ' + JSON.stringify(profile) + ' fabric preset does not mount ' + row.id + ' (' + row.name + ')')
     }
