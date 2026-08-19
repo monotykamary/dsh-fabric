@@ -16,15 +16,15 @@ await access(resolve('scripts/install-local.mjs'))
 const patch = await readFile('cordis.patch.yml', 'utf8')
 const references = [...patch.matchAll(/^\s+name:\s+['"]([^'"]+)['"]\s*$/gm)].map(match => match[1])
 const expectedReferences = [
-  '@dsh-fabric/client-ui',
-  '@dsh-fabric/code-runtime-quickjs',
-  '@dsh-fabric/compaction',
-  '@dsh-fabric/compaction/presets',
-  '@dsh-fabric/host',
-  '@dsh-fabric/mesh/provider',
+  'dsh-fabric-client-ui',
+  'dsh-fabric-code-runtime-quickjs',
+  'dsh-fabric-compaction',
+  'dsh-fabric-compaction/presets',
+  'dsh-fabric-host',
+  'dsh-fabric-mesh/provider',
   '@monotykamary/dsh-agent-presets',
 ]
-if (references.toSorted().join('\n') !== expectedReferences.join('\n')) {
+if (references.toSorted().join('\n') !== expectedReferences.toSorted().join('\n')) {
   throw new Error('cordis.patch.yml does not contain the exact Fabric composition rows')
 }
 if (!/^- id: code-runtime\r?\n  disabled: true$/m.test(patch)) {
@@ -44,23 +44,23 @@ for (const id of ['command-goal', 'goal-round-driver', 'ui-goal']) {
   }
 }
 const fabricPreset = await readFile('packages/compaction/presets/fabric/agent.cordis.yml', 'utf8')
-if (!fabricPreset.includes('- id: dsh-fabric-mesh-tool' + nl + "  name: '@dsh-fabric/mesh/tool'")) {
+if (!fabricPreset.includes('- id: dsh-fabric-mesh-tool' + nl + "  name: 'dsh-fabric-mesh/tool'")) {
   throw new Error('fabric preset must mount the Fabric mesh Consumer')
 }
-if (!fabricPreset.includes('- id: dsh-fabric-system-prompt' + nl + "  name: '@dsh-fabric/system-prompt'")) {
+if (!fabricPreset.includes('- id: dsh-fabric-system-prompt' + nl + "  name: 'dsh-fabric-system-prompt'")) {
   throw new Error('fabric preset must mount the Fabric system-prompt overlay')
 }
-if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]@dsh-fabric\/compaction['"]$/m.test(patch)) {
+if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]dsh-fabric-compaction['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric compaction engine')
 }
-if (!/^    - id: dsh-fabric-preset-root\r?\n      name: ['"]@dsh-fabric\/compaction\/presets['"]$/m.test(patch)) {
+if (!/^    - id: dsh-fabric-preset-root\r?\n      name: ['"]dsh-fabric-compaction\/presets['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric preset-root provider')
 }
 if (!/^    - id: dsh-fabric-agent-presets\r?\n      name: ['"]@monotykamary\/dsh-agent-presets['"]$/m.test(patch)
   || !/^          - path: !!js ctx\.fabricPresetRoot\r?\n            trust: system$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the host-native Fabric preset roster with a system-trusted package root')
 }
-if (!/^    - id: dsh-fabric-code-runtime\r?\n      name: ['"]@dsh-fabric\/code-runtime-quickjs['"]$/m.test(patch)) {
+if (!/^    - id: dsh-fabric-code-runtime\r?\n      name: ['"]dsh-fabric-code-runtime-quickjs['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert QuickJS under its distinct Fabric loader id')
 }
 for (const reference of references) {
@@ -135,11 +135,11 @@ for (const artifact of [
 
 for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   const composition = await readFile(`packages/compaction/presets/${preset}/agent.cordis.yml`, 'utf8')
-  if ((composition.match(/@dsh-fabric\/compaction/g) ?? []).length !== 1
+  if ((composition.match(/name: ['"]dsh-fabric-compaction['"]/g) ?? []).length !== 1
     || !composition.includes('@monotykamary/dsh-command-compact')
     || composition.includes('@monotykamary/dsh-compaction-basic')
     || composition.includes('@monotykamary/dsh-compaction-tool-result-pruner')
-    || /@dsh-fabric\/compaction[\s\S]{0,120}auto:\s*false/.test(composition)) {
+    || /name: ['"]dsh-fabric-compaction['"][\s\S]{0,120}auto:\s*false/.test(composition)) {
     throw new Error(`Fabric preset ${preset} does not exclusively compose Fabric compaction`)
   }
 }
@@ -168,8 +168,8 @@ const clientBundle = await readFile('packages/client-ui/lib/client.js', 'utf8')
 if (!clientBundle.startsWith('window.__ModuleLoader__.load(')) {
   throw new Error('client bundle is missing the DSH module-loader wrapper')
 }
-if (/require\(["']@dsh-fabric\//.test(clientBundle)) {
-  throw new Error('client bundle contains an unresolved @dsh-fabric value import')
+if (/require\(["']dsh-fabric-/.test(clientBundle)) {
+  throw new Error('client bundle contains an unresolved dsh-fabric value import')
 }
 if (!clientBundle.includes('Fabric overview') || !clientBundle.includes('view.summary')) {
   throw new Error('client bundle is missing the informative English Fabric overview dictionary')

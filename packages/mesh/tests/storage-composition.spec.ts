@@ -6,7 +6,7 @@ import { Context } from '@monotykamary/cordis'
 import Storage from '@monotykamary/dsh-storage'
 import * as StorageJson from '@monotykamary/dsh-storage-json'
 import * as StorageDomain from '@monotykamary/dsh-storage-domain'
-import { FabricActorId, FabricStateKey, FabricTopicId } from '@dsh-fabric/protocol'
+import { FabricActorId, FabricStateKey, FabricTopicId } from 'dsh-fabric-protocol'
 import { StorageFabricMesh } from '../src/provider.ts'
 
 async function mount(root: string) {

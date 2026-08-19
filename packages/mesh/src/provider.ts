@@ -9,7 +9,7 @@ import {
   FabricActorMessageId,
   FabricTopicId,
   FabricTopicMessageId,
-} from '@dsh-fabric/protocol'
+} from 'dsh-fabric-protocol'
 import type {
   FabricActorId as ActorId,
   FabricActorMessage,
@@ -23,7 +23,7 @@ import type {
   FabricTopicId as TopicId,
   FabricTopicMessage,
   FabricTopicRecord,
-} from '@dsh-fabric/protocol'
+} from 'dsh-fabric-protocol'
 import FabricMesh, { FabricMeshError } from './index.ts'
 import type { FabricMeshWorkspace } from './index.ts'
 import { fabricMeshDomainSpec } from './domain.ts'

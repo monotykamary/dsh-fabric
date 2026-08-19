@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-fabric/system-prompt",
+  "name": "dsh-fabric-system-prompt",
   "version": "0.1.0",
   "publishConfig": {
     "access": "public"

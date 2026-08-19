@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type {} from '@monotykamary/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsRuntime, TranslateNS } from '@monotykamary/dsh-client-ui-slots'
-import type { FabricActivityRecord, FabricGraphNode, FabricParticipantRecord } from '@dsh-fabric/protocol'
+import type { FabricActivityRecord, FabricGraphNode, FabricParticipantRecord } from 'dsh-fabric-protocol'
 import { buildFabricClientModel, navigateFabricTopology, type FabricNavigationDirection } from './model.ts'
 import { actionLabel, activityKindLabel, formatDuration, kindLabel, statusLabel, topologyNodeLabel } from './labels.ts'
 import type { FabricControls } from './types.ts'

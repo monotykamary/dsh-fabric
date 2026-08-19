@@ -1,4 +1,4 @@
-# @dsh-fabric/protocol
+# dsh-fabric-protocol
 
 Host-independent records shared by dsh-fabric adapters, services, and renderers. It imports no DSH host or browser package.
 

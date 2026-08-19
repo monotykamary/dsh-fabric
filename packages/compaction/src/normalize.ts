@@ -1,7 +1,7 @@
 /** DSH message normalization for deterministic Fabric compaction. */
 import { isCompactCheckpointSource } from '@monotykamary/dsh-compaction'
-import { projectFabricMeshActivity, readFabricMeshResultMeta } from '@dsh-fabric/protocol'
-import type { FabricActivityRecord, FabricJsonValue } from '@dsh-fabric/protocol'
+import { projectFabricMeshActivity, readFabricMeshResultMeta } from 'dsh-fabric-protocol'
+import type { FabricActivityRecord, FabricJsonValue } from 'dsh-fabric-protocol'
 import type { ContentBlock, Message } from '@monotykamary/dsh-llm'
 import { clipUtf8 } from './bounds.ts'
 
@@ -375,7 +375,7 @@ function projectActivity(
     subordinal: String(source.seq),
     address,
     ref: clipUtf8('fabric.' + activity.kind + '.' + activity.action, MAX_JSON_STRING_BYTES),
-    provider: '@dsh-fabric',
+    provider: 'dsh-fabric',
     action: clipUtf8(activity.action, MAX_JSON_STRING_BYTES),
     tool: meshActivityKind(activity.kind) ? 'fabric_mesh' : 'fabric_activity',
     args: isRecord(argsValue) ? argsValue as Record<string, FabricTraceJsonValue> : {},

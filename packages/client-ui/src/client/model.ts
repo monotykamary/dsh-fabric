@@ -10,8 +10,8 @@ import {
   type FabricParticipantDirectory,
   type FabricParticipantRecord,
   type FabricSessionInput,
-} from '@dsh-fabric/protocol'
-import type {} from '@dsh-fabric/host/types'
+} from 'dsh-fabric-protocol'
+import type {} from 'dsh-fabric-host/types'
 import type {} from '@monotykamary/dsh-subagent/client'
 import type {} from '@monotykamary/dsh-token-meter/client'
 

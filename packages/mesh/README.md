@@ -1,10 +1,10 @@
-# @dsh-fabric/mesh
+# dsh-fabric-mesh
 
 Complete DSH capability for durable Fabric topics, revisioned compare-and-swap state, and actor mailboxes.
 
 - The root export is the `FabricMesh` Service Definition.
-- `@dsh-fabric/mesh/provider` stores records through DSH `storage-domain`.
-- `@dsh-fabric/mesh/tool` registers the `fabric_mesh` Consumer, attaches validated `presentationMeta` to native post-commit tool results for browser topology, supplies model-facing operating rules, and contributes a bounded metadata-only DSH runtime-context snapshot.
+- `dsh-fabric-mesh/provider` stores records through DSH `storage-domain`.
+- `dsh-fabric-mesh/tool` registers the `fabric_mesh` Consumer, attaches validated `presentationMeta` to native post-commit tool results for browser topology, supplies model-facing operating rules, and contributes a bounded metadata-only DSH runtime-context snapshot.
 
 The context contribution is assembled from an authoritative count-limited provider snapshot before each model request, including after DSH compaction. It carries bounded identifiers, revisions, statuses, counts, and truncation metadata—not arbitrary payloads—and shrinks to a final 16 KiB UTF-8 ceiling. Snapshot/read record counts default to 100 and reject values above 500. Explicit topic and terminal-mailbox pruning provides storage retention; mailbox pruning never removes queued or claimed commands. QuickJS evaluations remain fresh, so cross-run coordination belongs here rather than in JavaScript globals.
 

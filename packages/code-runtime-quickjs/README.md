@@ -1,4 +1,4 @@
-# @dsh-fabric/code-runtime-quickjs
+# dsh-fabric-code-runtime-quickjs
 
 QuickJS WASM provider for DSH's existing `CodeRuntime` service. Every run receives a fresh context, is typechecked against the exact binding names supplied by Code Mode, enforces source-compilation, whole-run wall-time, memory, stack, and output budgets, validates JSON bridge traffic, and drains or aborts host calls during teardown.
 

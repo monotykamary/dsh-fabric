@@ -35,15 +35,15 @@
 
 - insert:
     - id: dsh-fabric-code-runtime
-      name: '@dsh-fabric/code-runtime-quickjs'
+      name: 'dsh-fabric-code-runtime-quickjs'
 
     - id: dsh-fabric-compaction
-      name: '@dsh-fabric/compaction'
+      name: 'dsh-fabric-compaction'
       config:
         auto: false
 
     - id: dsh-fabric-preset-root
-      name: '@dsh-fabric/compaction/presets'
+      name: 'dsh-fabric-compaction/presets'
 
     - id: dsh-fabric-agent-presets
       name: '@monotykamary/dsh-agent-presets'
@@ -57,10 +57,10 @@
         includeUserRoot: false
 
     - id: dsh-fabric-host
-      name: '@dsh-fabric/host'
+      name: 'dsh-fabric-host'
 
     - id: dsh-fabric-mesh
-      name: '@dsh-fabric/mesh/provider'
+      name: 'dsh-fabric-mesh/provider'
 
     - id: dsh-fabric-ui
-      name: '@dsh-fabric/client-ui'
+      name: 'dsh-fabric-client-ui'

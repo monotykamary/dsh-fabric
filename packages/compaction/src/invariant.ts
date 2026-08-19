@@ -1,8 +1,8 @@
-/** Package-owned invariant companion for @dsh-fabric/compaction. */
+/** Package-owned invariant companion for dsh-fabric-compaction. */
 import type { Context } from '@monotykamary/cordis'
 import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
-const PACKAGE_NAME = '@dsh-fabric/compaction'
+const PACKAGE_NAME = 'dsh-fabric-compaction'
 
 export const name = 'dsh-fabric-compaction-invariant'
 export const inject = ['invariants']

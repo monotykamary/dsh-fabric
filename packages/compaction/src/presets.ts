@@ -7,7 +7,7 @@ declare module '@monotykamary/cordis' {
   }
 }
 
-export const name = '@dsh-fabric/compaction/presets'
+export const name = 'dsh-fabric-compaction/presets'
 export const FABRIC_PRESET_ROOT = fileURLToPath(new URL('../presets/', import.meta.url))
 
 /** Publish the package-relative Fabric preset root for the host's AgentPresets row. */

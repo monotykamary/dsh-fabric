@@ -49,14 +49,14 @@ The installable workspace bundle masks the inherited code runtime, stock compact
 
 | Package | Responsibility |
 | --- | --- |
-| [`@dsh-fabric/protocol`](packages/protocol) | Host-independent participant, activity, topology, mesh, and actor records. |
-| [`@dsh-fabric/compaction`](packages/compaction) | Deterministic summary compiler, DSH `CompactionEngine`, and masked preset roster. |
-| [`@dsh-fabric/host`](packages/host) | Durable-event adapter and bounded session projection. |
-| [`@dsh-fabric/system-prompt`](packages/system-prompt) | Fabric-owned system prompt override and native-prose minimization. |
+| [`dsh-fabric-protocol`](packages/protocol) | Host-independent participant, activity, topology, mesh, and actor records. |
+| [`dsh-fabric-compaction`](packages/compaction) | Deterministic summary compiler, DSH `CompactionEngine`, and masked preset roster. |
+| [`dsh-fabric-host`](packages/host) | Durable-event adapter and bounded session projection. |
+| [`dsh-fabric-system-prompt`](packages/system-prompt) | Fabric-owned system prompt override and native-prose minimization. |
 
-| [`@dsh-fabric/mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
-| [`@dsh-fabric/code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
-| [`@dsh-fabric/client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |
+| [`dsh-fabric-mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
+| [`dsh-fabric-code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
+| [`dsh-fabric-client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |
 
 ## Install
 

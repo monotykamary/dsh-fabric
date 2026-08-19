@@ -1,4 +1,4 @@
-# @dsh-fabric/system-prompt
+# dsh-fabric-system-prompt
 
 Fabric-owned system prompt for DeepSeek Harness: one high-priority operational section capturing pi-fabric's well-tuned long-horizon disciplines, adapted to DSH, plus an authoritative `system-prompt/assemble` waterfall listener that minimizes the native DSH prose.
 

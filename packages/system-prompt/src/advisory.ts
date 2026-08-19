@@ -16,7 +16,7 @@
  *  - path/URL terms earn half a quantum, matching pi's path discount.
  *
  * State is per-agent, held by the plugin in a Map keyed by agent id.
- * @module @dsh-fabric/system-prompt/src/advisory
+ * @module dsh-fabric-system-prompt/src/advisory
  */
 
 /** One capability the advisor may hint at. */

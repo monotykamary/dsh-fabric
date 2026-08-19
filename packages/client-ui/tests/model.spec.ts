@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionListState, SessionSummary } from '@monotykamary/dsh-client-runtime/client'
-import type {} from '@dsh-fabric/host/types'
+import type {} from 'dsh-fabric-host/types'
 import { buildFabricClientModel, layoutFabricTree, navigateFabricTopology } from '../src/client/model.ts'
 
 function summary(id: string, parentId?: string): SessionSummary {

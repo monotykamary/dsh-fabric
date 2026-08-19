@@ -15,8 +15,8 @@ import {
   FabricStateKey,
   FabricTopicId,
   fabricMeshResultMeta,
-} from '@dsh-fabric/protocol'
-import type { FabricJsonValue, FabricMeshSnapshot } from '@dsh-fabric/protocol'
+} from 'dsh-fabric-protocol'
+import type { FabricJsonValue, FabricMeshSnapshot } from 'dsh-fabric-protocol'
 import type {} from './index.ts'
 
 /** Cordis plugin name. */

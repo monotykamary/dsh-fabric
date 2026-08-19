@@ -14,7 +14,7 @@ import type {
   FabricTopicId,
   FabricTopicMessage,
   FabricTopicRecord,
-} from '@dsh-fabric/protocol'
+} from 'dsh-fabric-protocol'
 
 export type FabricMeshErrorCode = 'already-exists' | 'not-found' | 'version-conflict' | 'invalid-state' | 'claim-conflict'
 

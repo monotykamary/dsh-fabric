@@ -1,8 +1,8 @@
-/** Package-owned invariant companion for @dsh-fabric/mesh. */
+/** Package-owned invariant companion for dsh-fabric-mesh. */
 import type { Context } from '@monotykamary/cordis'
 import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
-const PACKAGE_NAME = '@dsh-fabric/mesh'
+const PACKAGE_NAME = 'dsh-fabric-mesh'
 
 export const name = 'dsh-fabric-mesh-invariant'
 export const inject = ['invariants']

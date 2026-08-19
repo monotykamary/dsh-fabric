@@ -19,8 +19,8 @@ import type {
 import { compileQuickJsProgram } from './type-checker.ts'
 import { executeQuickJs } from './runtime.ts'
 // Type-only: pulls the `fabricDisclosure` Context augmentation owned by
-// @dsh-fabric/system-prompt (erased at runtime — no runtime dependency).
-import type {} from '@dsh-fabric/system-prompt'
+// dsh-fabric-system-prompt (erased at runtime — no runtime dependency).
+import type {} from 'dsh-fabric-system-prompt'
 
 /** QuickJS runtime budgets. */
 export interface Config {
@@ -121,7 +121,7 @@ export class QuickJsCodeRuntime extends CodeRuntime {
 /**
  * Add the progressive-disclosure surface to the `tools` namespace:
  * `tools.describe(name)` resolves the contract of a tool the prompt no
- * longer lists (fed by @dsh-fabric/system-prompt's per-agent catalog), and
+ * longer lists (fed by dsh-fabric-system-prompt's per-agent catalog), and
  * `tools.call({ name, args })` dispatches any bound tool by name through
  * the exact binding closures DSH built for this run — same ordering,
  * exclusive-call, and policy barriers as a direct member call. Both members
@@ -133,7 +133,7 @@ function withDisclosure(bindings: Map<string, CodeBindingNamespace>, ctx: Contex
   if (tools === undefined) return bindings
   const next = new Map(bindings)
   // Lazy: the disclosure catalog is optional — without the
-  // @dsh-fabric/system-prompt provider, describe() reports unavailable
+  // dsh-fabric-system-prompt provider, describe() reports unavailable
   // while call() keeps working through the ordinary binding map.
   const disclosure = (): { describe(name: string): { name: string; description: string; parameters: Record<string, unknown> | undefined } | undefined } | undefined => {
     try {

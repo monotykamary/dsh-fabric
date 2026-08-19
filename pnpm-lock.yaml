@@ -41,30 +41,30 @@ importers:
 
   .:
     dependencies:
-      '@dsh-fabric/client-ui':
-        specifier: workspace:^
-        version: link:packages/client-ui
-      '@dsh-fabric/code-runtime-quickjs':
-        specifier: workspace:^
-        version: link:packages/code-runtime-quickjs
-      '@dsh-fabric/compaction':
-        specifier: workspace:^
-        version: link:packages/compaction
-      '@dsh-fabric/host':
-        specifier: workspace:^
-        version: link:packages/host
-      '@dsh-fabric/mesh':
-        specifier: workspace:^
-        version: link:packages/mesh
-      '@dsh-fabric/protocol':
-        specifier: workspace:^
-        version: link:packages/protocol
-      '@dsh-fabric/system-prompt':
-        specifier: workspace:^
-        version: link:packages/system-prompt
       '@monotykamary/dsh-agent-presets':
         specifier: link:../deepseek-harness/packages/preset/agent-presets
         version: link:../deepseek-harness/packages/preset/agent-presets
+      dsh-fabric-client-ui:
+        specifier: workspace:^
+        version: link:packages/client-ui
+      dsh-fabric-code-runtime-quickjs:
+        specifier: workspace:^
+        version: link:packages/code-runtime-quickjs
+      dsh-fabric-compaction:
+        specifier: workspace:^
+        version: link:packages/compaction
+      dsh-fabric-host:
+        specifier: workspace:^
+        version: link:packages/host
+      dsh-fabric-mesh:
+        specifier: workspace:^
+        version: link:packages/mesh
+      dsh-fabric-protocol:
+        specifier: workspace:^
+        version: link:packages/protocol
+      dsh-fabric-system-prompt:
+        specifier: workspace:^
+        version: link:packages/system-prompt
     devDependencies:
       '@types/node':
         specifier: ^22.20.0
@@ -84,9 +84,6 @@ importers:
 
   packages/client-ui:
     dependencies:
-      '@dsh-fabric/protocol':
-        specifier: workspace:^
-        version: link:../protocol
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -117,19 +114,22 @@ importers:
       '@monotykamary/dsh-token-meter':
         specifier: link:../../../deepseek-harness/packages/llm/token-meter
         version: link:../../../deepseek-harness/packages/llm/token-meter
+      dsh-fabric-protocol:
+        specifier: workspace:^
+        version: link:../protocol
       react:
         specifier: ^18.2.0
         version: 18.3.1
     devDependencies:
-      '@dsh-fabric/host':
-        specifier: workspace:^
-        version: link:../host
       '@monotykamary/dsh-host-apiproxy':
         specifier: link:../../../deepseek-harness/packages/host/apiproxy
         version: link:../../../deepseek-harness/packages/host/apiproxy
       '@types/react':
         specifier: ~18.3.0
         version: 18.3.31
+      dsh-fabric-host:
+        specifier: workspace:^
+        version: link:../host
 
   packages/code-runtime-quickjs:
     dependencies:
@@ -158,21 +158,18 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
     devDependencies:
-      '@dsh-fabric/system-prompt':
-        specifier: workspace:^
-        version: link:../system-prompt
       '@monotykamary/dsh-system-prompt':
         specifier: link:../../../deepseek-harness/packages/core/system-prompt
         version: link:../../../deepseek-harness/packages/core/system-prompt
       '@monotykamary/dsh-tools':
         specifier: link:../../../deepseek-harness/packages/core/tools
         version: link:../../../deepseek-harness/packages/core/tools
+      dsh-fabric-system-prompt:
+        specifier: workspace:^
+        version: link:../system-prompt
 
   packages/compaction:
     dependencies:
-      '@dsh-fabric/protocol':
-        specifier: workspace:^
-        version: link:../protocol
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -206,15 +203,12 @@ importers:
       '@monotykamary/dsh-token-meter':
         specifier: link:../../../deepseek-harness/packages/llm/token-meter
         version: link:../../../deepseek-harness/packages/llm/token-meter
+      dsh-fabric-protocol:
+        specifier: workspace:^
+        version: link:../protocol
 
   packages/host:
     dependencies:
-      '@dsh-fabric/protocol':
-        specifier: workspace:^
-        version: link:../protocol
-      '@dsh-fabric/system-prompt':
-        specifier: workspace:^
-        version: link:../system-prompt
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -242,6 +236,12 @@ importers:
       '@monotykamary/schemastery':
         specifier: link:../../../deepseek-harness/vendor/schemastery
         version: link:../../../deepseek-harness/vendor/schemastery
+      dsh-fabric-protocol:
+        specifier: workspace:^
+        version: link:../protocol
+      dsh-fabric-system-prompt:
+        specifier: workspace:^
+        version: link:../system-prompt
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -252,9 +252,6 @@ importers:
 
   packages/mesh:
     dependencies:
-      '@dsh-fabric/protocol':
-        specifier: workspace:^
-        version: link:../protocol
       '@monotykamary/cordis':
         specifier: link:../../../deepseek-harness/vendor/cordis
         version: link:../../../deepseek-harness/vendor/cordis
@@ -279,16 +276,13 @@ importers:
       '@monotykamary/dsh-workspace':
         specifier: link:../../../deepseek-harness/packages/workspace/workspace
         version: link:../../../deepseek-harness/packages/workspace/workspace
+      dsh-fabric-protocol:
+        specifier: workspace:^
+        version: link:../protocol
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@dsh-fabric/code-runtime-quickjs':
-        specifier: workspace:^
-        version: link:../code-runtime-quickjs
-      '@dsh-fabric/host':
-        specifier: workspace:^
-        version: link:../host
       '@monotykamary/dsh-llm':
         specifier: link:../../../deepseek-harness/packages/llm/llm
         version: link:../../../deepseek-harness/packages/llm/llm
@@ -301,6 +295,12 @@ importers:
       '@monotykamary/dsh-storage-json':
         specifier: link:../../../deepseek-harness/packages/storage/storage-json
         version: link:../../../deepseek-harness/packages/storage/storage-json
+      dsh-fabric-code-runtime-quickjs:
+        specifier: workspace:^
+        version: link:../code-runtime-quickjs
+      dsh-fabric-host:
+        specifier: workspace:^
+        version: link:../host
 
   packages/protocol: {}
 

@@ -20,7 +20,7 @@ const MAX_JSON_NODES = 256
 const MAX_JSON_COLLECTION = 64
 const MAX_JSON_STRING_BYTES = 2048
 
-export const FABRIC_COMPACTION_PROVIDER = '@dsh-fabric/compaction'
+export const FABRIC_COMPACTION_PROVIDER = 'dsh-fabric-compaction'
 export const FABRIC_COMPACTION_MODEL = 'deterministic-projection-v2'
 
 export interface FabricCompactionSnapshotV1 {

@@ -20,16 +20,16 @@ const LINK_PATHS = [
   'packages/code-runtime-quickjs',
   'packages/client-ui',
 ]
-// Host-plane rows only: the mesh Consumer (@dsh-fabric/mesh/tool) and the
-// system-prompt overlay (@dsh-fabric/system-prompt) mount inside the `fabric`
+// Host-plane rows only: the mesh Consumer (dsh-fabric-mesh/tool) and the
+// system-prompt overlay (dsh-fabric-system-prompt) mount inside the `fabric`
 // preset composition, so they are verified against that file instead.
 const EXPECTED_ROWS = [
-  '@dsh-fabric/code-runtime-quickjs',
-  '@dsh-fabric/compaction',
-  '@dsh-fabric/compaction/presets',
-  '@dsh-fabric/host',
-  '@dsh-fabric/mesh/provider',
-  '@dsh-fabric/client-ui',
+  'dsh-fabric-code-runtime-quickjs',
+  'dsh-fabric-compaction',
+  'dsh-fabric-compaction/presets',
+  'dsh-fabric-host',
+  'dsh-fabric-mesh/provider',
+  'dsh-fabric-client-ui',
 ]
 const REQUIRED_ARTIFACTS = [
   'packages/protocol/lib/index.js',
@@ -290,7 +290,7 @@ function verifyInstalled(config, profile) {
   }
   const fabricRows = rowsById(config, 'dsh-fabric-code-runtime')
   if (fabricRows.length !== 1
-    || fabricRows[0].name !== '@dsh-fabric/code-runtime-quickjs'
+    || fabricRows[0].name !== 'dsh-fabric-code-runtime-quickjs'
     || fabricRows[0].disabled === true) {
     throw new Error(`profile ${JSON.stringify(profile)} did not activate exactly one Fabric code-runtime row`)
   }
@@ -315,7 +315,7 @@ function verifyUninstalled(config, profile) {
   const inheritedRows = rowsById(config, 'code-runtime')
   if (inheritedRows.length !== 1
     || inheritedRows[0].name === undefined
-    || inheritedRows[0].name === '@dsh-fabric/code-runtime-quickjs') {
+    || inheritedRows[0].name === 'dsh-fabric-code-runtime-quickjs') {
     throw new Error(`profile ${JSON.stringify(profile)} did not retain exactly one non-Fabric inherited code-runtime row`)
   }
   verifyRestoredCompaction(config, profile)
@@ -335,8 +335,8 @@ function verifyInstalledFabricPreset(profile) {
   const presetPath = resolve(ROOT, 'packages/compaction/presets/fabric/agent.cordis.yml')
   const composition = readFileSync(presetPath, 'utf8')
   for (const row of [
-    { id: 'dsh-fabric-mesh-tool', name: '@dsh-fabric/mesh/tool' },
-    { id: 'dsh-fabric-system-prompt', name: '@dsh-fabric/system-prompt' },
+    { id: 'dsh-fabric-mesh-tool', name: 'dsh-fabric-mesh/tool' },
+    { id: 'dsh-fabric-system-prompt', name: 'dsh-fabric-system-prompt' },
   ]) {
     const anchored = '- id: ' + row.id + '\n  name: ' + JSON.stringify(row.name)
     if (!composition.includes(anchored)) {
@@ -355,8 +355,8 @@ function verifyInstalledCompactionMask(config, profile) {
   const engine = rowsById(config, 'dsh-fabric-compaction')
   const presetRoot = rowsById(config, 'dsh-fabric-preset-root')
   const presets = rowsById(config, 'dsh-fabric-agent-presets')
-  if (engine.length !== 1 || engine[0].name !== '@dsh-fabric/compaction' || engine[0].disabled === true
-    || presetRoot.length !== 1 || presetRoot[0].name !== '@dsh-fabric/compaction/presets' || presetRoot[0].disabled === true
+  if (engine.length !== 1 || engine[0].name !== 'dsh-fabric-compaction' || engine[0].disabled === true
+    || presetRoot.length !== 1 || presetRoot[0].name !== 'dsh-fabric-compaction/presets' || presetRoot[0].disabled === true
     || presets.length !== 1 || presets[0].name !== '@monotykamary/dsh-agent-presets' || presets[0].disabled === true) {
     throw new Error(`profile ${JSON.stringify(profile)} did not activate the exclusive Fabric compaction engine and host-native roster`)
   }

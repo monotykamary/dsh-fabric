@@ -1,8 +1,8 @@
-import type { FabricActivityEventData, FabricActivityProjection } from '@dsh-fabric/protocol'
+import type { FabricActivityEventData, FabricActivityProjection } from 'dsh-fabric-protocol'
 
 export {}
 
-export type { FabricActivityEventData } from '@dsh-fabric/protocol'
+export type { FabricActivityEventData } from 'dsh-fabric-protocol'
 
 declare module '@monotykamary/dsh-session/types' {
   interface SessionEventMap {

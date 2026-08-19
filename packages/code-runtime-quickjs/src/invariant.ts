@@ -1,8 +1,8 @@
-/** Package-owned invariant companion for @dsh-fabric/code-runtime-quickjs. */
+/** Package-owned invariant companion for dsh-fabric-code-runtime-quickjs. */
 import type { Context } from '@monotykamary/cordis'
 import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
-const PACKAGE_NAME = '@dsh-fabric/code-runtime-quickjs'
+const PACKAGE_NAME = 'dsh-fabric-code-runtime-quickjs'
 
 export const name = 'dsh-fabric-code-runtime-quickjs-invariant'
 export const inject = ['invariants']

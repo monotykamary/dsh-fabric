@@ -71,7 +71,7 @@ describe('Fabric /compact composition', () => {
       expect(ctx.compaction).toBeInstanceOf(FabricCompactionEngine)
       expect(engine.config.auto).toBe(false)
       const summary = agent.session.events.findLast(event => event.type === 'compaction/summary')
-      expect(summary?.type === 'compaction/summary' && summary.data.provider).toBe('@dsh-fabric/compaction')
+      expect(summary?.type === 'compaction/summary' && summary.data.provider).toBe('dsh-fabric-compaction')
       expect(summary?.type === 'compaction/summary' && summary.data.model).toBe(FABRIC_COMPACTION_MODEL)
       expect(summary?.type === 'compaction/summary' && summary.data.summary[0]?.type === 'text'
         ? summary.data.summary[0].text
@@ -99,7 +99,7 @@ describe('Fabric /compact composition', () => {
       ])
       for (const preset of listed) {
         const composition = await presets.read(preset.id)
-        expect(composition).toContain("name: '@dsh-fabric/compaction'")
+        expect(composition).toContain("name: 'dsh-fabric-compaction'")
         expect(composition).not.toContain('@monotykamary/dsh-compaction-basic')
         expect(composition).not.toContain('@monotykamary/dsh-compaction-tool-result-pruner')
       }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createToolResultMessage } from '@monotykamary/dsh-llm'
 import { KNOWN_SESSION_EVENT_TYPES, Session, SessionId } from '@monotykamary/dsh-session'
 import type { SessionEvent } from '@monotykamary/dsh-session'
-import { fabricMeshResultMeta } from '@dsh-fabric/protocol'
+import { fabricMeshResultMeta } from 'dsh-fabric-protocol'
 import { createFabricActivityProjection } from '../src/projection.ts'
 import type {} from '../src/types.ts'
 

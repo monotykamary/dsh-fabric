@@ -1,4 +1,4 @@
-# @dsh-fabric/client-ui
+# dsh-fabric-client-ui
 
 Browser feature plugin contributing a full `Fabric` conversation tab and compact session-header action.
 

@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-fabric/host",
+  "name": "dsh-fabric-host",
   "version": "0.1.0",
   "publishConfig": {
     "access": "public"
@@ -35,8 +35,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@dsh-fabric/protocol": "workspace:^",
-    "@dsh-fabric/system-prompt": "workspace:^",
+    "dsh-fabric-protocol": "workspace:^",
+    "dsh-fabric-system-prompt": "workspace:^",
     "@monotykamary/schemastery": "^3.18.1",
     "zod": "^4.4.3"
   },

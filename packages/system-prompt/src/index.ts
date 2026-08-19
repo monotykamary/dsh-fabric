@@ -25,9 +25,9 @@
  * the assemble listener, and the pre-step listener are scope-filtered to
  * fabric agents and their subagents. Other presets' assemblies are never
  * minimized, spliced, or hinted. The disclosure catalog service itself is
- * provided by the host-plane @dsh-fabric/host row (so the host code
+ * provided by the host-plane dsh-fabric-host row (so the host code
  * runtime can resolve it) and consumed here.
- * @module @dsh-fabric/system-prompt
+ * @module dsh-fabric-system-prompt
  */
 
 import type { Context } from '@monotykamary/cordis'
@@ -59,7 +59,7 @@ declare module '@monotykamary/dsh-llm' {
 }
 
 /** Cordis plugin name. */
-export const name = '@dsh-fabric/system-prompt'
+export const name = 'dsh-fabric-system-prompt'
 
 /** The prompt registry this override contributes to; the advisory's runtime seams (tool registry, agent pre-step) are resolved lazily so the minimization still mounts where they are absent. */
 export const inject = ['systemPrompt']
@@ -185,7 +185,7 @@ const MAX_ENGINES = 64
  * @param ctx - host context carrying the prompt registry.
  */
 export function apply(ctx: Context): void {
-  // The disclosure catalog is provided by the host-plane @dsh-fabric/host
+  // The disclosure catalog is provided by the host-plane dsh-fabric-host
   // row so the host code runtime can resolve it; this preset-scoped plugin
   // consumes it and publishes per-agent catalogs.
   const store = resolveDisclosureStore(ctx)

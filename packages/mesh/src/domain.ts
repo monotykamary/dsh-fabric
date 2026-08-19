@@ -12,7 +12,7 @@ import type {
   FabricTopicMessage,
   FabricTopicMessageId,
   FabricTopicRecord,
-} from '@dsh-fabric/protocol'
+} from 'dsh-fabric-protocol'
 
 const jsonSchema: z.ZodType<FabricJsonValue> = z.lazy(() => z.union([
   z.null(), z.boolean(), z.number(), z.string(), z.array(jsonSchema), z.record(z.string(), jsonSchema),

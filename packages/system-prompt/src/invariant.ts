@@ -1,8 +1,8 @@
-/** Package-owned invariant companion for @dsh-fabric/system-prompt. */
+/** Package-owned invariant companion for dsh-fabric-system-prompt. */
 import type { Context } from '@monotykamary/cordis'
 import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
-const PACKAGE_NAME = '@dsh-fabric/system-prompt'
+const PACKAGE_NAME = 'dsh-fabric-system-prompt'
 
 export const name = 'dsh-fabric-system-prompt-invariant'
 export const inject = ['invariants']

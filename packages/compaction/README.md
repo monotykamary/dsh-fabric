@@ -1,4 +1,4 @@
-# @dsh-fabric/compaction
+# dsh-fabric-compaction
 
 Deterministic Fabric summary compiler adapted to DSH's durable `CompactionEngine` transaction. It preserves bounded typed facts, graded history projections, exact failure identities, and a compact recent transcript without making a second model request. The adapter recursively reconstructs cited original events from DSH's immutable session log, folds native mesh/Code Mode/workflow lifecycle records, and never feeds generated checkpoint prose or a prior snapshot back as compaction authority. Strict bounded snapshots remain available for diagnostics and detached compiler callers. Citation recovery has a 100,000-event safety bound; reaching it degrades to a bounded partial source with an explicit summary notice rather than making `/compact` permanently fail.
 

@@ -133,7 +133,7 @@
     compaction: true
   config:
     - id: dsh-fabric-compaction
-      name: '@dsh-fabric/compaction'
+      name: 'dsh-fabric-compaction'
 
     - id: command-compact
       name: '@monotykamary/dsh-command-compact'

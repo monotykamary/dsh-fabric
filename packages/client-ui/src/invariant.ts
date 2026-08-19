@@ -1,8 +1,8 @@
-/** Package-owned invariant companion for @dsh-fabric/client-ui. */
+/** Package-owned invariant companion for dsh-fabric-client-ui. */
 import type { Context } from '@monotykamary/cordis'
 import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
-const PACKAGE_NAME = '@dsh-fabric/client-ui'
+const PACKAGE_NAME = 'dsh-fabric-client-ui'
 
 /** Cordis companion plugin name. */
 export const name = 'dsh-fabric-client-ui-invariant'

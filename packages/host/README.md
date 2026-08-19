@@ -1,4 +1,4 @@
-# @dsh-fabric/host
+# dsh-fabric-host
 
 DSH-native adapter for Fabric activity. It registers a bounded `fabricActivity` session projection and folds native `tool/result.meta`, `tool/code-dispatch`, `tool-workflow/*`, and `compaction/*` events. The projection carries compact timeline facts plus topology nodes and edges to browser clients. Private workflow-member correlation survives bounded topology eviction, while public projection output stays bounded.
 

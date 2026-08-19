@@ -23,7 +23,7 @@ function scopeKeyOf(scope: Scope): ScopeKey {
   return scopeOf(scope.ctx)!
 }
 
-describe('@dsh-fabric/system-prompt', () => {
+describe('dsh-fabric-system-prompt', () => {
   it('registers the Fabric operating prompt and keeps the declared identity', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
@@ -109,7 +109,7 @@ describe('fabric-scoped overlay', () => {
 
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    // The host-plane @dsh-fabric/host row provides the catalog in production;
+    // The host-plane dsh-fabric-host row provides the catalog in production;
     // the test stands in for it so the plugin's consume path resolves.
     ctx.provide('fabricDisclosure', new FabricSystemPrompt.DisclosureStore())
 

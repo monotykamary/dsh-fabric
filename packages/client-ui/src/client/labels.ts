@@ -1,6 +1,6 @@
 /** Shared localized labels for Fabric browser surfaces. */
 import type { TranslateNS } from '@monotykamary/dsh-client-ui-slots'
-import type { FabricActivityKind, FabricGraphNode, FabricNodeKind, FabricNodeStatus } from '@dsh-fabric/protocol'
+import type { FabricActivityKind, FabricGraphNode, FabricNodeKind, FabricNodeStatus } from 'dsh-fabric-protocol'
 
 export function statusLabel(status: FabricNodeStatus, t: TranslateNS<'fabric'>): string {
   return t(`status.${status}`)

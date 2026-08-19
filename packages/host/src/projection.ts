@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { fabricSessionNodeId, projectFabricMeshActivity, readFabricMeshResultMeta } from '@dsh-fabric/protocol'
+import { fabricSessionNodeId, projectFabricMeshActivity, readFabricMeshResultMeta } from 'dsh-fabric-protocol'
 import type {
   FabricActivityEventData,
   FabricActivityProjection,
@@ -8,7 +8,7 @@ import type {
   FabricNodeStatus,
   FabricProjectedEdge,
   FabricProjectedNode,
-} from '@dsh-fabric/protocol'
+} from 'dsh-fabric-protocol'
 import type { ProjectionDefinition } from '@monotykamary/dsh-session-projection'
 import { snapshotJsonValue } from '@monotykamary/dsh-session'
 import type { SessionEvent } from '@monotykamary/dsh-session'

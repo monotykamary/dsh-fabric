@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-fabric/mesh",
+  "name": "dsh-fabric-mesh",
   "version": "0.1.0",
   "publishConfig": {
     "access": "public"
@@ -38,7 +38,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@dsh-fabric/protocol": "workspace:^",
+    "dsh-fabric-protocol": "workspace:^",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
@@ -52,8 +52,8 @@
     "@monotykamary/dsh-workspace": "^0.1.0-rc.7"
   },
   "devDependencies": {
-    "@dsh-fabric/code-runtime-quickjs": "workspace:^",
-    "@dsh-fabric/host": "workspace:^",
+    "dsh-fabric-code-runtime-quickjs": "workspace:^",
+    "dsh-fabric-host": "workspace:^",
     "@monotykamary/cordis": "^4.0.1",
     "@monotykamary/dsh-agent": "^0.1.0-rc.7",
     "@monotykamary/dsh-invariants": "^0.1.0-rc.7",

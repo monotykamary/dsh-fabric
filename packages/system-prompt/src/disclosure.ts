@@ -14,7 +14,7 @@
  * resulting block is validated to re-parse as TypeScript in tests. The
  * guest-side type checker is built from the binding map, not from this text,
  * so narrowing the prompt never narrows what a program may call.
- * @module @dsh-fabric/system-prompt/src/disclosure
+ * @module dsh-fabric-system-prompt/src/disclosure
  */
 
 /** Tools whose full argument/output contracts stay in the always-on SDK block. */

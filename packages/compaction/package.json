@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-fabric/compaction",
+  "name": "dsh-fabric-compaction",
   "version": "0.1.0",
   "publishConfig": {
     "access": "public"
@@ -40,7 +40,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@dsh-fabric/protocol": "workspace:^"
+    "dsh-fabric-protocol": "workspace:^"
   },
   "peerDependencies": {
     "@monotykamary/cordis": "^4.0.1",

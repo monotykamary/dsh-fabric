@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Context } from '@monotykamary/cordis'
-import { DisclosureStore } from '@dsh-fabric/system-prompt'
+import { DisclosureStore } from 'dsh-fabric-system-prompt'
 import { QuickJsCodeRuntime } from '../src/index.ts'
 import { compileQuickJsProgram, typeErrorRecoveryHint } from '../src/type-checker.ts'
 

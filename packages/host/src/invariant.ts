@@ -1,8 +1,8 @@
-/** Package-owned invariant companion for @dsh-fabric/host. */
+/** Package-owned invariant companion for dsh-fabric-host. */
 import type { Context } from '@monotykamary/cordis'
 import type { InvariantInstaller } from '@monotykamary/dsh-invariants'
 
-const PACKAGE_NAME = '@dsh-fabric/host'
+const PACKAGE_NAME = 'dsh-fabric-host'
 
 /** Cordis companion plugin name. */
 export const name = 'dsh-fabric-host-invariant'

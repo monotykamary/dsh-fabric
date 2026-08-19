@@ -1,7 +1,7 @@
 /** DSH session-event and projection adapter for Fabric activity. */
 import type { Context } from '@monotykamary/cordis'
 import z from '@monotykamary/schemastery'
-import { DisclosureStore } from '@dsh-fabric/system-prompt'
+import { DisclosureStore } from 'dsh-fabric-system-prompt'
 import { createFabricActivityProjection } from './projection.ts'
 import type {} from '@monotykamary/dsh-tool-workflow/types'
 
@@ -30,7 +30,7 @@ export const Config: z<Config> = z.object({
  *
  * The DisclosureStore is provided HERE (host plane, root realm) so the
  * host code runtime can resolve it for `tools.describe()`; the
- * fabric-preset-scoped @dsh-fabric/system-prompt plugin consumes it and
+ * fabric-preset-scoped dsh-fabric-system-prompt plugin consumes it and
  * publishes per-agent tool catalogs into it.
  */
 export function apply(ctx: Context, config: Config): void {
