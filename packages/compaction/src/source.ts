@@ -38,10 +38,18 @@ export function selectFabricCompactionSource(
   }
 
   const events = session.events
+
+  // One fold resolves message ids and turn placement together instead of
+  // walking the whole durable log once per concern.
   const byMessageId = new Map<string, number>()
+  const turnAtSeq = new Map<number, number>()
+  let currentTurn: number | undefined
   for (const event of events) {
+    if (event.type === 'turn/start') currentTurn = event.data.turn
+    if (currentTurn !== undefined) turnAtSeq.set(event.seq, currentTurn)
     const id = messageId(event)
     if (id !== undefined) byMessageId.set(id, event.seq)
+    if (event.type === 'turn/end' && event.data.turn === currentTurn) currentTurn = undefined
   }
 
   const selectedSeqs: number[] = []
@@ -56,7 +64,6 @@ export function selectFabricCompactionSource(
   const closure = sourceClosure(events, selectedSeqs, maxSourceEvents)
   const covered = closure.covered
 
-  const turnAtSeq = turnIndex(events)
   const selectedTurns = new Set<number>()
   for (const seq of covered) {
     const turn = turnAtSeq.get(seq)
@@ -67,17 +74,26 @@ export function selectFabricCompactionSource(
   const messages: Message[] = []
   const activityEvents: SessionActivityInput[] = []
   let lastTime: number | undefined
-  for (const event of events) {
-    if (covered.has(event.seq)) {
-      const message = session.deriveEventMessage(event)
-      if (message !== null && !isCompactCheckpointSource(message.source)) {
-        messages.push(message)
+  // Events are dense seq-indexed log positions, so the output fold can skip
+  // everything before the earliest cited or activity-selected position.
+  let firstRelevantSeq = Number.POSITIVE_INFINITY
+  for (const seq of covered) if (seq < firstRelevantSeq) firstRelevantSeq = seq
+  for (const seq of selectedActivitySeqs) if (seq < firstRelevantSeq) firstRelevantSeq = seq
+  if (Number.isFinite(firstRelevantSeq)) {
+    for (let index = firstRelevantSeq; index < events.length; index += 1) {
+      const event = events[index]
+      if (event === undefined) continue
+      if (covered.has(event.seq)) {
+        const message = session.deriveEventMessage(event)
+        if (message !== null && !isCompactCheckpointSource(message.source)) {
+          messages.push(message)
+          lastTime = maxTime(lastTime, event.time)
+        }
+      }
+      if (selectedActivitySeqs.has(event.seq)) {
+        activityEvents.push({ type: String(event.type), seq: event.seq, time: event.time, data: event.data })
         lastTime = maxTime(lastTime, event.time)
       }
-    }
-    if (selectedActivitySeqs.has(event.seq)) {
-      activityEvents.push({ type: String(event.type), seq: event.seq, time: event.time, data: event.data })
-      lastTime = maxTime(lastTime, event.time)
     }
   }
 
@@ -131,41 +147,42 @@ function messageId(event: SessionEvent): string | undefined {
   return undefined
 }
 
-function turnIndex(events: readonly SessionEvent[]): Map<number, number> {
-  const output = new Map<number, number>()
-  let current: number | undefined
-  for (const event of events) {
-    if (event.type === 'turn/start') current = event.data.turn
-    if (current !== undefined) output.set(event.seq, current)
-    if (event.type === 'turn/end' && event.data.turn === current) current = undefined
-  }
-  return output
-}
-
 function activitySelection(
   events: readonly SessionEvent[],
   turnAtSeq: ReadonlyMap<number, number>,
   selectedTurns: ReadonlySet<number>,
 ): Set<number> {
+  // One pass collects direct selections and, for correlated records, the full
+  // member list plus whether any member sits in a selected turn. Lifecycle
+  // widening then walks only those members instead of rescanning the log.
   const selected = new Set<number>()
-  const workflowRuns = new Set<string>()
-  const codeCalls = new Set<string>()
+  const workflowMembers = new Map<string, number[]>()
+  const codeMembers = new Map<string, number[]>()
+  const selectedWorkflows = new Set<string>()
+  const selectedCodeCalls = new Set<string>()
 
   for (const event of events) {
     const turn = turnAtSeq.get(event.seq)
-    if (turn === undefined || !selectedTurns.has(turn) || !isActivityEvent(event)) continue
-    selected.add(event.seq)
+    if (turn === undefined || !isActivityEvent(event)) continue
     const correlation = activityCorrelation(event)
-    if (correlation?.kind === 'workflow') workflowRuns.add(correlation.id)
-    if (correlation?.kind === 'code') codeCalls.add(correlation.id)
+    if (correlation !== undefined) {
+      const members = correlation.kind === 'workflow' ? workflowMembers : codeMembers
+      const list = members.get(correlation.id)
+      if (list === undefined) members.set(correlation.id, [event.seq])
+      else list.push(event.seq)
+      if (selectedTurns.has(turn)) {
+        if (correlation.kind === 'workflow') selectedWorkflows.add(correlation.id)
+        else selectedCodeCalls.add(correlation.id)
+      }
+    }
+    if (selectedTurns.has(turn)) selected.add(event.seq)
   }
 
-  if (workflowRuns.size === 0 && codeCalls.size === 0) return selected
-  for (const event of events) {
-    if (!isActivityEvent(event)) continue
-    const correlation = activityCorrelation(event)
-    if (correlation?.kind === 'workflow' && workflowRuns.has(correlation.id)) selected.add(event.seq)
-    if (correlation?.kind === 'code' && codeCalls.has(correlation.id)) selected.add(event.seq)
+  for (const runId of selectedWorkflows) {
+    for (const seq of workflowMembers.get(runId) ?? []) selected.add(seq)
+  }
+  for (const subCallId of selectedCodeCalls) {
+    for (const seq of codeMembers.get(subCallId) ?? []) selected.add(seq)
   }
   return selected
 }

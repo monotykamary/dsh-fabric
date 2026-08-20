@@ -3,24 +3,24 @@ export const MAX_SUMMARY_BYTES = 32 * 1024;
 const MAX_REQUEST_SOURCE_BYTES = 8 * 1024;
 
 const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 export const utf8Bytes = (text: string): number => encoder.encode(text).byteLength;
 
 export const clipUtf8 = (text: string, maxBytes: number, suffix = "…"): string => {
   if (maxBytes <= 0) return "";
-  if (utf8Bytes(text) <= maxBytes) return text;
-  const suffixBytes = utf8Bytes(suffix);
+  const full = encoder.encode(text);
+  if (full.byteLength <= maxBytes) return text;
+  const suffixBytes = encoder.encode(suffix).byteLength;
   if (suffixBytes >= maxBytes) return "";
-  let output = "";
-  let used = 0;
+  // Trim to the longest complete-character prefix that leaves room for the
+  // suffix: cut at the byte budget, then walk back over continuation bytes of
+  // a split character. One encode plus one decode replaces the previous
+  // per-character encode loop, which allocated a Uint8Array for every char.
   const available = maxBytes - suffixBytes;
-  for (const character of text) {
-    const bytes = utf8Bytes(character);
-    if (used + bytes > available) break;
-    output += character;
-    used += bytes;
-  }
-  return `${output}${suffix}`;
+  let end = available;
+  while (end > 0 && ((full[end] ?? 0) & 0xc0) === 0x80) end -= 1;
+  return `${decoder.decode(full.subarray(0, end))}${suffix}`;
 };
 
 export interface CanonicalText {
