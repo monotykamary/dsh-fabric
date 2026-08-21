@@ -300,6 +300,7 @@ function verifyInstalled(config, profile) {
   }
   verifyInstalledCompactionMask(config, profile)
   verifyInstalledTodoGoalMask(config, profile)
+  verifyInstalledSessionQuery(config, profile)
   verifyInstalledFabricPreset(profile)
 }
 
@@ -331,12 +332,27 @@ function verifyInstalledTodoGoalMask(config, profile) {
   }
 }
 
+function verifyInstalledSessionQuery(config, profile) {
+  const rows = rowsById(config, 'session-query-sqlite')
+  if (rows.length !== 1 || rows[0].disabled === true) {
+    throw new Error(`profile ${JSON.stringify(profile)} must contain exactly one enabled session-query-sqlite row`)
+  }
+  const block = config.match(/^- id: session-query-sqlite\r?\n((?: {2}[^\n]*(?:\n|$))*)/m)?.[1] ?? ''
+  if (!/openAt:\s+first-search/.test(block) || /openAt:\s+never/.test(block)) {
+    throw new Error(`profile ${JSON.stringify(profile)} did not enable full-text session search for Fabric memory/recall`)
+  }
+  if (/path:\s*':memory:'/.test(block)) {
+    throw new Error(`profile ${JSON.stringify(profile)} did not mount a durable session-query index`)
+  }
+}
+
 function verifyInstalledFabricPreset(profile) {
   const presetPath = resolve(ROOT, 'packages/compaction/presets/fabric/agent.cordis.yml')
   const composition = readFileSync(presetPath, 'utf8')
   for (const row of [
     { id: 'dsh-fabric-mesh-tool', name: 'dsh-fabric-mesh/tool' },
     { id: 'dsh-fabric-system-prompt', name: 'dsh-fabric-system-prompt' },
+    { id: 'tool-session-query', name: '@monotykamary/dsh-tool-session-query' },
   ]) {
     const anchored = '- id: ' + row.id + '\n  name: \'' + row.name + '\''
     if (!composition.includes(anchored)) {

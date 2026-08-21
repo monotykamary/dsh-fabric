@@ -39,6 +39,8 @@ describe('dsh-fabric-system-prompt', () => {
     expect(fabric?.text).toContain('# Fabric operating rules')
     expect(fabric?.text).toContain('fabric_mesh')
     expect(fabric?.text).toContain('TOOL_OUTCOME_UNKNOWN')
+    expect(fabric?.text).toContain('## Memory')
+    expect(fabric?.text).toContain('session_search')
   })
 
   it('minimizes native per-tool prose while preserving structural and dynamic sections', async () => {
@@ -55,6 +57,8 @@ describe('dsh-fabric-system-prompt', () => {
     ctx.systemPrompt.section({ name: 'tools:sdk', order: 150, text: 'sdk body' })
     ctx.systemPrompt.section({ name: 'tools:code-only', order: 140, text: 'code only' })
     ctx.systemPrompt.section({ name: 'fabric:mesh-guidance', order: 120, text: 'mesh guidance' })
+    // fabric:memory-guidance is registered by the plugin itself below; the
+    // minimization must keep it even when its visibility gate yields no text.
 
     const assembly = await ctx.systemPrompt.assemble({})
     const names = assembly.sections.map(section => section.name)
@@ -66,6 +70,7 @@ describe('dsh-fabric-system-prompt', () => {
     expect(names).toContain('tools:sdk')
     expect(names).toContain('tools:code-only')
     expect(names).toContain('fabric:mesh-guidance')
+    expect(names).toContain('fabric:memory-guidance')
     expect(names).toContain('fabric:system-prompt')
   })
 
@@ -142,5 +147,34 @@ describe('fabric-scoped overlay', () => {
     expect(fabricSdk?.text).toContain('The available tools:')
     expect(fabricSdk?.text).not.toContain('subagent')
     expect(fabricSdk?.text).not.toContain('fabric_mesh')
+  })
+})
+describe('fabric memory guidance', () => {
+  it('registers an empty memory-guidance section when no session tools are composed', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(FabricSystemPrompt)
+
+    const assembly = await ctx.systemPrompt.assemble({})
+    const guidance = assembly.sections.find(section => section.name === 'fabric:memory-guidance')
+    expect(guidance).toBeDefined()
+    expect(guidance?.text).toBe('')
+  })
+
+  it('populates the memory-guidance section when session_search is in the tool registry', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(FabricSystemPrompt)
+    // Stand in for the host tool registry with the session-query toolset;
+    // the real deployment composes @monotykamary/dsh-tool-session-query in
+    // the fabric preset (presets/fabric/agent.cordis.yml).
+    ctx.provide('tools', { get: (name: string) => name === 'session_search' ? { name: 'session_search' } : undefined })
+
+    const assembly = await ctx.systemPrompt.assemble({})
+    const guidance = assembly.sections.find(section => section.name === 'fabric:memory-guidance')
+    expect(guidance?.text).toContain('## Fabric memory')
+    expect(guidance?.text).toContain('session_search')
+    expect(guidance?.text).toContain('session_event_read')
+    expect(guidance?.text).toContain("After '/compact'")
   })
 })

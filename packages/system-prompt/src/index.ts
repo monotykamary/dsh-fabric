@@ -87,7 +87,10 @@ export const FABRIC_SYSTEM_PROMPT = [
   "'run_code' evaluations are fresh; persist cross-run identifiers through 'fabric_mesh', not JavaScript globals.",
   '',
   '## Compaction',
-  "Compaction is deterministic — it never makes an auxiliary model call. After '/compact', rediscover durable identifiers through 'fabric_mesh' and re-read state; never trust prior checkpoint prose.",
+  "Compaction is deterministic — it never makes an auxiliary model call. After '/compact', rediscover durable identifiers through 'fabric_mesh', re-read state, and recall dropped context with 'session_search' before resuming; never trust prior checkpoint prose.",
+  '',
+  '## Memory',
+  "Prior sessions are the durable record. Recall with 'session_search' (cross-session; the caller session is excluded) or 'session_event_search' (one session); 'session_trace'/'session_event_trace'/'session_event_read' recover lineage and exact data.",
   '',
   '## Code Mode',
   "Inside 'run_code', call tools as 'await tools.name(args)'; a failed call rejects with 'ToolCallError' — catch it to continue.",
@@ -127,10 +130,28 @@ export const PRESERVED_SECTIONS = new Set([
   'tool:cordis',
   'tool:report',
   'tool:session-query',
+  'fabric:memory-guidance',
   'fabric:mesh-guidance',
   'tools:code-only',
   'tools:sdk',
 ])
+
+/**
+ * Fabric memory guidance: pi-fabric's recall discipline adapted to DSH's
+ * session-query tools. Registered as a visibility-gated section (empty while
+ * the fabric preset does not compose the session-query toolset) so the
+ * minimization keeps it without dangling prose in foreign scopes.
+ */
+export const MEMORY_GUIDANCE = [
+  '## Fabric memory',
+  '',
+  "Session search is the semantic memory/recall surface: prior sessions, not the live transcript, are the durable record.",
+  '',
+  "- 'session_search' recalls relevant work from PRIOR sessions — the caller session is excluded — ranked by the strongest matching event, workspace-scoped, and filterable by session, creation time, parent, event type/surface, and event time.",
+  "- 'session_event_search' searches EARLIER events in one session (the current session covers only events before the active step); pass 'session_id' to target another session.",
+  "- Follow a useful hit with 'session_event_read' (exact data plus a bounded context window), 'session_event_trace' (replacement and citation links), or 'session_trace' (ancestor/descendant lineage) instead of guessing.",
+  "- After '/compact', re-establish dropped context by recalling from memory before resuming — never trust prior checkpoint prose.",
+].join('\n')
 
 /** Advisory hint budget, mirroring pi's default (≈512 tokens at chars/4). */
 const ADVISORY_BUDGET_CHARS = 2048
@@ -155,6 +176,30 @@ function resolveTools(ctx: Context): { schemas(scope?: unknown): readonly { name
 function resolveDisclosureStore(ctx: Context): DisclosureStore | undefined {
   try {
     return ctx.get('fabricDisclosure')
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Whether the fabric scope exposes the DSH session-query toolset (the
+ * memory/recall surface). Resolved lazily through the tool registry so the
+ * guidance degrades to an empty section in compositions without it.
+ */
+function sessionSearchVisible(ctx: Context, context: { scope?: unknown }): boolean {
+  try {
+    const registry = ctxTools(ctx)
+    if (registry === undefined) return false
+    return registry.get('session_search', context.scope) !== undefined
+  } catch {
+    return false
+  }
+}
+
+/** The host tool registry, when composed; undefined otherwise. */
+function ctxTools(ctx: Context): { get(name: string, scope?: unknown): unknown } | undefined {
+  try {
+    return ctx.get('tools') as { get(name: string, scope?: unknown): unknown }
   } catch {
     return undefined
   }
@@ -194,6 +239,14 @@ export function apply(ctx: Context): void {
     name: 'fabric:system-prompt',
     order: 10,
     text: FABRIC_SYSTEM_PROMPT,
+  })
+  // Memory/recall guidance: empty unless the fabric preset composes the DSH
+  // session-query toolset (see presets/fabric/agent.cordis.yml), so foreign
+  // scopes and deployments without the tools never see dangling prose.
+  ctx.systemPrompt.section({
+    name: 'fabric:memory-guidance',
+    order: 114,
+    text: context => sessionSearchVisible(ctx, context) ? MEMORY_GUIDANCE : '',
   })
   ctx.on('system-prompt/assemble', async (_assembly: PromptAssembly, _context, next) => {
     const assembled = await next()

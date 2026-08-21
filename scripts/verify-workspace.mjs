@@ -43,12 +43,18 @@ for (const id of ['command-goal', 'goal-round-driver', 'ui-goal']) {
     throw new Error('cordis.patch.yml must disable the inherited ' + id + ' row')
   }
 }
+if (!/^- id: session-query-sqlite\r?\n  config:\r?\n    path: !!js dshHomePath\('session-query'\)\r?\n    openAt: first-search$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must enable full-text session search with a durable index for Fabric memory/recall')
+}
 const fabricPreset = await readFile('packages/compaction/presets/fabric/agent.cordis.yml', 'utf8')
 if (!fabricPreset.includes('- id: dsh-fabric-mesh-tool' + nl + "  name: 'dsh-fabric-mesh/tool'")) {
   throw new Error('fabric preset must mount the Fabric mesh Consumer')
 }
 if (!fabricPreset.includes('- id: dsh-fabric-system-prompt' + nl + "  name: 'dsh-fabric-system-prompt'")) {
   throw new Error('fabric preset must mount the Fabric system-prompt overlay')
+}
+if (!fabricPreset.includes('- id: tool-session-query' + nl + "  name: '@monotykamary/dsh-tool-session-query'")) {
+  throw new Error('fabric preset must mount the DSH session-query toolset for Fabric memory/recall')
 }
 if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]dsh-fabric-compaction['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric compaction engine')

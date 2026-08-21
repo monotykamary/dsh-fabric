@@ -65,6 +65,18 @@
   name: 'dsh-fabric-system-prompt'
 
 
+# Fabric memory/recall composes DSH's native session-query toolset instead of
+# porting pi-fabric's tiered transcript index: cross-session `session_search`,
+# in-session `session_event_search`, and the `session_trace`/
+# `session_event_trace`/`session_event_read` lineage and exact-data readers.
+# The FTS backend row is enabled host-plane in cordis.patch.yml (durable index,
+# openAt: first-search); this row registers the model-facing tools and the
+# `tool:session-query` guidance section for fabric agents only, matching the
+# mesh Consumer and system-prompt overlay scoping above.
+- id: tool-session-query
+  name: '@monotykamary/dsh-tool-session-query'
+
+
 # `shell-env` stays in the HOST composition: `apps/cli/src/web.ts` injects it to
 # publish `DSH_WEB_URL`/`DSH_WEB_MODE`, and a host row that injects a service is
 # the criterion for host-plane ownership — injection resolves before any session

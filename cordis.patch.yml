@@ -33,6 +33,18 @@
   config:
     maxParallelSubCalls: !!js Number.MAX_SAFE_INTEGER
 
+# Full-text session search backs Fabric memory/recall. The base and web-app
+# bundle layers mount this row with openAt: never (exact reads and lineage
+# traces stay available, search fails with SESSION_QUERY_SEARCH_DISABLED);
+# this Fabric layer opts back in with a durable per-home index so recall
+# spans restarts, deferring the node:sqlite import to the first search (the
+# harness's lazy-search startup posture). The model-facing toolset mounts in
+# the fabric preset (presets/fabric/agent.cordis.yml).
+- id: session-query-sqlite
+  config:
+    path: !!js dshHomePath('session-query')
+    openAt: first-search
+
 - insert:
     - id: dsh-fabric-code-runtime
       name: 'dsh-fabric-code-runtime-quickjs'

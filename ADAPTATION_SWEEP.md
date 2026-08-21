@@ -4,7 +4,7 @@ This document records the completion sweep for the focused DeepSeek Harness adap
 
 ## Boundary
 
-The adaptation reuses DSH as the authority for tools, workflows, sessions, the compaction service/transaction seam, client navigation, and Cordis lifecycle. It adds a deterministic Fabric compaction provider and a host-native roster restricted to Fabric-owned presets, a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, and Activity/Topology presentation.
+The adaptation reuses DSH as the authority for tools, workflows, sessions, the compaction service/transaction seam, client navigation, and Cordis lifecycle. It adds a deterministic Fabric compaction provider and a host-native roster restricted to Fabric-owned presets, a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, Activity/Topology presentation, and a semantic memory/recall surface over DSH's native session-query facilities.
 
 It is not a line-for-line port of pi-fabric's component system, workflow engine, agent transports, or TUI. FabricParticipantRecord is a host-independent read projection over the DSH session mirror and Fabric actors; it does not create a second participant directory, executor, or control plane.
 
@@ -52,18 +52,41 @@ New Fabric activity does not append a plugin-owned event family. Top-level mesh 
 
 DSH `0.1.0-rc.6` still cannot reload older session logs that already contain the retired required `fabric/activity` event: its persisted-event allowlist is static. Mesh business records remain durable in `storage-domain`, but legacy session-log replay requires an upstream external-event codec seam or an explicit offline conversion. This caveat applies only to pre-native-event logs; new Fabric mutations do not create it.
 
+## Semantic memory and recall
+
+pi-fabric's `memory` provider is not ported as a second transcript index. Fabric memory composes DSH's native session-query facilities, which the base bundles mount but leave search-disabled:
+
+1. `cordis.patch.yml` restates `session-query-sqlite` with a durable `dshHomePath('session-query')` index and `openAt: first-search`, overriding the base/web-app layers' `openAt: never`. The service's exact reads and lineage traces were already mounted; this enables SQLite FTS5, deferring the `node:sqlite` import to the first search (the harness's lazy-search startup posture).
+2. The `fabric` preset mounts `@monotykamary/dsh-tool-session-query`, registering DSH's five model-facing tools: `session_search` (cross-session recall; the caller session is excluded, workspace-scoped), `session_event_search` (one session; the current session covers only pre-step events), `session_trace`, `session_event_trace`, and `session_event_read` (lineage and exact-data recovery).
+3. `dsh-fabric-system-prompt` registers a visibility-gated `fabric:memory-guidance` section (kept by the minimization) plus a `## Memory` block in the Fabric operating prompt; the compaction block now points at `session_search` for re-establishing dropped context after `/compact`.
+
+Deployment note: the dsh CLI resolves a profile bundle's patch from its own installation node_modules before the profile directory (installation-first), so a checkout-linked bundle can be shadowed by a published copy. The `session-query-sqlite` restatement therefore also ships in the profile's user patch layer (the live `web` profile carries it), which is applied after every bundle layer and hot-reloaded.
+
+Functional parity with pi's `memory` provider:
+
+| pi memory | dsh-fabric surface |
+|---|---|
+| `memory.recall(query, scope, filters, paging)` | `session_search` (project/global scope) and `session_event_search` (session scope), with session/event filters and paging |
+| `memory.expand(session, range/ids)` | `session_event_read` / `session_event_trace` |
+| `memory.sessions(scope)` | no model-facing list tool; `ctx.sessionQuery.listSessions` is the service seam if a browse tool is ever wanted |
+| literal token search | FTS5 literal query over the live-preferred corpus (query text sanitized by DSH) |
+| regex query mode | not ported; DSH search is literal-token FTS |
+| role/tool/ref/provider/action/outcome filters | DSH event-type/surface/time/seq filters (pi's taxonomy is pi's own) |
+| source-hash / lineage staleness guards | DSH cursor generations and `session_trace` lineage replace pointer hashes |
+| hot/cold tiers and digests | one live-preferred FTS5 index; no separate tiered index |
+| guest `memory` global | Code Mode guests call `tools.session_search(...)` through the same `tools` namespace; `tools.describe()` discloses it |
+
 ## Deliberately deferred parity surfaces
 
 These are not represented as completed features:
 
 - schema-enforced world state, evidence digests, and fail-closed certification;
-- semantic memory/recall beyond DSH's existing session-query facilities;
 - an always-resident actor execution host (mailboxes are durable, but a Consumer drives claims);
 - a Fabric-owned workflow engine, agent transport layer, or component calculus;
 - a cross-provider USD budget ledger and a Fabric audit archive;
 - pi-fabric's full TUI controls, retained-run lens, settings editor, and transcript preview system.
 
-When these are added, they should remain separate DSH capabilities. In particular, recall should compose DSH session-query rather than introduce a second transcript index, and orchestration should extend native workflow/subagent seams rather than register another executor.
+When these are added, they should remain separate DSH capabilities. Memory/recall composes DSH session-query (see "Semantic memory and recall") rather than a second transcript index, and orchestration should extend native workflow/subagent seams rather than register another executor.
 
 ## Acceptance ledger
 
@@ -77,6 +100,7 @@ The sweep is complete when all of the following remain true:
 - a JSON-round-tripped session log reconstructs Fabric and compaction projections;
 - prompt assembly re-emits current count- and byte-bounded mesh metadata from detached authoritative records;
 - topology settlement survives bounded edge/node eviction;
+- fabric sessions expose `session_search`/`session_event_search`/`session_trace`/`session_event_trace`/`session_event_read` over an enabled durable FTS index, and the assembled prompt carries `fabric:memory-guidance`;
 - the rc.6 incompatibility of legacy logs containing the retired `fabric/activity` event stays explicit;
 - `cordis.patch.yml` disables `command-goal`, `goal-round-driver`, and `ui-goal`, and every Fabric preset either masks `tool-todo`/`tool-goal` or omits them (`minimal`);
 - prompt assembly keeps the Fabric operating prompt plus the persona, plan policy, cordis toolset, subagent reporting, Code-Mode SDK/collapse sections, and mesh guidance while dropping the native per-tool prose, with tool schemas and the runtime-context snapshot untouched.

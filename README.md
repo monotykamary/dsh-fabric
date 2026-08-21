@@ -101,6 +101,7 @@ Installing the bundle replaces the verbose native DSH prompt prose with a minimi
 - A `fabric:system-prompt` section (right after the persona) captures pi-fabric's well-tuned long-horizon disciplines — durable `fabric_mesh` coordination, deterministic compaction recovery, Code-Mode economy, delegation fan-out, and error recovery — adapted to DSH's `run_code`, `fabric_mesh`, subagent, and workflow surfaces.
 - A `system-prompt/assemble` waterfall listener drops the native per-tool guidance one-liners whose content the tool schemas already carry, while preserving the persona, plan policy, cordis toolset guidance, subagent reporting, the Code-Mode SDK/collapse sections, and the mesh guidance. Tool schemas and the runtime-context snapshot are never filtered.
 - DSH's todo ledger and goal system (`todo_write`, `create_goal`/`get_goal`/`update_goal`, `/goal`, the goal round driver, and the goal bar) are masked. Long-horizon objectives and progress belong in `fabric_mesh` instead of same-session todo/goal records.
+- Fabric memory/recall composes DSH's native session-query tools (`session_search`, `session_event_search`, and the `session_trace`/`session_event_trace`/`session_event_read` readers) over a durable SQLite FTS5 index, with `fabric:memory-guidance` prompt guidance for re-establishing dropped context after `/compact`.
 
 ## The `fabric_mesh` tool
 
@@ -172,6 +173,7 @@ This is a focused DSH adaptation, not literal pi-fabric parity. Known constraint
 - The current DSH `CodeRunRequest` omits the generated SDK declaration prelude, so QuickJS checks namespace/member existence and normal TypeScript semantics while ToolRuntime remains the authoritative argument/result validator.
 - Actor mailboxes provide durable claim/settle semantics, not an always-resident autonomous actor host.
 - Fabric-owned presets are pinned adaptations of DSH `0.1.0-rc.6` and must be reviewed on host upgrades.
+- Memory/recall is DSH session-query composed into the `fabric` preset, not pi-fabric's tiered transcript index: regex query mode, pi's Fabric-operation filters, and a session-list browse tool are not ported.
 
 ## Acknowledgments
 
