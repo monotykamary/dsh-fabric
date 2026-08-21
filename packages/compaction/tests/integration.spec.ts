@@ -62,7 +62,9 @@ describe('Fabric /compact composition', () => {
       await ctx.plugin(CommandCompact)
       const agent = idleAgent(closedConversation())
 
-      const execution = await ctx.commands.execute(agent, '/compact', SIGNAL)
+      // The harness CommandRuntime signature is execute(agent, line, images, signal);
+      // the empty images array keeps SIGNAL in the signal slot.
+      const execution = await ctx.commands.execute(agent, '/compact', [], SIGNAL)
 
       const end = agent.session.events.findLast(event => event.type === 'compaction/end')
       const diagnostic = end?.type === 'compaction/end' ? end.data.error : undefined
