@@ -62,6 +62,9 @@ importers:
       dsh-fabric-protocol:
         specifier: workspace:^
         version: link:packages/protocol
+      dsh-fabric-schema:
+        specifier: workspace:^
+        version: link:packages/schema
       dsh-fabric-system-prompt:
         specifier: workspace:^
         version: link:packages/system-prompt
@@ -303,6 +306,55 @@ importers:
         version: link:../host
 
   packages/protocol: {}
+
+  packages/schema:
+    dependencies:
+      '@monotykamary/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent':
+        specifier: link:../../../deepseek-harness/packages/core/agent
+        version: link:../../../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-invariants':
+        specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+        version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-session':
+        specifier: link:../../../deepseek-harness/packages/core/session
+        version: link:../../../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-system-prompt':
+        specifier: link:../../../deepseek-harness/packages/core/system-prompt
+        version: link:../../../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tools':
+        specifier: link:../../../deepseek-harness/packages/core/tools
+        version: link:../../../deepseek-harness/packages/core/tools
+      '@monotykamary/schemastery':
+        specifier: link:../../../deepseek-harness/vendor/schemastery
+        version: link:../../../deepseek-harness/vendor/schemastery
+      dsh-fabric-mesh:
+        specifier: workspace:^
+        version: link:../mesh
+      dsh-fabric-protocol:
+        specifier: workspace:^
+        version: link:../protocol
+    devDependencies:
+      '@monotykamary/dsh-llm':
+        specifier: link:../../../deepseek-harness/packages/llm/llm
+        version: link:../../../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-session-projection':
+        specifier: link:../../../deepseek-harness/packages/session/session-projection
+        version: link:../../../deepseek-harness/packages/session/session-projection
+      '@monotykamary/dsh-storage':
+        specifier: link:../../../deepseek-harness/packages/storage/storage
+        version: link:../../../deepseek-harness/packages/storage/storage
+      '@monotykamary/dsh-storage-domain':
+        specifier: link:../../../deepseek-harness/packages/storage/storage-domain
+        version: link:../../../deepseek-harness/packages/storage/storage-domain
+      '@monotykamary/dsh-storage-json':
+        specifier: link:../../../deepseek-harness/packages/storage/storage-json
+        version: link:../../../deepseek-harness/packages/storage/storage-json
+      dsh-fabric-host:
+        specifier: workspace:^
+        version: link:../host
 
   packages/system-prompt:
     dependencies:

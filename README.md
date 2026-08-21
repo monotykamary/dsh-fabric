@@ -55,6 +55,7 @@ The installable workspace bundle masks the inherited code runtime, stock compact
 | [`dsh-fabric-system-prompt`](packages/system-prompt) | Fabric-owned system prompt override and native-prose minimization. |
 
 | [`dsh-fabric-mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
+| [`dsh-fabric-schema`](packages/schema) | Schema-enforced world state, evidence digests, and fail-closed certification: `state_*` Timeline/CAS head, complexity ledger, goal predicate, and `schema_*` hypothesis → certificate → commit workspace transactions with enforce/audit modes. |
 | [`dsh-fabric-code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
 | [`dsh-fabric-client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |
 

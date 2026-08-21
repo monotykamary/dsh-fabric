@@ -4,7 +4,7 @@ This document records the completion sweep for the focused DeepSeek Harness adap
 
 ## Boundary
 
-The adaptation reuses DSH as the authority for tools, workflows, sessions, the compaction service/transaction seam, client navigation, and Cordis lifecycle. It adds a deterministic Fabric compaction provider and a host-native roster restricted to Fabric-owned presets, a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, Activity/Topology presentation, and a semantic memory/recall surface over DSH's native session-query facilities.
+The adaptation reuses DSH as the authority for tools, workflows, sessions, the compaction service/transaction seam, client navigation, and Cordis lifecycle. It adds a deterministic Fabric compaction provider and a host-native roster restricted to Fabric-owned presets, a checked QuickJS `CodeRuntime` provider, mesh/CAS/mailboxes, a bounded Fabric projection, Activity/Topology presentation, a semantic memory/recall surface over DSH's native session-query facilities, and a schema-enforced world state with evidence digests and fail-closed certification.
 
 It is not a line-for-line port of pi-fabric's component system, workflow engine, agent transports, or TUI. FabricParticipantRecord is a host-independent read projection over the DSH session mirror and Fabric actors; it does not create a second participant directory, executor, or control plane.
 
@@ -19,6 +19,7 @@ It is not a line-for-line port of pi-fabric's component system, workflow engine,
 | Session-derived Fabric UI | DSH SessionProjectionRegistry | Bounded `fabricActivity` fold over native `tool/result.meta`, `tool/code-dispatch`, workflow, and compaction events | Live composition, native-event serialized replay, checkpoint restore | Verified |
 | Context compaction | DSH service, token meter, command, durable transaction, invariants | Exclusive Fabric deterministic compiler/provider, source-event reconstruction, bounded typed snapshots, masked preset roster, lifecycle projection, reassembled mesh context | Real `/compact`, recursive source recovery, compiler/activity/provenance, preset-mask, standing-mount, fold/replay, and system-prompt tests | Verified |
 | System prompt and continuation surfaces | DSH SystemPrompt registry and assemble waterfall | Fabric-owned operating prompt section plus a waterfall listener that minimizes native prose; DSH todo ledger, goal tools, `/goal`, goal round driver, and goal bar masked | Preserved structural/dynamic sections, dropped per-tool one-liners, and masked todo/goal rows verified by `scripts/verify-workspace.mjs` | Verified |
+| Schema world state and certification | DSH storage-domain mesh records + ToolRuntime pre-execute gate | Append-only transition Timeline with CAS head (`state/current`), complexity ledger, executable goal, fail-closed re-verification, and the hypothesis → certificate → commit workspace transaction gate | State/schema controller suites, ToolRuntime composition, and enforce/audit pre-execute tests | Verified |
 
 | Browser slots and navigation | DSH client slots and sessions service | Activity, grouped participant/mesh Topology, header action | Left-to-right structural layout, deterministic keyboard navigation, and authoritative session opening | Verified |
 | Client HMR | DSH client module loader | Package-owned CSS module update | Rebuilt bundles replace existing style-tag text | Verified by build contract |
@@ -76,17 +77,27 @@ Functional parity with pi's `memory` provider:
 | hot/cold tiers and digests | one live-preferred FTS5 index; no separate tiered index |
 | guest `memory` global | Code Mode guests call `tools.session_search(...)` through the same `tools` namespace; `tools.describe()` discloses it |
 
+## Schema-enforced world state and certification
+
+The Schema harness world-model pattern (state grounding + falsifiable mechanism hypotheses, verified by typed evidence, committed through certified transactions) is ported from pi-fabric's proven `state`/`schema` layers as `dsh-fabric-schema`:
+
+1. **World state** (`state_transition`/`state_get`/`state_history`/`state_verify`/`state_complexity`/`state_goal`/`state_check_goal`): an append-only Timeline of labeled, typed transitions stored as mesh topic events on `fabric.state` (proposal → committed marker with CAS head proof, rejected/quarantine rollback events), a compare-and-swap head pointer at `state/current` recomputable from the log, the structural complexity ledger (`state/complexity/*`, TS/JS/TSX/JSX decision-point token fold), and the executable goal predicate at `state/goal`.
+2. **Schema transactions** (`schema_hypothesize`/`schema_verify`/`schema_commit`/`schema_abort`/`schema_status`): `schema_hypothesize` durably binds a falsifiable hypothesis plus nonempty typed evidence (`file_exists`/`file_absent`/`file_contains`/`file_sha256`/`trusted_command`) to the current state binding and a git-aware workspace fingerprint; `schema_verify` fail-closed re-snapshots the workspace, confirms every evidence item against the unchanged fingerprint, and may issue one fresh session-bound single-use certificate (TTL-bounded, token-hashed at `schema/certificate/*`); `schema_commit` consumes the certificate and atomically applies declared write/edit/delete operations with SHA-256 preconditions, before-image journals, no-outside-drift checks, postconditions, rollback/quarantine on failure, crash recovery, and a follow-on `state_transition` (`schema:…` → `schema-commit-N`).
+3. **Enforcement** (mode `off`/`audit`/`enforce`, default `off`): in `enforce` mode the ToolRuntime `tools/pre-execute` waterfall denies direct `edit`/`write` calls with the Schema route; `audit` publishes `would_block` events without denying. Shell-produced mutations are outside this gate (pi-fabric's prewalk shell-mutation interception is a separate deferred surface); evidence commands run through the controller's own bounded runner. `fabric:schema-guidance` (preserved by the minimization) plus a `## Schema` operating block carry the discipline to the model.
+4. **Records are ordinary mesh records**: `fabric.state` and `fabric.schema` topic events plus `state/current`, `state/goal`, `state/complexity/*`, `schema/workspace`, `schema/hypothesis/*`, `schema/certificate/*` states — inspectable with `fabric_mesh` and folded into the same workspace-scoped durability as topics and mailboxes.
+
+Documented divergences from pi: artifacts bind to the DSH session id (per-session invocation) instead of a per-run `fabric_exec` call id; mesh state has no delete, so an absent-before ledger write survives a failed transition's rollback (it only feeds future delta measurements); transaction journals live under the OS temp directory keyed by workspace identity hash; `enforce` covers `edit`/`write` only.
+
 ## Deliberately deferred parity surfaces
 
 These are not represented as completed features:
 
-- schema-enforced world state, evidence digests, and fail-closed certification;
 - an always-resident actor execution host (mailboxes are durable, but a Consumer drives claims);
 - a Fabric-owned workflow engine, agent transport layer, or component calculus;
 - a cross-provider USD budget ledger and a Fabric audit archive;
 - pi-fabric's full TUI controls, retained-run lens, settings editor, and transcript preview system.
 
-When these are added, they should remain separate DSH capabilities. Memory/recall composes DSH session-query (see "Semantic memory and recall") rather than a second transcript index, and orchestration should extend native workflow/subagent seams rather than register another executor.
+When these are added, they should remain separate DSH capabilities. Memory/recall composes DSH session-query (see "Semantic memory and recall") rather than a second transcript index, world state and certification compose the durable mesh and the ToolRuntime policy seams (see "Schema-enforced world state and certification") rather than a second store or executor, and orchestration should extend native workflow/subagent seams rather than register another executor.
 
 ## Acceptance ledger
 
@@ -101,6 +112,8 @@ The sweep is complete when all of the following remain true:
 - prompt assembly re-emits current count- and byte-bounded mesh metadata from detached authoritative records;
 - topology settlement survives bounded edge/node eviction;
 - fabric sessions expose `session_search`/`session_event_search`/`session_trace`/`session_event_trace`/`session_event_read` over an enabled durable FTS index, and the assembled prompt carries `fabric:memory-guidance`;
+- fabric sessions expose `state_transition`/`state_get`/`state_history`/`state_verify`/`state_complexity`/`state_goal`/`state_check_goal` and `schema_status`/`schema_hypothesize`/`schema_verify`/`schema_commit`/`schema_abort` over durable mesh records, `schema_commit` advances the state head and generation with rollback/quarantine on failure, and the assembled prompt carries `fabric:schema-guidance` plus the `## Schema` operating block;
+- `mode: enforce` denies direct `edit`/`write` calls through the `tools/pre-execute` gate with the Schema route, while `audit` publishes `would_block` without denying;
 - the rc.6 incompatibility of legacy logs containing the retired `fabric/activity` event stays explicit;
 - `cordis.patch.yml` disables `command-goal`, `goal-round-driver`, and `ui-goal`, and every Fabric preset either masks `tool-todo`/`tool-goal` or omits them (`minimal`);
 - prompt assembly keeps the Fabric operating prompt plus the persona, plan policy, cordis toolset, subagent reporting, Code-Mode SDK/collapse sections, and mesh guidance while dropping the native per-tool prose, with tool schemas and the runtime-context snapshot untouched.

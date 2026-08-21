@@ -64,6 +64,17 @@
 - id: dsh-fabric-system-prompt
   name: 'dsh-fabric-system-prompt'
 
+# Schema-enforced world state: the model-facing state_* and schema_* tools,
+# the fabric:schema-guidance prompt section, and the optional
+# edit/write enforcement gate (mode: off | audit | enforce). The controller
+# resolves the agent workspace and cwd per call through the same identity
+# rules as the mesh Consumer; state and schema records are durable mesh
+# records in this scope's workspace.
+- id: dsh-fabric-schema-tool
+  name: 'dsh-fabric-schema/tool'
+  config:
+    mode: off
+
 
 # Fabric memory/recall composes DSH's native session-query toolset instead of
 # porting pi-fabric's tiered transcript index: cross-session `session_search`,

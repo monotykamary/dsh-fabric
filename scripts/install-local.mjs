@@ -16,6 +16,7 @@ const LINK_PATHS = [
   'packages/compaction',
   'packages/host',
   'packages/mesh',
+  'packages/schema',
   'packages/system-prompt',
   'packages/code-runtime-quickjs',
   'packages/client-ui',

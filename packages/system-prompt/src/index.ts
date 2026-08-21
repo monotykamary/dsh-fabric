@@ -92,6 +92,9 @@ export const FABRIC_SYSTEM_PROMPT = [
   '## Memory',
   "Prior sessions are the durable record. Recall with 'session_search' (cross-session; the caller session is excluded) or 'session_event_search' (one session); 'session_trace'/'session_event_trace'/'session_event_read' recover lineage and exact data.",
   '',
+  '## Schema',
+  "The world model is a labeled state machine plus a falsifiable transaction gate: 'state_get'/'state_transition'/'state_history'/'state_verify' manage the certified head, and 'schema_hypothesize'/'schema_verify'/'schema_commit'/'schema_abort' bind typed evidence and SHA-256 preconditions to workspace transactions. Never claim world state from conversation — read 'state_get' and 'schema_status' first, and route workspace mutations through 'schema_commit' when the gate is enforcing.",
+  '',
   '## Code Mode',
   "Inside 'run_code', call tools as 'await tools.name(args)'; a failed call rejects with 'ToolCallError' — catch it to continue.",
   "Overlap independent read-only calls under 'Promise.all'; sequence dependent work.",
@@ -132,6 +135,7 @@ export const PRESERVED_SECTIONS = new Set([
   'tool:session-query',
   'fabric:memory-guidance',
   'fabric:mesh-guidance',
+  'fabric:schema-guidance',
   'tools:code-only',
   'tools:sdk',
 ])

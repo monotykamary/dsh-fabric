@@ -56,6 +56,9 @@ if (!fabricPreset.includes('- id: dsh-fabric-system-prompt' + nl + "  name: 'dsh
 if (!fabricPreset.includes('- id: tool-session-query' + nl + "  name: '@monotykamary/dsh-tool-session-query'")) {
   throw new Error('fabric preset must mount the DSH session-query toolset for Fabric memory/recall')
 }
+if (!fabricPreset.includes('- id: dsh-fabric-schema-tool' + nl + "  name: 'dsh-fabric-schema/tool'")) {
+  throw new Error('fabric preset must mount the Fabric schema/state toolset')
+}
 if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]dsh-fabric-compaction['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric compaction engine')
 }
@@ -76,7 +79,7 @@ for (const reference of references) {
   }
 }
 
-const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
+const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'schema', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
 for (const directory of packageDirs) {
   const manifestPath = `packages/${directory}/package.json`
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
@@ -112,6 +115,9 @@ const artifacts = [
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
   'packages/mesh/lib/invariant.js',
+  'packages/schema/lib/index.js',
+  'packages/schema/lib/tool.js',
+  'packages/schema/lib/invariant.js',
   'packages/system-prompt/lib/index.js',
   'packages/system-prompt/lib/invariant.js',
   'packages/code-runtime-quickjs/lib/index.js',
