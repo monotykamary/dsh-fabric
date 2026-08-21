@@ -57,15 +57,24 @@
   min-width: 0;
   min-height: 0;
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
-  padding: 24px;
+  touch-action: none;
+  cursor: grab;
   background-image: radial-gradient(circle, var(--dsw-alias-border-l1) 0.7px, transparent 0.7px);
   background-position: 0 0;
   background-size: 18px 18px;
 }
 
-.graphViewport { flex: none; transform-origin: 0 0; }
+.canvas[data-panning='true'] { cursor: grabbing; user-select: none; }
+.canvas[data-panning='true'] .graphViewport { transition: none; }
+
+.graphViewport {
+  flex: none;
+  transform-origin: 0 0;
+  transition: transform 180ms cubic-bezier(.2, .8, .2, 1);
+  will-change: transform;
+}
 .graphViewport svg { display: block; }
 
 .zoomControls {
@@ -232,7 +241,7 @@
 
 @media (min-width: 761px) {
   .topologyShell { padding-bottom: 0; }
-  .canvas { padding-bottom: calc(24px + var(--dsh-fabric-bottom-clearance)); }
+  .canvasColumn { padding-bottom: var(--dsh-fabric-bottom-clearance); }
   .details { padding-bottom: calc(20px + var(--dsh-fabric-bottom-clearance)); }
 }
 
@@ -244,6 +253,6 @@
   .toolbar { align-items: flex-start; flex-direction: column; }
   .toolbarAside { width: 100%; justify-content: flex-end; }
   .topologyShell { display: block; overflow-y: auto; }
-  .canvas { min-height: 360px; overflow: auto; }
+  .canvas { min-height: 360px; overflow: hidden; }
   .details { min-height: max-content; overflow: visible; border-top: 1px solid var(--dsw-alias-border-l1); border-left: 0; }
 }

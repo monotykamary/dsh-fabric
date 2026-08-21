@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import type {} from '@monotykamary/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsRuntime, TranslateNS } from '@monotykamary/dsh-client-ui-slots'
 import type { FabricActivityRecord, FabricGraphNode, FabricParticipantRecord } from 'dsh-fabric-protocol'
@@ -33,6 +33,13 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
   const layoutKeyRef = useRef('')
   const zoomAtRef = useRef<(target: number, anchorX: number, anchorY: number) => void>(() => {})
   const scaleRef = useRef(1)
+  const offsetRef = useRef({ x: 0, y: 0 })
+  const panRef = useRef<{ pointerId: number; x: number; y: number; offsetX: number; offsetY: number }>()
+  const touchGestureRef = useRef<
+    | { kind: 'pan'; identifier: number; x: number; y: number; offsetX: number; offsetY: number }
+    | { kind: 'pinch'; distance: number; scale: number; contentX: number; contentY: number }
+  >()
+  const [isPanning, setIsPanning] = useState(false)
   const catalogIds = model?.graph.nodes
     .flatMap(node => node.sessionId === undefined ? [] : [node.sessionId])
     .toSorted() ?? []
@@ -107,17 +114,15 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
     const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, target))
     const contentX = (anchorX - offset.x) / current
     const contentY = (anchorY - offset.y) / current
-    const boxWidth = model.layout.width * next
-    const boxHeight = model.layout.height * next
-    const x = boxWidth <= viewport.width
-      ? (viewport.width - boxWidth) / 2
-      : Math.min(Math.max(anchorX - contentX * next, 0), boxWidth - viewport.width)
-    const y = boxHeight <= viewport.height
-      ? (viewport.height - boxHeight) / 2
-      : Math.min(Math.max(anchorY - contentY * next, 0), boxHeight - viewport.height)
+    const nextOffset = {
+      x: anchorX - contentX * next,
+      y: anchorY - contentY * next,
+    }
     userZoomedRef.current = true
+    scaleRef.current = next
+    offsetRef.current = nextOffset
     setScale(next)
-    setOffset({ x, y })
+    setOffset(nextOffset)
   }
   const zoomIn = (): void => {
     if (viewport === null) return
@@ -129,12 +134,145 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
   }
   const fitView = (): void => {
     if (model === null || viewport === null || fitScale === undefined) return
+    const nextOffset = {
+      x: (viewport.width - model.layout.width * fitScale) / 2,
+      y: (viewport.height - model.layout.height * fitScale) / 2,
+    }
     userZoomedRef.current = false
+    scaleRef.current = fitScale
+    offsetRef.current = nextOffset
     setScale(fitScale)
-    setOffset({
-      x: Math.max(0, (viewport.width - model.layout.width * fitScale) / 2),
-      y: Math.max(0, (viewport.height - model.layout.height * fitScale) / 2),
-    })
+    setOffset(nextOffset)
+  }
+  const zoomOnDoubleClick = (event: ReactMouseEvent<HTMLDivElement>): void => {
+    const target = event.target as Element
+    if (target.closest('[data-fabric-node]') !== null) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    zoomAt(
+      (scaleRef.current || fitScale || 1) * ZOOM_STEP,
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+    )
+  }
+
+  const beginPan = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.pointerType === 'touch' || event.button !== 0) return
+    const target = event.target as Element
+    if (target.closest('[data-fabric-node]') !== null) return
+    const canvas = event.currentTarget
+    panRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      offsetX: offset.x,
+      offsetY: offset.y,
+    }
+    userZoomedRef.current = true
+    canvas.setPointerCapture(event.pointerId)
+    setIsPanning(true)
+    event.preventDefault()
+  }
+  const movePan = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const pan = panRef.current
+    if (pan === undefined || pan.pointerId !== event.pointerId) return
+    const nextOffset = {
+      x: pan.offsetX + event.clientX - pan.x,
+      y: pan.offsetY + event.clientY - pan.y,
+    }
+    offsetRef.current = nextOffset
+    setOffset(nextOffset)
+    event.preventDefault()
+  }
+  const endPan = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (panRef.current?.pointerId !== event.pointerId) return
+    panRef.current = undefined
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    setIsPanning(false)
+  }
+  const beginTouchGesture = (event: ReactTouchEvent<HTMLDivElement>): void => {
+    const touches = event.touches
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (touches.length === 2) {
+      const first = touches[0]
+      const second = touches[1]
+      if (first === undefined || second === undefined) return
+      const midpointX = (first.clientX + second.clientX) / 2 - rect.left
+      const midpointY = (first.clientY + second.clientY) / 2 - rect.top
+      const currentScale = scaleRef.current
+      touchGestureRef.current = {
+        kind: 'pinch',
+        distance: Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY),
+        scale: currentScale,
+        contentX: (midpointX - offsetRef.current.x) / currentScale,
+        contentY: (midpointY - offsetRef.current.y) / currentScale,
+      }
+      userZoomedRef.current = true
+      setIsPanning(true)
+      event.preventDefault()
+      return
+    }
+    const touch = touches[0]
+    const target = event.target as Element
+    if (touch === undefined || target.closest('[data-fabric-node]') !== null) return
+    touchGestureRef.current = {
+      kind: 'pan',
+      identifier: touch.identifier,
+      x: touch.clientX,
+      y: touch.clientY,
+      offsetX: offsetRef.current.x,
+      offsetY: offsetRef.current.y,
+    }
+    userZoomedRef.current = true
+    setIsPanning(true)
+  }
+  const moveTouchGesture = (event: ReactTouchEvent<HTMLDivElement>): void => {
+    const gesture = touchGestureRef.current
+    if (gesture === undefined) return
+    if (gesture.kind === 'pinch' && event.touches.length === 2) {
+      const first = event.touches[0]
+      const second = event.touches[1]
+      if (first === undefined || second === undefined || gesture.distance === 0) return
+      const rect = event.currentTarget.getBoundingClientRect()
+      const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE,
+        gesture.scale * Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY) / gesture.distance,
+      ))
+      const nextOffset = {
+        x: (first.clientX + second.clientX) / 2 - rect.left - gesture.contentX * nextScale,
+        y: (first.clientY + second.clientY) / 2 - rect.top - gesture.contentY * nextScale,
+      }
+      scaleRef.current = nextScale
+      offsetRef.current = nextOffset
+      setScale(nextScale)
+      setOffset(nextOffset)
+      event.preventDefault()
+      return
+    }
+    if (gesture.kind !== 'pan' || event.touches.length !== 1) return
+    const touch = Array.from(event.touches).find(value => value.identifier === gesture.identifier)
+    if (touch === undefined) return
+    const nextOffset = {
+      x: gesture.offsetX + touch.clientX - gesture.x,
+      y: gesture.offsetY + touch.clientY - gesture.y,
+    }
+    offsetRef.current = nextOffset
+    setOffset(nextOffset)
+    event.preventDefault()
+  }
+  const endTouchGesture = (event: ReactTouchEvent<HTMLDivElement>): void => {
+    touchGestureRef.current = undefined
+    const touch = event.touches[0]
+    if (touch === undefined) {
+      setIsPanning(false)
+      return
+    }
+    touchGestureRef.current = {
+      kind: 'pan',
+      identifier: touch.identifier,
+      x: touch.clientX,
+      y: touch.clientY,
+      offsetX: offsetRef.current.x,
+      offsetY: offsetRef.current.y,
+    }
   }
 
   // Fit the whole graph by default; once the user zooms, keep their view and
@@ -162,6 +300,7 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
   useEffect(() => {
     zoomAtRef.current = zoomAt
     scaleRef.current = scale ?? fitScale ?? 1
+    offsetRef.current = offset
   })
 
   if (model === null) {
@@ -217,13 +356,26 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
         : (
           <div className={css.topologyShell}>
             <div className={css.canvasColumn}>
-              <div ref={attachCanvas} className={css.canvas}>
+              <div
+                ref={attachCanvas}
+                className={css.canvas}
+                data-panning={isPanning}
+                onPointerDown={beginPan}
+                onPointerMove={movePan}
+                onPointerUp={endPan}
+                onPointerCancel={endPan}
+                onDoubleClick={zoomOnDoubleClick}
+                onTouchStart={beginTouchGesture}
+                onTouchMove={moveTouchGesture}
+                onTouchEnd={endTouchGesture}
+                onTouchCancel={endTouchGesture}
+              >
                 {scale === undefined ? null : (
                 <div
                   className={css.graphViewport}
                   style={{
-                    width: model.layout.width * (scale ?? 1),
-                    height: model.layout.height * (scale ?? 1),
+                    width: model.layout.width,
+                    height: model.layout.height,
                     transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale ?? 1})`,
                   }}
                 >
@@ -341,6 +493,7 @@ function GraphNode({ node, x, y, depth, position, setSize, hasChildren, selected
       ref={registerRef}
       className={[css.node, selected ? css.nodeSelected : '', node.kind === 'group' ? css.nodeGroup : ''].filter(Boolean).join(' ')}
       data-kind={node.kind}
+      data-fabric-node=""
       transform={['translate(', x - 82, ' ', y - 30, ')'].join('')}
       role="treeitem"
       aria-level={depth + 1}
