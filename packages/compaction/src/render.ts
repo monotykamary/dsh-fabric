@@ -27,7 +27,7 @@ export interface RenderOptions {
 }
 
 const POINTER_LINE =
-  "Exact pre-summary events remain in the DSH session log; use session export and the cited source range for forensic replay.";
+  "For exact pre-summary history, use session_search (or session_event_search within this session) to recall the cited range, then session_event_read by entry seq for exact data.";
 
 const sampledLines = (lines: readonly string[], keep: number): string[] => {
   if (lines.length <= keep) return [...lines];
@@ -62,9 +62,9 @@ export const renderSummary = (sections: Sections, options: RenderOptions): strin
     Math.max(utf8Bytes(header), Math.floor(budget * limit / MAX_SUMMARY_BYTES));
   const blocks: string[] = [];
   for (const { key, header, maxBytes } of SECTION_ORDER) {
-    const lines = sections[key];
-    if (lines.length === 0) continue;
-    blocks.push(boundedBlock(header, lines, scaled(header, maxBytes)));
+    const sectionLines = sections[key];
+    if (sectionLines.length === 0) continue;
+    blocks.push(boundedBlock(header, sectionLines, scaled(header, maxBytes)));
     if (key === "goal" && options.requestLines && options.requestLines.length > 0) {
       blocks.push(boundedBlock("[Compaction Request]", options.requestLines, scaled("[Compaction Request]", REQUEST_MAX_BYTES)));
     }
@@ -72,11 +72,9 @@ export const renderSummary = (sections: Sections, options: RenderOptions): strin
   if (sections.goal.length === 0 && options.requestLines && options.requestLines.length > 0) {
     blocks.unshift(boundedBlock("[Compaction Request]", options.requestLines, scaled("[Compaction Request]", REQUEST_MAX_BYTES)));
   }
-
   if (sections.transcript.length > 0) {
     blocks.push(boundedBlock("---", sections.transcript, scaled("---", TRANSCRIPT_MAX_BYTES)));
   }
-
   const timestamp = options.lastTimestamp || "(unknown time)";
   const range = options.firstEntryId || options.lastEntryId
     ? `${options.firstEntryId || "(start)"} → ${options.lastEntryId || "(end)"}`
@@ -84,9 +82,24 @@ export const renderSummary = (sections: Sections, options: RenderOptions): strin
   const footer = options.summaryKind === "branch"
     ? `[branch summarized ${timestamp}; structural source entries ${range}]`
     : `[compacted ${timestamp}; cumulative source entries ${range}]`;
-  blocks.push(boundedBlock("---", [footer, POINTER_LINE], scaled("---", FOOTER_MAX_BYTES)));
+  // The tail is the recall contract: rendered at the fixed footer budget
+  // (unscaled, as pi-fabric does) so a tight budget trims sections, never
+  // the pointer line.
+  blocks.push(boundedBlock("---", [footer, POINTER_LINE], FOOTER_MAX_BYTES));
 
   const summary = `${blocks.join("\n\n")}\n`;
   if (utf8Bytes(summary) <= limit) return summary;
-  return `${clipUtf8(summary, Math.max(0, limit - 1), "")}\n`;
+  // Overflow: drop whole blocks from the front (oldest context first; the
+  // footer stays last) until the fixed tail fits, then clamp the head.
+  let start = 0;
+  let candidate = summary;
+  while (start < blocks.length - 1 && utf8Bytes(candidate) > limit) {
+    start += 1;
+    candidate = `${blocks.slice(start).join("\n\n")}\n`;
+  }
+  if (utf8Bytes(candidate) <= limit) return candidate;
+  const tail = blocks[blocks.length - 1]!;
+  const head = blocks.slice(start, -1);
+  const headText = head.join("\n\n");
+  return `${clipUtf8(headText, Math.max(0, limit - utf8Bytes(tail) - 2))}${headText ? "\n" : ""}${tail}\n`;
 };
