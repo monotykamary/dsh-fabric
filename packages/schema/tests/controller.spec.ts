@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -10,6 +11,8 @@ import { StorageFabricMesh } from 'dsh-fabric-mesh/provider'
 import { DEFAULT_SCHEMA_CONFIG, SchemaController, type FabricSchemaConfig } from '../src/controller.ts'
 import { StateStore } from '../src/state-store.ts'
 import { sha256File } from '../src/workspace.ts'
+
+const sha1 = (text: string): string => createHash('sha1').update(text).digest('hex')
 
 async function mountedSchema(workspace: string, storageRoot: string, config: FabricSchemaConfig = DEFAULT_SCHEMA_CONFIG) {
   const ctx = new Context()
@@ -84,10 +87,12 @@ describe('SchemaController workspace transactions', () => {
         expect(committed.outcome).toBe('committed')
         expect(committed.generation).toBe(1)
         expect(committed.paths).toEqual(['note.txt', 'existing.txt', 'remove.txt'])
+        const noteSha256 = sha256File(join(root, 'note.txt'))
+        const updatedSha256 = sha256File(join(root, 'existing.txt'))
         expect(mutations).toEqual([
-          { path: 'note.txt', operation: 'create', diffs: [{ oldText: null, newText: 'note\n' }] },
-          { path: 'existing.txt', operation: 'modify', diffs: [{ oldText: 'hello', newText: 'HELLO' }] },
-          { path: 'remove.txt', operation: 'delete', diffs: [{ oldText: 'remove', newText: null }] },
+          { beforeSha1: null, afterSha1: sha1('note\n'), beforeSha256: null, afterSha256: noteSha256.slice('sha256:'.length), path: 'note.txt', operation: 'create', diffs: [{ oldText: null, newText: 'note\n' }] },
+          { beforeSha1: sha1('hello'), afterSha1: sha1('HELLO'), beforeSha256: existingSha256.slice('sha256:'.length), afterSha256: updatedSha256.slice('sha256:'.length), path: 'existing.txt', operation: 'modify', diffs: [{ oldText: 'hello', newText: 'HELLO' }] },
+          { beforeSha1: sha1('remove'), afterSha1: null, beforeSha256: removeSha256.slice('sha256:'.length), afterSha256: null, path: 'remove.txt', operation: 'delete', diffs: [{ oldText: 'remove', newText: null }] },
         ])
         expect(controller.status().lastOutcome).toBe('committed')
         expect(controller.status().generation).toBe(1)

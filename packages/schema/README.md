@@ -21,7 +21,7 @@ verification → certified transaction), adapted from pi-fabric's proven
   consumes the certificate and atomically applies declared write/edit/delete
   operations with SHA-256 preconditions, postconditions, before-image
   journals, rollback/quarantine, and crash recovery, then records net committed
-  text changes through the Harness mutation receipt API; `schema_abort`
+  text changes and complete-content SHA-1/SHA-256 transitions through the Harness mutation receipt API; `schema_abort`
   discards uncommitted artifacts.
 - **Enforcement** (`mode: off | audit | enforce`): in `enforce` mode the
   `tools/pre-execute` gate denies direct `edit`/`write` calls with the

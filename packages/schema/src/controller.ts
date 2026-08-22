@@ -4,7 +4,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import type { FileMutation } from '@monotykamary/dsh-session'
+import type { FileMutationInput } from '@monotykamary/dsh-session'
 import type { FabricJsonValue, FabricStateRecord, FabricTopicMessage } from 'dsh-fabric-protocol'
 import { FabricStateKey, FabricTopicId } from 'dsh-fabric-protocol'
 import type { FabricMeshWorkspace } from 'dsh-fabric-mesh'
@@ -65,16 +65,24 @@ interface BeforeImage {
   mode?: number
 }
 
-function committedTextMutations(before: readonly BeforeImage[]): FileMutation[] {
-  const mutations: FileMutation[] = []
+function sha1(bytes: Uint8Array): string {
+  return createHash('sha1').update(bytes).digest('hex')
+}
+
+function sha256(bytes: Uint8Array): string {
+  return createHash('sha256').update(bytes).digest('hex')
+}
+
+function committedTextMutations(before: readonly BeforeImage[]): FileMutationInput[] {
+  const mutations: FileMutationInput[] = []
   for (const image of before) {
     const exists = fs.existsSync(image.absolute)
     const oldBytes = image.content === undefined ? undefined : Buffer.from(image.content, 'base64')
     if (oldBytes !== undefined && !isUtf8(oldBytes)) continue
     const oldText = oldBytes?.toString('utf8')
     if (!exists) {
-      if (oldText !== undefined) {
-        mutations.push({ path: image.path, operation: 'delete', diffs: [{ oldText, newText: null }] })
+      if (oldBytes !== undefined && oldText !== undefined) {
+        mutations.push({ beforeSha1: sha1(oldBytes), afterSha1: null, beforeSha256: sha256(oldBytes), afterSha256: null, path: image.path, operation: 'delete', diffs: [{ oldText, newText: null }] })
       }
       continue
     }
@@ -83,6 +91,10 @@ function committedTextMutations(before: readonly BeforeImage[]): FileMutation[] 
     const newText = newBytes.toString('utf8')
     if (oldText === newText) continue
     mutations.push({
+      beforeSha1: oldBytes === undefined ? null : sha1(oldBytes),
+      afterSha1: sha1(newBytes),
+      beforeSha256: oldBytes === undefined ? null : sha256(oldBytes),
+      afterSha256: sha256(newBytes),
       path: image.path,
       operation: oldText === undefined ? 'create' : 'modify',
       diffs: [{ oldText: oldText ?? null, newText }],
@@ -355,7 +367,7 @@ export class SchemaController {
       postconditions: SchemaEvidence[]
     },
     parentToolCallId: string,
-    recordMutations?: (mutations: readonly FileMutation[]) => void,
+    recordMutations?: (mutations: readonly FileMutationInput[]) => void,
   ): Promise<Record<string, unknown>> {
     if (input.operations.length === 0) throw new Error('Schema commit requires at least one file operation')
     if (input.postconditions.length === 0) throw new Error('Schema commit requires nonempty typed postconditions')
