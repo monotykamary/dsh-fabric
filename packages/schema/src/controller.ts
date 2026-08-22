@@ -1,8 +1,10 @@
+import { isUtf8 } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import type { FileMutation } from '@monotykamary/dsh-session'
 import type { FabricJsonValue, FabricStateRecord, FabricTopicMessage } from 'dsh-fabric-protocol'
 import { FabricStateKey, FabricTopicId } from 'dsh-fabric-protocol'
 import type { FabricMeshWorkspace } from 'dsh-fabric-mesh'
@@ -61,6 +63,32 @@ interface BeforeImage {
   existed: boolean
   content?: string
   mode?: number
+}
+
+function committedTextMutations(before: readonly BeforeImage[]): FileMutation[] {
+  const mutations: FileMutation[] = []
+  for (const image of before) {
+    const exists = fs.existsSync(image.absolute)
+    const oldBytes = image.content === undefined ? undefined : Buffer.from(image.content, 'base64')
+    if (oldBytes !== undefined && !isUtf8(oldBytes)) continue
+    const oldText = oldBytes?.toString('utf8')
+    if (!exists) {
+      if (oldText !== undefined) {
+        mutations.push({ path: image.path, operation: 'delete', diffs: [{ oldText, newText: null }] })
+      }
+      continue
+    }
+    const newBytes = fs.readFileSync(image.absolute)
+    if (!isUtf8(newBytes)) continue
+    const newText = newBytes.toString('utf8')
+    if (oldText === newText) continue
+    mutations.push({
+      path: image.path,
+      operation: oldText === undefined ? 'create' : 'modify',
+      diffs: [{ oldText: oldText ?? null, newText }],
+    })
+  }
+  return mutations
 }
 
 interface TransactionJournal {
@@ -327,6 +355,7 @@ export class SchemaController {
       postconditions: SchemaEvidence[]
     },
     parentToolCallId: string,
+    recordMutations?: (mutations: readonly FileMutation[]) => void,
   ): Promise<Record<string, unknown>> {
     if (input.operations.length === 0) throw new Error('Schema commit requires at least one file operation')
     if (input.postconditions.length === 0) throw new Error('Schema commit requires nonempty typed postconditions')
@@ -426,6 +455,7 @@ export class SchemaController {
         updatedAt: Date.now(),
       } satisfies SchemaWorkspaceRecord)
       committed = true
+      recordMutations?.(committedTextMutations(before))
       journal.status = 'committed'
       try {
         atomicJsonWrite(journalPath, journal)

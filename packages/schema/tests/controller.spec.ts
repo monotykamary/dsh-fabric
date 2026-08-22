@@ -51,6 +51,7 @@ describe('SchemaController workspace transactions', () => {
     const { workspace: root, storage, cleanup } = await roots('dsh-fabric-schema-commit')
     try {
       await writeFile(join(root, 'existing.txt'), 'hello')
+      await writeFile(join(root, 'remove.txt'), 'remove')
       const { controller, state, dispose } = await mountedSchema(root, storage)
       try {
         const hypothesis = await controller.hypothesize({
@@ -65,19 +66,29 @@ describe('SchemaController workspace transactions', () => {
         expect(verified.verified).toBe(true)
         expect(verified.results).toEqual([expect.objectContaining({ status: 'confirmed' })])
         const certificate = String((verified as { certificate: string }).certificate)
+        const mutations: unknown[] = []
+        const existingSha256 = sha256File(join(root, 'existing.txt'))
+        const removeSha256 = sha256File(join(root, 'remove.txt'))
 
         const committed = await controller.commit({
           hypothesisId: String(hypothesis.hypothesisId),
           certificate,
           operations: [
             { kind: 'write', path: 'note.txt', content: 'note\n', expected: { absent: true } },
+            { kind: 'edit', path: 'existing.txt', oldText: 'hello', newText: 'HELLO', expectedSha256: existingSha256 },
+            { kind: 'delete', path: 'remove.txt', expectedSha256: removeSha256 },
           ],
           postconditions: [{ kind: 'file_contains', path: 'note.txt', literal: 'note' }],
-        }, 'inv-1')
+        }, 'inv-1', receipts => { mutations.push(...receipts) })
 
         expect(committed.outcome).toBe('committed')
         expect(committed.generation).toBe(1)
-        expect(committed.paths).toEqual(['note.txt'])
+        expect(committed.paths).toEqual(['note.txt', 'existing.txt', 'remove.txt'])
+        expect(mutations).toEqual([
+          { path: 'note.txt', operation: 'create', diffs: [{ oldText: null, newText: 'note\n' }] },
+          { path: 'existing.txt', operation: 'modify', diffs: [{ oldText: 'hello', newText: 'HELLO' }] },
+          { path: 'remove.txt', operation: 'delete', diffs: [{ oldText: 'remove', newText: null }] },
+        ])
         expect(controller.status().lastOutcome).toBe('committed')
         expect(controller.status().generation).toBe(1)
         expect(state.getHead()?.label).toBe('schema:add note')

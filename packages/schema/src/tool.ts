@@ -2,7 +2,7 @@ import { realpathSync } from 'node:fs'
 import type { Context } from '@monotykamary/cordis'
 import type { AssembleContext } from '@monotykamary/dsh-system-prompt'
 import type { Agent } from '@monotykamary/dsh-agent'
-import type { PreToolDecision, ToolExecution } from '@monotykamary/dsh-tools'
+import type { PreToolDecision, ToolExecution, ToolRunContext } from '@monotykamary/dsh-tools'
 import { defineTool } from '@monotykamary/dsh-tools'
 import { snapshotJsonValue } from '@monotykamary/dsh-session'
 import type { JsonValue } from '@monotykamary/dsh-session'
@@ -121,7 +121,7 @@ export function apply(ctx: Context, config: Config): void {
     toolName: string,
     description: string,
     parameters: Record<string, unknown>,
-    execute: (args: Record<string, unknown>, agent: Agent | undefined) => Promise<unknown>,
+    execute: (args: Record<string, unknown>, agent: Agent | undefined, exec: ToolRunContext) => Promise<unknown>,
     readOnly = false,
   ): void => {
     ctx.tools.register(defineTool({
@@ -134,7 +134,7 @@ export function apply(ctx: Context, config: Config): void {
       },
       async execute(args, exec) {
         if (exec.agent === undefined) throw new Error(`${toolName} requires a DSH agent workspace`)
-        return json(await execute(args as Record<string, unknown>, exec.agent))
+        return json(await execute(args as Record<string, unknown>, exec.agent, exec))
       },
       presentCall: args => ({ card: 'generic', title: `Schema: ${toolName}`, kind: readOnly ? 'read' : 'other' }),
       ...(readOnly ? { isConcurrencySafe: () => true } : {}),
@@ -274,13 +274,16 @@ export function apply(ctx: Context, config: Config): void {
     certificate: { type: 'string', required: true },
     operations: { type: 'json', required: true, description: 'Nonempty array of {kind:"write"|"edit"|"delete", path, ...} with SHA-256 preconditions.' },
     postconditions: { type: 'json', required: true, description: 'Nonempty array of typed evidence items confirmed after the operations apply.' },
-  }, async (args, agent) => {
+  }, async (args, agent, exec) => {
+    const operations = operationsArray(args.operations, 'operations')
     return controller(agent).commit({
       hypothesisId: text(args.hypothesisId, 'hypothesisId'),
       certificate: text(args.certificate, 'certificate'),
-      operations: operationsArray(args.operations, 'operations'),
+      operations,
       postconditions: evidenceArray(args.postconditions, 'postconditions'),
-    }, invocationOf(agent))
+    }, invocationOf(agent), (mutations) => {
+      for (const mutation of mutations) exec.recordFileMutation(mutation)
+    })
   })
 
   register('schema_abort', 'Abort an uncommitted same-session hypothesis and optionally its active certificate', {
