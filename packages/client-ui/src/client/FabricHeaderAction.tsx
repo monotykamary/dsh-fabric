@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type {} from '@monotykamary/dsh-client-ui-conversation/client'
-import { IconChevronDownOutline14 } from '@monotykamary/dsh-client-ui-primitives'
+import { ChevronDown } from '@monotykamary/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@monotykamary/dsh-client-ui-slots'
 import { buildFabricClientModel } from './model.ts'
 import { statusLabel } from './labels.ts'
@@ -56,7 +56,7 @@ export function FabricHeaderAction({ useSessions, sessionId, openNode, refreshCa
       >
         <span className={running.length > 0 ? css.headerPulse : css.headerIdle} />
         <span>Fabric · {related.length}</span>
-        <IconChevronDownOutline14 className={expanded ? css.headerChevronOpen : css.headerChevron} />
+        <ChevronDown size={14} className={expanded ? css.headerChevronOpen : css.headerChevron} />
       </button>
       {expanded ? (
         <div className={css.headerPopover} role="dialog" aria-label={t('header.popover.aria')}>
