@@ -117,6 +117,35 @@ describe('dsh-fabric-schema ToolRuntime composition', () => {
     }
   })
 
+  it('returns an empty snapshot from state_get before the fabric.state topic exists', async () => {
+    const { workspace: root, storage, cleanup } = await roots('dsh-fabric-schema-fresh')
+    try {
+      const { ctx, fibers } = await compose(storage)
+      try {
+        const session = ctx.sessions.create(SessionId('schema-fresh-session'), { meta: { cwd: root } })
+        const agent = agentFor(session, ctx)
+        const result = await ctx.tools.execute({
+          signal,
+          callId: 'schema-fresh-1' as never,
+          name: 'state_get',
+          arguments: {},
+          agent: agent as never,
+        })
+        expect(result.isError).toBe(false)
+        expect(result.value).toMatchObject({
+          head: null,
+          goal: null,
+          complexity: { files: 0, decisionPoints: 0, lastNetDelta: 0 },
+          certification: { current: null, recent: [] },
+        })
+      } finally {
+        for (const fiber of fibers.reverse()) await fiber.dispose()
+      }
+    } finally {
+      await cleanup()
+    }
+  })
+
   it('rejects malformed evidence and operations with typed errors', async () => {
     const { workspace: root, storage, cleanup } = await roots('dsh-fabric-schema-args')
     try {

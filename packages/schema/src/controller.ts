@@ -7,7 +7,7 @@ import path from 'node:path'
 import type { FileMutationInput } from '@monotykamary/dsh-session'
 import type { FabricJsonValue, FabricStateRecord, FabricTopicMessage } from 'dsh-fabric-protocol'
 import { FabricStateKey, FabricTopicId } from 'dsh-fabric-protocol'
-import type { FabricMeshWorkspace } from 'dsh-fabric-mesh'
+import { FabricMeshError, type FabricMeshWorkspace } from 'dsh-fabric-mesh'
 import { StateStore, type SchemaMeshEvent } from './state-store.ts'
 import type {
   SchemaCertificateRecord,
@@ -120,6 +120,9 @@ const sameBinding = (left: unknown, right: unknown): boolean =>
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
+
+const isNotFoundError = (error: unknown): boolean =>
+  (error instanceof FabricMeshError && error.code === 'not-found') || /not found|does not exist/.test(errorMessage(error))
 
 const atomicJsonWrite = (filePath: string, value: unknown): void => {
   const directory = path.dirname(filePath)
@@ -855,7 +858,7 @@ export class SchemaController {
         .map(eventFromMessage)
         .sort((left, right) => left.sequence - right.sequence)
     } catch (error) {
-      if (/not found/.test(errorMessage(error))) return []
+      if (isNotFoundError(error)) return []
       throw error
     }
   }

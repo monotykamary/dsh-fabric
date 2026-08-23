@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 import type { FabricJsonValue, FabricStateRecord, FabricTopicMessage } from 'dsh-fabric-protocol'
 import { FabricStateKey, FabricTopicId } from 'dsh-fabric-protocol'
-import type { FabricMeshWorkspace } from 'dsh-fabric-mesh'
+import { FabricMeshError, type FabricMeshWorkspace } from 'dsh-fabric-mesh'
 import { countFileComplexity } from './complexity.ts'
 import { runCommand, type CommandResult } from './evidence-runner.ts'
 import type {
@@ -104,6 +104,9 @@ const errorMessage = (error: unknown): string =>
 
 const isCasError = (error: unknown): boolean =>
   error instanceof Error && /expected version \d+, current version is \d+/.test(error.message)
+
+const isNotFoundError = (error: unknown): boolean =>
+  (error instanceof FabricMeshError && error.code === 'not-found') || /not found|does not exist/.test(errorMessage(error))
 
 const toStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined
@@ -899,7 +902,7 @@ export class StateStore {
         .map(eventFromMessage)
         .sort((left, right) => left.sequence - right.sequence || String(left.id).localeCompare(String(right.id)))
     } catch (error) {
-      if (/not found/.test(errorMessage(error))) return []
+      if (isNotFoundError(error)) return []
       throw error
     }
   }
