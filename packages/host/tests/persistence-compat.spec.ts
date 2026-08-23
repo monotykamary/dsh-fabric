@@ -30,7 +30,7 @@ describe('DSH session persistence compatibility', () => {
     const restored = Session.create(SessionId('fabric-native-persistence-restored'), stored)
     const projection = createFabricActivityProjection()
     const state = restored.events.reduce((current, event) => projection.apply(current, event), projection.init())
-    expect(projection.view(state)).toMatchObject({
+    expect(projection.wire.view(state)).toMatchObject({
       activities: [expect.objectContaining({ kind: 'actor', action: 'created' })],
       nodes: [expect.objectContaining({ id: 'actor:builder', status: 'idle' })],
       edges: [expect.objectContaining({ source: '$session', target: 'actor:builder' })],

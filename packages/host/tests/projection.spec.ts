@@ -59,7 +59,7 @@ describe('fabric activity projection', () => {
     }, 2))
     state = definition.apply(state, event('compaction/end', { compactionId: 'cmp-1', turn: null }, 3))
 
-    const view = definition.view(state)
+    const view = definition.wire.view(state)
     expect(view.nodes).toContainEqual(expect.objectContaining({ id: 'actor:durable', status: 'idle' }))
     expect(view.nodes).toContainEqual(expect.objectContaining({
       id: 'compaction:cmp-1', kind: 'compaction', status: 'completed', detail: '42 tokens · seq 0–0',
@@ -85,7 +85,7 @@ describe('fabric activity projection', () => {
       runId: 'run-tight', childId: 'child-tight', seq: 0, outcome: 'completed',
     }, 3))
 
-    expect(definition.view(state).nodes).toContainEqual(expect.objectContaining({
+    expect(definition.wire.view(state).nodes).toContainEqual(expect.objectContaining({
       id: 'session:child-tight', label: 'Builder', status: 'completed',
     }))
   })
@@ -101,7 +101,7 @@ describe('fabric activity projection', () => {
       edges: [{ id: `edge:${hugeId}`, source: '$session', target: hugeId, kind: 'state', updatedAt: 1 }],
     }, 0))
 
-    const view = definition.view(state)
+    const view = definition.wire.view(state)
     expect(view.activities[0]?.id.length).toBeLessThanOrEqual(512)
     expect(view.activities[0]?.action.length).toBeLessThanOrEqual(256)
     expect(view.activities[0]?.label.length).toBeLessThanOrEqual(2048)

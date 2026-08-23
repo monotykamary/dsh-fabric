@@ -70,21 +70,51 @@ interface FabricProjectionState extends FabricActivityProjection {
   }>
 }
 
+const workflowMemberSchema = z.object({
+  runId: z.string(),
+  nodeId: z.string(),
+  sessionId: z.string(),
+  label: z.string(),
+})
+
+/** The fold's full persisted state: the client view plus workflow-member bookkeeping. */
+const stateSchema = z.object({
+  activities: z.array(activitySchema),
+  nodes: z.array(nodeSchema),
+  edges: z.array(edgeSchema),
+  workflowMembers: z.record(z.string(), workflowMemberSchema),
+}) as z.ZodType<FabricProjectionState>
+
+declare module '@monotykamary/dsh-session-projection/types' {
+  interface SessionProjectionStateMap {
+    /** Host fold state behind the `fabricActivity` client projection. */
+    fabricActivity: FabricProjectionState
+  }
+}
+
+/** Registration shape for the client-visible `fabricActivity` unit: wire required. */
+export type FabricActivityProjectionDefinition = Omit<ProjectionDefinition<'fabricActivity', FabricProjectionState>, 'wire'> & {
+  wire: NonNullable<ProjectionDefinition<'fabricActivity', FabricProjectionState>['wire']>
+}
+
 /** Create the pure bounded fold registered by the host adapter. */
 export function createFabricActivityProjection(
   activityLimit = 200,
   topologyLimit = 256,
-): ProjectionDefinition<'fabricActivity', FabricProjectionState> {
+): FabricActivityProjectionDefinition {
   if (!Number.isSafeInteger(activityLimit) || activityLimit < 1) throw new TypeError('activityLimit must be a positive safe integer')
   if (!Number.isSafeInteger(topologyLimit) || topologyLimit < 1) throw new TypeError('topologyLimit must be a positive safe integer')
 
   return {
     key: 'fabricActivity',
-    schema: projectionSchema,
+    stateVersion: 4,
+    stateSchema,
     init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
-    view: state => ({ activities: state.activities, nodes: state.nodes, edges: state.edges }),
-    stateVersion: 4,
+    wire: {
+      viewSchema: projectionSchema,
+      view: state => ({ activities: state.activities, nodes: state.nodes, edges: state.edges }),
+    },
   }
 }
 
