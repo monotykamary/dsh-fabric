@@ -1,10 +1,14 @@
 # The `fabric` agent preset: Fabric mode — the standard coding agent under the
 # Fabric operating disciplines, presented through the Code Mode SDK.
 #
-# Everything in `code` is here unchanged, including the `tool-presentation`
-# row: instead of one tool call per action, the model writes a TypeScript
-# program against a generated SDK and `run_code` executes it, so a sequence
+# The tool set follows `code`; the `tool-presentation` row additionally makes
+# the outer run label optional and deterministic. Instead of one tool call per
+# action, the model writes a TypeScript program against a generated SDK and
+# `run_code` executes it, so a sequence
 # that would be five round trips becomes one.
+#
+# `run_code.description` is optional here; a supplied value wins, otherwise
+# DSH derives the card and compaction title from the logged program.
 #
 # What makes this preset Fabric is its identity. Sessions composed from it
 # record this preset id, the picker and session header read "Fabric mode", and
@@ -285,3 +289,4 @@
   name: '@monotykamary/dsh-agent-tool-presentation'
   config:
     mode: code
+    runCodeLabel: inferred

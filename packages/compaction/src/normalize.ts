@@ -3,6 +3,7 @@ import { isCompactCheckpointSource } from '@monotykamary/dsh-compaction'
 import { projectFabricMeshActivity, readFabricMeshResultMeta } from 'dsh-fabric-protocol'
 import type { FabricActivityRecord, FabricJsonValue } from 'dsh-fabric-protocol'
 import type { ContentBlock, Message } from '@monotykamary/dsh-llm'
+import { resolveRunCodeTitle } from '@monotykamary/dsh-tools'
 import { clipUtf8 } from './bounds.ts'
 
 export type FabricTraceJsonValue = null | boolean | number | string | FabricTraceJsonValue[] | { [key: string]: FabricTraceJsonValue }
@@ -125,7 +126,17 @@ export function normalizeMessages(
   const output: CompactionEvent[] = prior.map(event => ({ ...event }))
   appendSessionActivities(output, activityEvents, new Set(output.map(event => event.entryId)))
   const calls = new Map<string, ToolCallEvent>()
-  for (const event of output) if (event.kind === 'toolCall') calls.set(event.toolCallId, event)
+  const runTitles = new Map<string, string>()
+  for (const event of output) {
+    if (event.kind !== 'toolCall') continue
+    calls.set(event.toolCallId, event)
+    if (event.name === 'run_code' && typeof event.args.code === 'string') {
+      runTitles.set(event.toolCallId, resolveRunCodeTitle({
+        code: event.args.code,
+        ...(typeof event.args.description === 'string' ? { description: event.args.description } : {}),
+      }))
+    }
+  }
 
   for (const message of messages) {
     if (isCompactCheckpointSource(message.source)) continue
@@ -152,14 +163,21 @@ export function normalizeMessages(
         continue
       }
       if (block.type === 'tool-call') {
+        const rawArgs = unboundedArguments(block.arguments)
         const event = base({
           kind: 'toolCall',
           toolCallId: String(block.id),
           name: block.name,
-          args: parseArguments(block.arguments),
+          args: boundedArguments(rawArgs),
         }, entryId, sourceEntryId)
         output.push(event)
         calls.set(event.toolCallId, event)
+        if (block.name === 'run_code' && typeof rawArgs.code === 'string') {
+          runTitles.set(event.toolCallId, resolveRunCodeTitle({
+            code: rawArgs.code,
+            ...(typeof rawArgs.description === 'string' ? { description: rawArgs.description } : {}),
+          }))
+        }
         continue
       }
       if (block.type === 'tool-result') {
@@ -183,6 +201,19 @@ export function normalizeMessages(
             kind: 'toolResult', toolCallId, toolName, isError, text,
             ...(result === undefined ? {} : { result }),
           }, entryId, sourceEntryId))
+          const runTitle = toolName === 'run_code' ? runTitles.get(toolCallId) : undefined
+          if (runTitle !== undefined && call !== undefined) {
+            const subordinal = `call:${toolCallId}`
+            output.push(base({
+              kind: 'fabricRun',
+              toolCallId,
+              subordinal,
+              address: `${call.entryId}/${subordinal}`,
+              name: clipUtf8(runTitle, MAX_EVENT_TEXT_BYTES),
+              outcome: isError ? 'failed' : 'succeeded',
+              source: 'result',
+            }, call.entryId, sourceEntryId))
+          }
         }
       }
     }
@@ -456,15 +487,22 @@ function base<T extends Omit<CompactionEvent, keyof EventBase>>(
   return { ...event, index: 0, entryId, sourceEntryId }
 }
 
-function parseArguments(source: unknown): Record<string, unknown> {
+function unboundedArguments(source: unknown): Record<string, unknown> {
   try {
     const parsed: unknown = typeof source === 'string' ? JSON.parse(source) : source
-    if (!isRecord(parsed)) return {}
-    const bounded = boundedJson(parsed, { nodes: 0 }, 0)
-    return isRecord(bounded) ? bounded : {}
+    return isRecord(parsed) ? parsed : {}
   } catch {
     return {}
   }
+}
+
+function boundedArguments(source: Record<string, unknown>): Record<string, unknown> {
+  const bounded = boundedJson(source, { nodes: 0 }, 0)
+  return isRecord(bounded) ? bounded : {}
+}
+
+function parseArguments(source: unknown): Record<string, unknown> {
+  return boundedArguments(unboundedArguments(source))
 }
 
 function contentTextUnknown(value: unknown): string {

@@ -507,7 +507,7 @@ const projectEarlierTurns = (events: CompactionEvent[]): ProjectedSection => {
       if (!currentContext) continue;
       if (event.kind === "fabricRun") lastRun = event;
       const name = event.kind === "toolCall"
-        ? (event.name === "fabric_exec" ? undefined : event.name)
+        ? (event.name === "run_code" ? undefined : event.name)
         : event.kind === "bash"
           ? "bash"
           : event.kind === "fabricOperation"
@@ -578,7 +578,7 @@ const projectStatus = (events: CompactionEvent[]): string[] => {
 };
 
 const summarizeArgs = (name: string, args: Record<string, unknown>): string => {
-  if (name === "fabric_exec") return "structured execution";
+  if (name === "run_code") return "structured execution";
   const primary =
     name === "bash" ? args.command ?? args.cmd ?? args.shell
     : name === "grep" ? args.pattern ?? args.query ?? args.regex
@@ -603,10 +603,10 @@ const projectTranscript = (events: CompactionEvent[]): ProjectedSection => {
   );
   const transcriptEvents = events.filter((event) => {
     if (event.kind === "toolCall") {
-      return event.name !== "fabric_exec" || !completedFabricCalls.has(event.toolCallId);
+      return event.name !== "run_code" || !completedFabricCalls.has(event.toolCallId);
     }
     if (event.kind === "toolResult") {
-      return event.toolName !== "fabric_exec" || !completedFabricCalls.has(event.toolCallId);
+      return event.toolName !== "run_code" || !completedFabricCalls.has(event.toolCallId);
     }
     return true;
   });
@@ -639,7 +639,7 @@ const projectTranscript = (events: CompactionEvent[]): ProjectedSection => {
       lines.push(`${ref} bash(${truncate(firstLine(e.command), MAX_TRANSCRIPT_CMD)}) → ${status}`);
     } else if (e.kind === "fabricRun") {
       lines.push(
-        `${ref} fabric_exec ${quoted(clipUtf8(e.name, 160), MAX_FABRIC_RUN_TRANSCRIPT_NAME)} → ${e.outcome} [entry ${fabricRunPointer(e)}]`,
+        `${ref} run_code ${quoted(clipUtf8(e.name, 160), MAX_FABRIC_RUN_TRANSCRIPT_NAME)} → ${e.outcome} [entry ${fabricRunPointer(e)}]`,
       );
     } else if (e.kind === "fabricPhase") {
       lines.push(`${ref} phase(${truncate(e.phase, MAX_TRANSCRIPT_CMD)}) [${e.address}]`);

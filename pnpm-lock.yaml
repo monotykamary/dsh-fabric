@@ -209,6 +209,9 @@ importers:
       '@monotykamary/dsh-tool-session-query':
         specifier: ^0.1.0-rc.7
         version: 0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-query@0.1.0-rc.8(f20a3fea0d4796d40c8424ab84a5bc16))(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-timeout@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)
+      '@monotykamary/dsh-tools':
+        specifier: link:../../../deepseek-harness/packages/core/tools
+        version: link:../../../deepseek-harness/packages/core/tools
       dsh-fabric-protocol:
         specifier: workspace:^
         version: link:../protocol

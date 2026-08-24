@@ -91,6 +91,45 @@ describe('compileFabricSummary', () => {
     ]))
   })
 
+  it('projects declared and inferred run_code titles from recorded arguments', () => {
+    const inferredId = CallId('run-inferred')
+    const declaredId = CallId('run-declared')
+    const messages = [
+      createUserMessage({ content: [{ type: 'text', text: GOAL }], source: { kind: 'user' } }),
+      createAssistantMessage({
+        content: [{
+          type: 'tool-call',
+          id: inferredId,
+          name: 'run_code',
+          arguments: JSON.stringify({
+            code: 'return await tools.bash({ command: "pnpm pack", description: "Inspect packed release" })',
+          }),
+        }],
+        source: { provider: 'test', model: 'test' },
+      }),
+      createToolResultMessage({ callId: inferredId, content: [{ type: 'text', text: 'packed' }], isError: false }),
+      createAssistantMessage({
+        content: [{
+          type: 'tool-call',
+          id: declaredId,
+          name: 'run_code',
+          arguments: JSON.stringify({ code: 'return 1', description: 'Use the declared title' }),
+        }],
+        source: { provider: 'test', model: 'test' },
+      }),
+      createToolResultMessage({ callId: declaredId, content: [{ type: 'text', text: 'failed' }], isError: true }),
+    ]
+
+    const compiled = compileFabricSummary(messages, { lastTimestamp: 'run-titles' })
+
+    expect(compiled.summary).toContain('Inspect packed release → succeeded')
+    expect(compiled.summary).toContain('Use the declared title → failed')
+    expect(compiled.summary).not.toContain('run_code(structured execution)')
+    expect(compiled.snapshot.events).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'fabricRun', toolCallId: 'run-inferred', name: 'Inspect packed release', outcome: 'succeeded' }),
+      expect.objectContaining({ kind: 'fabricRun', toolCallId: 'run-declared', name: 'Use the declared title', outcome: 'failed' }),
+    ]))
+  })
 
   it('projects native Code Mode sub-dispatches into files, failures, and transcript', () => {
     const content = (value: unknown) => [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value) }]
