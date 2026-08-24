@@ -3,7 +3,6 @@ import type { ClientContext, SessionId } from '@monotykamary/dsh-client-runtime/
 import type { BoundActions } from '@monotykamary/dsh-client-ui-slots'
 import type {} from '@monotykamary/dsh-client-locale/client'
 import type { ChatStore } from '@monotykamary/dsh-client-ui-conversation/client'
-import { FabricHeaderAction } from './FabricHeaderAction.tsx'
 import { en, zh } from './locales.ts'
 import { createFabricControls } from './navigation.ts'
 import { FabricView } from './FabricView.tsx'
@@ -24,7 +23,7 @@ function conversationChatStore(ctx: ClientContext): ChatStore {
   return store as unknown as ChatStore
 }
 
-/** Register the full Fabric view and compact lineage action. */
+/** Register the full Fabric conversation view. */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register('fabric', { zh, en }), 'dsh-fabric: client dictionaries')
   const t = ctx.locale.bind('fabric')
@@ -45,13 +44,4 @@ export function apply(ctx: ClientContext): void {
       inject: controls,
     }, FabricView)
   })
-
-  ctx.slots.inject('conversation.session.header.actions', () => ctx.slots.register({
-    name: 'conversation.session.header.actions',
-    id: 'fabric-topology',
-    order: 30,
-    locale: 'fabric',
-    inject: (_sessionId: SessionId): FabricControls => createFabricControls(ctx.sessions),
-  }, FabricHeaderAction))
-
 }

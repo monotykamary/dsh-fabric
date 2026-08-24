@@ -9,7 +9,6 @@ export type FabricLocaleKey =
   | 'details.aria' | 'details.status' | 'details.tokens' | 'details.duration' | 'details.jobs' | 'details.open'
   | 'details.residency' | 'details.capabilities' | 'residency.session' | 'residency.durable'
   | 'capability.openSession' | 'capability.sendMessage'
-  | 'header.aria' | 'header.popover.aria' | 'header.title' | 'header.summary.one' | 'header.summary.many'
   | 'status.running' | 'status.completed' | 'status.failed' | 'status.blocked'
   | 'status.stopped' | 'status.pending' | 'status.idle'
   | 'kind.main' | 'kind.group' | 'kind.session' | 'kind.agent' | 'kind.subagent' | 'kind.workflow' | 'kind.phase' | 'kind.job'
@@ -58,11 +57,6 @@ export const en: LocaleDictOf<'fabric'> = {
   'residency.durable': 'Durable',
   'capability.openSession': 'Open session',
   'capability.sendMessage': 'Receive messages',
-  'header.aria': 'Fabric overview: {count} related participants, {running} running',
-  'header.popover.aria': 'Fabric participant overview',
-  'header.title': 'Fabric participants',
-  'header.summary.one': '{count} related participant · {running} running',
-  'header.summary.many': '{count} related participants · {running} running',
   'status.running': 'Running',
   'status.completed': 'Completed',
   'status.failed': 'Failed',
@@ -158,11 +152,6 @@ export const zh: LocaleDictOf<'fabric'> = {
   'residency.durable': '持久',
   'capability.openSession': '打开会话',
   'capability.sendMessage': '接收消息',
-  'header.aria': 'Fabric 概览：{count} 个相关参与者，{running} 个运行中',
-  'header.popover.aria': 'Fabric 参与者概览',
-  'header.title': 'Fabric 参与者',
-  'header.summary.one': '{count} 个相关参与者 · {running} 个运行中',
-  'header.summary.many': '{count} 个相关参与者 · {running} 个运行中',
   'status.running': '运行中',
   'status.completed': '已完成',
   'status.failed': '失败',

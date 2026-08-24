@@ -183,8 +183,11 @@ if (!clientBundle.startsWith('window.__ModuleLoader__.load(')) {
 if (/require\(["']dsh-fabric-/.test(clientBundle)) {
   throw new Error('client bundle contains an unresolved dsh-fabric value import')
 }
-if (!clientBundle.includes('Fabric overview') || !clientBundle.includes('view.summary')) {
-  throw new Error('client bundle is missing the informative English Fabric overview dictionary')
+if (!clientBundle.includes('mesh resources') || !clientBundle.includes('view.summary')) {
+  throw new Error('client bundle is missing the informative English Fabric summary dictionary')
+}
+if (clientBundle.includes('fabric-topology')) {
+  throw new Error('client bundle still registers the removed Fabric session-header action')
 }
 if (!clientBundle.includes('data-conversation-composer-overlay')
   || !clientBundle.includes('--dsh-composer-height')

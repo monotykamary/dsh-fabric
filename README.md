@@ -140,7 +140,6 @@ Fabric adds a conversation tab with:
 - a left-to-right **Topology** tree: `Main → Participants → {Sessions, Agents, Actors}` and `Main → Mesh → {Topics, State}`;
 - dashed traffic overlays for topic publication, actor routing, and state access rather than message nodes in the hierarchy;
 - deterministic arrow-key or H/J/K/L navigation with focus-aware scrolling;
-- a compact header popup containing participants only;
 - native navigation to authoritative DSH sessions.
 
 `FabricParticipantRecord` is the portable semantic identity used by the UI. The DSH session mirror and Fabric actor records remain lifecycle authorities; the adapter does not introduce a second executor, registry, or client business-state store. Workflow, phase, message, and compaction facts remain available in Activity without crowding the topology.

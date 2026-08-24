@@ -21,7 +21,7 @@ It is not a line-for-line port of pi-fabric's component system, workflow engine,
 | System prompt and continuation surfaces | DSH SystemPrompt registry and assemble waterfall | Fabric-owned operating prompt section plus a waterfall listener that minimizes native prose; DSH todo ledger, goal tools, `/goal`, goal round driver, and goal bar masked | Preserved structural/dynamic sections, dropped per-tool one-liners, and masked todo/goal rows verified by `scripts/verify-workspace.mjs` | Verified |
 | Schema world state and certification | DSH storage-domain mesh records + ToolRuntime pre-execute gate | Append-only transition Timeline with CAS head (`state/current`), complexity ledger, executable goal, fail-closed re-verification, and the hypothesis → certificate → commit workspace transaction gate | State/schema controller suites, ToolRuntime composition, and enforce/audit pre-execute tests | Verified |
 
-| Browser slots and navigation | DSH client slots and sessions service | Activity, grouped participant/mesh Topology, header action | Left-to-right structural layout, deterministic keyboard navigation, and authoritative session opening | Verified |
+| Browser slots and navigation | DSH client slots and sessions service | Activity and grouped participant/mesh Topology | Left-to-right structural layout, deterministic keyboard navigation, and authoritative session opening | Verified |
 | Client HMR | DSH client module loader | Package-owned CSS module update | Rebuilt bundles replace existing style-tag text | Verified by build contract |
 | Component lifecycle | Cordis | Ordinary plugins/effects | No second registry or lifecycle | Verified by workspace structure |
 

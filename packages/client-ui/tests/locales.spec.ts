@@ -28,14 +28,9 @@ describe('Fabric client locales', () => {
     }
   })
 
-  it('renders the reported header and shared labels in the active language', () => {
+  it('renders shared labels in the active language', () => {
     const english = translator(en)
     const chinese = translator(zh)
-    expect(english('header.title')).toBe('Fabric participants')
-    expect(chinese('header.title')).toBe('Fabric 参与者')
-    expect(english('header.summary.one', { count: 1, running: 0 })).toBe('1 related participant · 0 running')
-    expect(english('header.summary.many', { count: 2, running: 1 })).toBe('2 related participants · 1 running')
-    expect(chinese('header.summary.many', { count: 2, running: 1 })).toBe('2 个相关参与者 · 1 个运行中')
     expect(statusLabel('running', english)).toBe('Running')
     expect(kindLabel('compaction', english)).toBe('Context compaction')
     expect(activityKindLabel('workflow', chinese)).toBe('工作流')
@@ -50,7 +45,7 @@ describe('Fabric client locales', () => {
   })
 
   it('keeps translated copy out of component and registration sources', async () => {
-    for (const file of ['FabricView.tsx', 'FabricHeaderAction.tsx', 'index.ts', 'labels.ts']) {
+    for (const file of ['FabricView.tsx', 'index.ts', 'labels.ts']) {
       const source = await readFile(new URL(`../src/client/${file}`, import.meta.url), 'utf8')
       expect(source, file).not.toMatch(/\p{Script=Han}/u)
     }
