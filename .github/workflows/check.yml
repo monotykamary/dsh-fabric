@@ -16,7 +16,7 @@ env:
   # CI reproduces the local layout: check the harness out one level above
   # this repo, install it, and build the two lib faces dsh-fabric links to.
   # Bump DSH_HARNESS_REF when the local harness checkout advances.
-  DSH_HARNESS_REF: 000a0722a37451ccc19ca57394eebc91527fd0e1
+  DSH_HARNESS_REF: 6fbdc58a1ff33c01d3f24328eeb650c76645c87a
 
 jobs:
   check:
