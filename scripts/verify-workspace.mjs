@@ -79,7 +79,7 @@ for (const reference of references) {
   }
 }
 
-const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'schema', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
+const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'models', 'schema', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
 for (const directory of packageDirs) {
   const manifestPath = `packages/${directory}/package.json`
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
@@ -115,6 +115,9 @@ const artifacts = [
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
   'packages/mesh/lib/invariant.js',
+  'packages/models/lib/index.js',
+  'packages/models/lib/tool.js',
+  'packages/models/lib/invariant.js',
   'packages/schema/lib/index.js',
   'packages/schema/lib/tool.js',
   'packages/schema/lib/invariant.js',
@@ -135,6 +138,7 @@ for (const artifact of [
   'packages/host/lib/index.js',
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
+  'packages/models/lib/index.js',
   'packages/system-prompt/lib/index.js',
   'packages/client-ui/lib/index.js',
 ]) {

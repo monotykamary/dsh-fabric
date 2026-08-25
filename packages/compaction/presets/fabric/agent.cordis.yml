@@ -65,6 +65,15 @@
 - id: dsh-fabric-mesh-tool
   name: 'dsh-fabric-mesh/tool'
 
+# The fabric_models Consumer mounts HERE for the same preset scoping: the
+# selection authority (ctx.sessionModels) stays host-plane on the API proxy,
+# while this row registers only the model-facing read/switch tool on fabric
+# agents. Aliases come from this row's config.
+- id: dsh-fabric-models-tool
+  name: 'dsh-fabric-models/tool'
+  config:
+    aliases: {}
+
 - id: dsh-fabric-system-prompt
   name: 'dsh-fabric-system-prompt'
 

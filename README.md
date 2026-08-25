@@ -43,7 +43,7 @@ flowchart LR
   DSH --> Compiler
 ```
 
-The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh provider, host projection, and client surfaces under seven composed rows. The Fabric mesh Consumer and the Fabric system-prompt overlay are NOT host rows: they mount inside the `fabric` preset itself, so their prompt surfaces stay fabric-scoped and no other preset's system prompt is touched. The Fabric-owned roster keeps the four pinned DSH modes and adds a fifth, `fabric`: Fabric mode uses the Code Mode SDK under its own preset identity and selects `runCodeLabel: inferred`, so `code` is the only required outer argument, an explicit description still wins, and otherwise one deterministic title derived from the logged program serves the call card and compaction. Fabric sessions record and display as Fabric mode instead of reusing PTC mode.
+The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh provider, host projection, and client surfaces under seven composed rows. The Fabric mesh Consumer, the `fabric_models` Consumer, and the Fabric system-prompt overlay are NOT host rows: they mount inside the `fabric` preset itself, so their prompt surfaces stay fabric-scoped and no other preset's system prompt is touched. The Fabric-owned roster keeps the four pinned DSH modes and adds a fifth, `fabric`: Fabric mode uses the Code Mode SDK under its own preset identity and selects `runCodeLabel: inferred`, so `code` is the only required outer argument, an explicit description still wins, and otherwise one deterministic title derived from the logged program serves the call card and compaction. Fabric sessions record and display as Fabric mode instead of reusing PTC mode.
 
 ## Packages
 
@@ -55,6 +55,7 @@ The installable workspace bundle masks the inherited code runtime, stock compact
 | [`dsh-fabric-system-prompt`](packages/system-prompt) | Fabric-owned system prompt override and native-prose minimization. |
 
 | [`dsh-fabric-mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
+| [`dsh-fabric-models`](packages/models) | Session model inspection and alias-aware switching through the `fabric_models` Consumer. |
 | [`dsh-fabric-schema`](packages/schema) | Schema-enforced world state, evidence digests, and fail-closed certification: `state_*` Timeline/CAS head, complexity ledger, goal predicate, and `schema_*` hypothesis → certificate → commit workspace transactions with enforce/audit modes. |
 | [`dsh-fabric-code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
 | [`dsh-fabric-client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |

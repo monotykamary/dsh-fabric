@@ -13,6 +13,7 @@ It is not a line-for-line port of pi-fabric's component system, workflow engine,
 | Concern | Authority | Fabric contribution | Evidence | Status |
 |---|---|---|---|---|
 | Tool registration, policy, nested calls | DSH ToolRuntime | `fabric_mesh` Consumer | Native and Code Mode composition tests | Verified |
+| Session model selection | DSH API proxy `sessionModels` service (the `session.models`/`session.selectModel` authority) | `fabric_models` Consumer (current/list/select, alias fallback chains) plus `model` on the native `subagent`/`spawn_teammate` delegation surfaces | `packages/models` Consumer spec; DSH subagent/agent-team spawn-model tests | Verified |
 | Code Mode orchestration | DSH `run_code` and CodeRuntime seam | QuickJS WASM provider | `run_code` dispatches `fabric_mesh`, commits storage and session projection | Verified |
 | Workflows and subagents | DSH workflow/subagent services | Activity projection plus semantic agent participants | Fold tests include phases, bounded member correlation, settlement, and participant derivation | Verified |
 | Mesh business state | DSH `storage-domain` | Topics, CAS state, actor mailboxes | Restart composition tests and claim-token replay tests | Verified |
