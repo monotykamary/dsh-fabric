@@ -218,6 +218,88 @@
 .empty { display: grid; min-height: 260px; place-items: center; color: var(--dsw-alias-label-tertiary); }
 
 
+.delegationEmpty {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  place-items: center;
+  padding: 32px;
+  color: var(--dsw-alias-label-tertiary);
+  text-align: center;
+}
+
+.missionControlFrame { container: mission-control / inline-size; display: flex; min-width: 0; min-height: 0; flex: 1; }
+
+.missionControl {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: 220px minmax(340px, 1fr) minmax(250px, 320px);
+  overflow: hidden;
+  padding-bottom: var(--dsh-fabric-bottom-clearance);
+}
+
+.delegationGroups, .workerPane, .workerInspector { min-width: 0; min-height: 0; overflow-y: auto; }
+.delegationGroups { display: flex; flex-direction: column; gap: 3px; padding: 12px 8px; border-right: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); }
+.delegationGroups > header, .workerPane > header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px 10px; }
+.delegationGroups > header span, .metric { color: var(--dsw-alias-label-tertiary); font-size: 10px; font-variant-numeric: tabular-nums; }
+.delegationGroups > button { display: grid; width: 100%; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 8px; border: 0; border-radius: 8px; padding: 8px; color: inherit; background: transparent; cursor: pointer; text-align: left; }
+.delegationGroups > button:hover, .delegationGroups > button[aria-current='true'] { background: var(--dsw-alias-bg-base); }
+.delegationGroups > button[aria-current='true'] { box-shadow: inset 2px 0 var(--dsw-alias-state-business-primary); }
+.delegationGroups button > span:nth-child(2), .workerPane > header > span { display: grid; min-width: 0; gap: 2px; }
+.delegationGroups strong, .delegationGroups small, .workerPane > header strong, .workerPane > header small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.delegationGroups small, .workerPane > header small { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.delegationGroups em { min-width: 18px; border-radius: 9px; padding: 2px 5px; color: var(--dsw-alias-state-business-primary); background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base)); font-size: 9px; font-style: normal; text-align: center; }
+
+.statusDot { display: inline-block; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--dsw-alias-label-caption); }
+.statusDot[data-status='running'] { background: var(--dsw-alias-state-success-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 14%, transparent); }
+.statusDot[data-status='failed'], .statusDot[data-status='blocked'] { background: var(--dsw-alias-state-error-primary); }
+.statusDot[data-status='completed'] { background: var(--dsw-alias-state-business-primary); }
+.statusDot[data-status='pending'] { background: var(--dsw-alias-state-warning-primary, #c88416); }
+
+.workerPane { display: flex; flex-direction: column; border-right: 1px solid var(--dsw-alias-border-l1); }
+.workerPane > header { min-height: 42px; border-bottom: 1px solid var(--dsw-alias-border-l1); padding: 10px 14px; }
+.workerRows { display: flex; min-height: 0; flex-direction: column; gap: 1px; overflow-y: auto; padding: 6px; }
+.workerRows > button { display: grid; width: 100%; grid-template-columns: 10px minmax(150px, 1fr) minmax(76px, 112px) 62px; align-items: center; gap: 9px; border: 0; border-radius: 7px; padding: 8px 9px; color: inherit; background: transparent; cursor: pointer; text-align: left; }
+.workerRows > button:hover, .workerRows > button[aria-current='true'] { background: var(--dsw-alias-bg-layer-1); }
+.workerRows > button[data-status='failed'] { box-shadow: inset 2px 0 var(--dsw-alias-state-error-primary); }
+.workerIdentity, .workerRoute, .workerMetrics { display: grid; min-width: 0; gap: 2px; }
+.workerIdentity strong, .workerIdentity small, .workerRoute small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workerIdentity small, .workerRoute small, .workerMetrics small { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.workerRoute > span { width: max-content; border-radius: 8px; padding: 1px 6px; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1)); font-size: 9px; text-transform: uppercase; }
+.workerMetrics { justify-items: end; font-variant-numeric: tabular-nums; }
+
+.workerInspector { display: flex; flex-direction: column; gap: 16px; padding: 16px; background: var(--dsw-alias-bg-layer-1); }
+.workerInspector > header { display: flex; align-items: center; gap: 9px; }
+.workerInspector > header > span:last-child { display: grid; min-width: 0; gap: 2px; }
+.workerInspector > header small { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.workerInspector dl { display: grid; gap: 7px; padding: 10px; border-radius: 8px; background: var(--dsw-alias-bg-base); }
+.workerInspector dl div { display: flex; justify-content: space-between; gap: 10px; }
+.workerInspector dt { color: var(--dsw-alias-label-tertiary); }
+.workerInspector dd { max-width: 62%; overflow-wrap: anywhere; text-align: right; }
+.workerInspector h3 { padding: 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.workerInspector section { display: grid; gap: 6px; }
+.workerInspector p, .workerInspector pre, .workerInspector dl, .workerInspector h3 { margin: 0; }
+.workerInspector p, .workerInspector pre { overflow-wrap: anywhere; color: var(--dsw-alias-label-secondary); font: inherit; line-height: 1.5; white-space: pre-wrap; }
+.workerInspector pre { max-height: 230px; overflow: auto; padding: 10px; border-radius: 8px; background: var(--dsw-alias-bg-base); font-family: var(--dsw-font-family-mono, monospace); font-size: 10px; }
+.workerControls { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.workerControls > button, .workerControls form button { border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 7px 9px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); cursor: pointer; font: inherit; }
+.workerControls > button:first-child, .workerControls form, .workerControls > small { grid-column: 1 / -1; }
+.workerControls button:disabled { cursor: default; opacity: .55; }
+.workerControls .dangerControl { color: var(--dsw-alias-state-error-primary); }
+.workerControls form { display: grid; gap: 7px; }
+.workerControls textarea { box-sizing: border-box; width: 100%; min-height: 72px; resize: vertical; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 8px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); font: inherit; }
+.workerControls label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--dsw-alias-label-tertiary); }
+.workerControls select { min-width: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; padding: 5px 7px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); font: inherit; }
+.workerControls > small { color: var(--dsw-alias-label-tertiary); }
+.routingWarning, .workerError, .controlError { color: var(--dsw-alias-state-error-primary); }
+
+@container mission-control (max-width: 980px) {
+  .missionControl { grid-template-columns: 180px minmax(310px, 1fr); }
+  .workerInspector { grid-column: 1 / -1; max-height: 44%; border-top: 1px solid var(--dsw-alias-border-l1); }
+}
+
 @media (min-width: 761px) {
   .topologyShell { padding-bottom: 0; }
   .canvasColumn { padding-bottom: var(--dsh-fabric-bottom-clearance); }
@@ -226,6 +308,15 @@
 
 @media (max-width: 900px) {
   .keyboardHint { display: none; }
+}
+
+@container mission-control (max-width: 760px) {
+  .missionControl { display: flex; overflow-y: auto; flex-direction: column; }
+  .delegationGroups { max-height: 180px; border-right: 0; border-bottom: 1px solid var(--dsw-alias-border-l1); }
+  .workerPane { min-height: 280px; border-right: 0; }
+  .workerInspector { max-height: none; overflow: visible; }
+  .workerRows > button { grid-template-columns: 10px minmax(120px, 1fr) minmax(88px, 120px); }
+  .workerMetrics { display: none; }
 }
 
 @media (max-width: 760px) {

@@ -1,7 +1,7 @@
 {
   "name": "dsh-fabric",
   "version": "0.1.11",
-  "description": "Fabric-style deterministic compaction, activity, topology, code runtime, mesh, and actor capabilities for DeepSeek Harness",
+  "description": "Fabric-style compaction, checked code, durable coordination, native delegation, and Mission Control for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -34,15 +34,16 @@
     "dsh-fabric-models": "workspace:^",
     "dsh-fabric-protocol": "workspace:^",
     "dsh-fabric-schema": "workspace:^",
-    "dsh-fabric-system-prompt": "workspace:^"
+    "dsh-fabric-system-prompt": "workspace:^",
+    "dsh-fabric-delegation": "workspace:^"
   },
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "pnpm run clean && pnpm --filter dsh-fabric-protocol run build && pnpm --filter dsh-fabric-compaction run build && pnpm --filter dsh-fabric-system-prompt run build && pnpm --filter dsh-fabric-host run build && pnpm --filter dsh-fabric-mesh run build && pnpm --filter dsh-fabric-models run build && pnpm --filter dsh-fabric-schema run build && pnpm --filter dsh-fabric-code-runtime-quickjs run build && pnpm --filter dsh-fabric-client-ui run build",
+    "build": "pnpm run clean && pnpm --filter dsh-fabric-protocol run build && pnpm --filter dsh-fabric-compaction run build && pnpm --filter dsh-fabric-system-prompt run build && pnpm --filter dsh-fabric-models run build && pnpm --filter dsh-fabric-delegation run build && pnpm --filter dsh-fabric-host run build && pnpm --filter dsh-fabric-mesh run build && pnpm --filter dsh-fabric-schema run build && pnpm --filter dsh-fabric-code-runtime-quickjs run build && pnpm --filter dsh-fabric-client-ui run build",
     "watch:client": "pnpm --filter dsh-fabric-client-ui run watch",
     "install:local": "node scripts/install-local.mjs",
     "uninstall:local": "node scripts/install-local.mjs --uninstall",
-    "typecheck": "pnpm --filter dsh-fabric-protocol run typecheck && pnpm --filter dsh-fabric-protocol run build && pnpm --filter dsh-fabric-compaction run typecheck && pnpm --filter dsh-fabric-compaction run build && pnpm --filter dsh-fabric-system-prompt run typecheck && pnpm --filter dsh-fabric-system-prompt run build && pnpm --filter dsh-fabric-host run typecheck && pnpm --filter dsh-fabric-host run build && pnpm --filter dsh-fabric-mesh run typecheck && pnpm --filter dsh-fabric-mesh run build && pnpm --filter dsh-fabric-models run typecheck && pnpm --filter dsh-fabric-models run build && pnpm --filter dsh-fabric-schema run typecheck && pnpm --filter dsh-fabric-code-runtime-quickjs run typecheck && pnpm --filter dsh-fabric-client-ui run typecheck",
+    "typecheck": "pnpm --filter dsh-fabric-protocol run typecheck && pnpm --filter dsh-fabric-protocol run build && pnpm --filter dsh-fabric-compaction run typecheck && pnpm --filter dsh-fabric-compaction run build && pnpm --filter dsh-fabric-system-prompt run typecheck && pnpm --filter dsh-fabric-system-prompt run build && pnpm --filter dsh-fabric-models run typecheck && pnpm --filter dsh-fabric-models run build && pnpm --filter dsh-fabric-delegation run typecheck && pnpm --filter dsh-fabric-delegation run build && pnpm --filter dsh-fabric-host run typecheck && pnpm --filter dsh-fabric-host run build && pnpm --filter dsh-fabric-mesh run typecheck && pnpm --filter dsh-fabric-mesh run build && pnpm --filter dsh-fabric-schema run typecheck && pnpm --filter dsh-fabric-code-runtime-quickjs run typecheck && pnpm --filter dsh-fabric-client-ui run typecheck",
     "test": "vitest run",
     "verify": "node scripts/verify-workspace.mjs",
     "check": "pnpm run typecheck && pnpm run build && pnpm run test && pnpm run verify"

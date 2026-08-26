@@ -129,6 +129,7 @@ export const PRESERVED_SECTIONS = new Set([
   'tool:report',
   'tool:session-query',
   'fabric:memory-guidance',
+  'fabric:delegation',
   'fabric:mesh-guidance',
   'fabric:schema-guidance',
   'tools:code-only',

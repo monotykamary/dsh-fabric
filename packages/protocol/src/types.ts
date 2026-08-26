@@ -84,11 +84,62 @@ export interface FabricProjectedEdge {
   updatedAt?: number
 }
 
-/** Compact host-computed activity and topology values for one session. */
+/** Routing tiers selected by the Fabric delegation Consumer. */
+export type FabricDelegationTier = 'cheap' | 'default' | 'strong'
+
+/** One delegated worker reconstructed from the parent Session log. */
+export interface FabricDelegationWorkerRecord {
+  id: string
+  index: number
+  label: string
+  task: string
+  tier: FabricDelegationTier
+  status: FabricNodeStatus
+  updatedAt: number
+  childSessionId?: string
+  parentSessionId?: string
+  currentActivity?: string
+  requestedProvider?: string
+  requestedModel?: string
+  actualProvider?: string
+  actualModel?: string
+  routingVerified?: boolean
+  tokens?: number
+  durationMs?: number
+  output?: string
+  error?: string
+}
+
+/** One delegation call and all worker outcomes reconstructed from durable events. */
+export interface FabricDelegationRecord {
+  id: string
+  callId: string
+  label: string
+  status: FabricNodeStatus
+  parallel: boolean
+  maxParallel?: number
+  tokenBudget?: number
+  totalTokens?: number
+  createdAt: number
+  updatedAt: number
+  durationMs?: number
+  validation?: string
+  workers: readonly FabricDelegationWorkerRecord[]
+}
+
+/** Provider/model route reconstructed from a session's durable request lifecycle. */
+export interface FabricModelRoute {
+  provider: string
+  model: string
+}
+
+/** Compact host-computed activity, topology, and delegation values for one session. */
 export interface FabricActivityProjection {
+  route?: FabricModelRoute
   activities: readonly FabricActivityRecord[]
   nodes: readonly FabricProjectedNode[]
   edges: readonly FabricProjectedEdge[]
+  delegations: readonly FabricDelegationRecord[]
 }
 
 /** One session summary accepted by the host-independent lineage projection. */

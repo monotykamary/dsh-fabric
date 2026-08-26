@@ -36,5 +36,17 @@ export function createFabricControls(
       }
     },
     refreshCatalogs,
+    async cancelWorker(rawSessionId) {
+      const session = sessions.binding(rawSessionId as SessionId)?.session
+      if (session === undefined) return false
+      const result = await session.cancel()
+      return result.ok
+    },
+    async messageWorker(rawSessionId, message, mode) {
+      const session = sessions.binding(rawSessionId as SessionId)?.session
+      if (session === undefined || message.trim() === '') return false
+      const result = await session.prompt([{ type: 'text', text: message.trim() }], mode)
+      return result.ok
+    },
   }
 }

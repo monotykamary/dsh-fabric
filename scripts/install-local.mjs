@@ -7,7 +7,6 @@ import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const DSH_PACKAGE = '@monotykamary/dsh@0.1.0-rc.7'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LOCAL_STATE_FILE = '.dsh-fabric-local-install.json'
 const LINK_PATHS = [
@@ -16,6 +15,8 @@ const LINK_PATHS = [
   'packages/compaction',
   'packages/host',
   'packages/mesh',
+  'packages/models',
+  'packages/delegation',
   'packages/schema',
   'packages/system-prompt',
   'packages/code-runtime-quickjs',
@@ -40,6 +41,8 @@ const REQUIRED_ARTIFACTS = [
   'packages/host/lib/index.js',
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
+  'packages/models/lib/index.js',
+  'packages/delegation/lib/index.js',
   'packages/system-prompt/lib/index.js',
   'packages/code-runtime-quickjs/lib/index.js',
   'packages/client-ui/lib/client.js',
@@ -73,8 +76,7 @@ async function main() {
   }
 
   await captureInstallState(options.profile, packages)
-  await runPnpm([
-    'dlx', DSH_PACKAGE,
+  await runDsh([
     'plugin', '--profile', options.profile,
     'add', ...packages.map(entry => entry.link),
   ])
@@ -89,8 +91,7 @@ async function main() {
 
 async function uninstall(profile, packages) {
   const state = await localInstallState(profile, packages)
-  await runPnpm([
-    'dlx', DSH_PACKAGE,
+  await runDsh([
     'plugin', '--profile', profile,
     'remove', ...packages.map(entry => entry.name),
   ])
@@ -100,7 +101,7 @@ async function uninstall(profile, packages) {
     return spec === null ? [] : [`${entry.name}@${spec}`]
   })
   if (restore.length > 0) {
-    await runPnpm(['dlx', DSH_PACKAGE, 'plugin', '--profile', profile, 'add', ...restore])
+    await runDsh(['plugin', '--profile', profile, 'add', ...restore])
   }
 
   await verifyRestoredDependencies(profile, packages, state)
@@ -272,8 +273,7 @@ async function verifyArtifacts() {
 }
 
 async function dumpConfig(profile) {
-  return await runPnpm([
-    'dlx', DSH_PACKAGE,
+  return await runDsh([
     '--profile', profile,
     '--dump-config',
   ], true)
@@ -412,11 +412,38 @@ function escapeRegex(value) {
 }
 
 function runPnpm(args, capture = false) {
-  const invocation = pnpmInvocation(args)
+  return runProcess(pnpmInvocation(args), args, capture, 'pnpm', process.env)
+}
+
+async function runDsh(args, capture = false) {
+  const env = { ...process.env }
+  if (env.PATH !== undefined) {
+    env.PATH = env.PATH.split(process.platform === 'win32' ? ';' : ':')
+      .filter(entry => !entry.includes('/.tools/pnpm/') && !entry.includes('\\.tools\\pnpm\\'))
+      .join(process.platform === 'win32' ? ';' : ':')
+  }
+  delete env.npm_config_user_agent
+  delete env.npm_execpath
+  const profileIndex = args.indexOf('--profile')
+  const profile = profileIndex < 0 ? undefined : args[profileIndex + 1]
+  if (profile !== undefined) {
+    try {
+      const modules = JSON.parse(await readFile(resolve(dshHomeRoot(), 'profiles', profile, 'node_modules/.modules.yaml'), 'utf8'))
+      if (typeof modules.storeDir === 'string' && modules.storeDir !== '') {
+        env.npm_config_store_dir = modules.storeDir
+      }
+    } catch (error) {
+      if (!(error && typeof error === 'object' && error.code === 'ENOENT')) throw error
+    }
+  }
+  return runProcess({ command: process.platform === 'win32' ? 'dsh.cmd' : 'dsh', args }, args, capture, 'dsh', env)
+}
+
+function runProcess(invocation, args, capture, label, env) {
   return new Promise((resolvePromise, rejectPromise) => {
     const child = spawn(invocation.command, invocation.args, {
       cwd: ROOT,
-      env: process.env,
+      env,
       stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit',
     })
     let stdout = ''
@@ -424,7 +451,7 @@ function runPnpm(args, capture = false) {
     child.once('error', rejectPromise)
     child.once('close', (code, signal) => {
       if (code === 0) resolvePromise(stdout)
-      else rejectPromise(new Error(`pnpm ${args.join(' ')} failed${signal === null ? ` with exit code ${code}` : ` from signal ${signal}`}`))
+      else rejectPromise(new Error(`${label} ${args.join(' ')} failed${signal === null ? ` with exit code ${code}` : ` from signal ${signal}`}`))
     })
   })
 }

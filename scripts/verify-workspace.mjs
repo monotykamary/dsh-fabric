@@ -62,6 +62,9 @@ if (!fabricPreset.includes('- id: dsh-fabric-mesh-tool' + nl + "  name: 'dsh-fab
 if (!fabricPreset.includes('- id: dsh-fabric-system-prompt' + nl + "  name: 'dsh-fabric-system-prompt'")) {
   throw new Error('fabric preset must mount the Fabric system-prompt overlay')
 }
+if (!fabricPreset.includes("    - id: dsh-fabric-delegation" + nl + "      name: 'dsh-fabric-delegation'")) {
+  throw new Error('fabric preset must mount the Fabric delegation Consumer inside the native workflow realm')
+}
 if (!fabricPreset.includes('- id: tool-session-query' + nl + "  name: '@monotykamary/dsh-tool-session-query'")) {
   throw new Error('fabric preset must mount the DSH session-query toolset for Fabric memory/recall')
 }
@@ -88,7 +91,7 @@ for (const reference of references) {
   }
 }
 
-const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'models', 'schema', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
+const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'models', 'delegation', 'schema', 'system-prompt', 'code-runtime-quickjs', 'client-ui']
 for (const directory of packageDirs) {
   const manifestPath = `packages/${directory}/package.json`
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
@@ -128,6 +131,8 @@ const artifacts = [
   'packages/models/lib/index.js',
   'packages/models/lib/tool.js',
   'packages/models/lib/invariant.js',
+  'packages/delegation/lib/index.js',
+  'packages/delegation/lib/invariant.js',
   'packages/schema/lib/index.js',
   'packages/schema/lib/tool.js',
   'packages/schema/lib/invariant.js',
@@ -149,6 +154,7 @@ for (const artifact of [
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
   'packages/models/lib/index.js',
+  'packages/delegation/lib/index.js',
   'packages/system-prompt/lib/index.js',
   'packages/client-ui/lib/index.js',
 ]) {

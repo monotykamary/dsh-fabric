@@ -54,6 +54,53 @@ describe('buildFabricClientModel', () => {
     expect(model?.activity[0]).toMatchObject({ label: 'audit', nodeId: 'session:main' })
   })
 
+  it('joins live child provider and model telemetry into running workers', () => {
+    const value = state()
+    const main = value.byId['main' as keyof typeof value.byId]
+    const child = value.byId['child' as keyof typeof value.byId]
+    if (main === undefined || child === undefined) throw new Error('missing fixtures')
+    main.projectionValues = { fabricActivity: {
+      activities: [], nodes: [], edges: [],
+      delegations: [{
+        id: 'delegation:call', callId: 'call', label: 'Review', status: 'running', parallel: true,
+        createdAt: 1, updatedAt: 2, workers: [{ id: 'call:0', index: 0, label: 'Reviewer', task: 'Review', tier: 'default', status: 'running', updatedAt: 2, childSessionId: 'child' }],
+      }],
+    } }
+    child.projectionValues = { fabricActivity: {
+      route: { provider: 'cursor', model: 'composer-2.5-fast' },
+      activities: [{ id: 'activity', kind: 'agent', action: 'testing', label: 'Run focused tests', status: 'running', updatedAt: 20 }],
+      nodes: [], edges: [], delegations: [],
+    } }
+    expect(buildFabricClientModel(value, 'main', 1_000)?.delegations[0]?.workers[0]).toMatchObject({
+      actualProvider: 'cursor', actualModel: 'composer-2.5-fast',
+      parentSessionId: 'main', currentActivity: 'Run focused tests · testing',
+    })
+  })
+
+  it('preserves a settled worker execution route when child telemetry later changes', () => {
+    const value = state()
+    const main = value.byId['main' as keyof typeof value.byId]
+    const child = value.byId['child' as keyof typeof value.byId]
+    if (main === undefined || child === undefined) throw new Error('missing fixtures')
+    main.projectionValues = { fabricActivity: {
+      activities: [], nodes: [], edges: [],
+      delegations: [{
+        id: 'delegation:settled', callId: 'settled', label: 'Review', status: 'completed', parallel: true,
+        createdAt: 1, updatedAt: 2, workers: [{
+          id: 'settled:0', index: 0, label: 'Reviewer', task: 'Review', tier: 'default', status: 'completed',
+          updatedAt: 2, childSessionId: 'child', actualProvider: 'codex-oauth', actualModel: 'gpt-5.6-sol', routingVerified: true,
+        }],
+      }],
+    } }
+    child.projectionValues = { fabricActivity: {
+      route: { provider: 'cursor', model: 'composer-2.5-fast' }, activities: [], nodes: [], edges: [], delegations: [],
+    } }
+
+    expect(buildFabricClientModel(value, 'main', 1_000)?.delegations[0]?.workers[0]).toMatchObject({
+      actualProvider: 'codex-oauth', actualModel: 'gpt-5.6-sol', routingVerified: true,
+    })
+  })
+
   it('places hierarchy left-to-right and shares its child order with keyboard navigation', () => {
     const model = buildFabricClientModel(state(), 'child', 1_000)
     if (model === null) throw new Error('missing model')

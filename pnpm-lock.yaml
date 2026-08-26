@@ -53,6 +53,9 @@ importers:
       dsh-fabric-compaction:
         specifier: workspace:^
         version: link:packages/compaction
+      dsh-fabric-delegation:
+        specifier: workspace:^
+        version: link:packages/delegation
       dsh-fabric-host:
         specifier: workspace:^
         version: link:packages/host
@@ -218,6 +221,58 @@ importers:
       dsh-fabric-protocol:
         specifier: workspace:^
         version: link:../protocol
+
+  packages/delegation:
+    dependencies:
+      '@monotykamary/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent':
+        specifier: link:../../../deepseek-harness/packages/core/agent
+        version: link:../../../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-invariants':
+        specifier: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+        version: link:../../../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-session':
+        specifier: link:../../../deepseek-harness/packages/core/session
+        version: link:../../../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-system-prompt':
+        specifier: link:../../../deepseek-harness/packages/core/system-prompt
+        version: link:../../../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tool-workflow':
+        specifier: link:../../../deepseek-harness/packages/workflow/tool-workflow
+        version: link:../../../deepseek-harness/packages/workflow/tool-workflow
+      '@monotykamary/dsh-tools':
+        specifier: link:../../../deepseek-harness/packages/core/tools
+        version: link:../../../deepseek-harness/packages/core/tools
+      '@monotykamary/dsh-workflow':
+        specifier: link:../../../deepseek-harness/packages/workflow/workflow
+        version: link:../../../deepseek-harness/packages/workflow/workflow
+      '@monotykamary/schemastery':
+        specifier: link:../../../deepseek-harness/vendor/schemastery
+        version: link:../../../deepseek-harness/vendor/schemastery
+      dsh-fabric-models:
+        specifier: workspace:^
+        version: link:../models
+    devDependencies:
+      '@monotykamary/dsh-agent-loop':
+        specifier: ^0.1.0-rc.7
+        version: 0.1.6(85891f2aa4fbe0d074a60f086bd7a530)
+      '@monotykamary/dsh-agent-loop-testkit':
+        specifier: ^0.1.0-rc.7
+        version: 0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)
+      '@monotykamary/dsh-llm':
+        specifier: link:../../../deepseek-harness/packages/llm/llm
+        version: link:../../../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-subagent':
+        specifier: link:../../../deepseek-harness/packages/subagent/subagent
+        version: link:../../../deepseek-harness/packages/subagent/subagent
+      '@monotykamary/dsh-subagent-spawn-in-process':
+        specifier: ^0.1.0-rc.7
+        version: 0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-subagent-in-process-driver@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools))(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)
+      '@monotykamary/dsh-workflow-worker-thread':
+        specifier: ^0.1.0-rc.7
+        version: 0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)(@monotykamary/dsh-workflow@deepseek-harness+packages+workflow+workflow)
 
   packages/host:
     dependencies:
@@ -429,11 +484,45 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
+  '@monotykamary/dsh-agent-loop-testkit@0.1.6':
+    resolution: {integrity: sha512-U8rtbgdqAHlrtkygye5bwXdbA4e8Ce3Z/DdqWaXPSm/mJQ/aYoHrxv3KbUImPK7ghWN6zHjRwnbp0e5TeI41rQ==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-agent': ^0.1.6
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/dsh-llm': ^0.1.6
+      '@monotykamary/dsh-session': ^0.1.6
+      '@monotykamary/dsh-system-prompt': ^0.1.6
+      '@monotykamary/dsh-tools': ^0.1.6
+
+  '@monotykamary/dsh-agent-loop@0.1.6':
+    resolution: {integrity: sha512-MuA75WS7XklSQeZG4qrg9IulaUui/R2zDniMpKXqPz9T1xwR+tQJfmVgq8mo/zSt5ihOQWMpVgDAz+igfNKrfw==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-agent': ^0.1.6
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/dsh-llm': ^0.1.6
+      '@monotykamary/dsh-scope': ^0.1.6
+      '@monotykamary/dsh-session': ^0.1.6
+      '@monotykamary/dsh-session-persistence': ^0.1.6
+      '@monotykamary/dsh-settings': ^0.1.6
+      '@monotykamary/dsh-system-prompt': ^0.1.6
+      '@monotykamary/dsh-tools': ^0.1.6
+
   '@monotykamary/dsh-brand@0.1.7':
     resolution: {integrity: sha512-LfuE3QHHN/S+ByLwCBgtPmg4DVvZopG0i21T5xiFFbp60TqUlXTdz/wN9JNDHSBa4gsQRG1C3RZDvSMhZ6m2VQ==}
     peerDependencies:
       '@monotykamary/cordis': ^4.0.1
       '@monotykamary/dsh-invariants': ^0.1.7
+
+  '@monotykamary/dsh-session-persistence@0.1.6':
+    resolution: {integrity: sha512-KT/RiC1m4B1ToX5kwRreQOkDs3x4go/eFUrNsOrdnJMD/HY5EbJM8bPFn3AtxO9L5NqnPyWcsqFW2eOtZHrsIA==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-brand': ^0.1.6
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/dsh-session': ^0.1.6
+      '@monotykamary/dsh-timeout': ^0.1.6
 
   '@monotykamary/dsh-session-query@0.1.7':
     resolution: {integrity: sha512-vW1evgG2LSad+fCkAO5hkgCDhZwNRiC42VFAYQki0idP0HPKT/cZJsE37Ak5E50lYCP2gPQUZGWIDMMHxWyCgg==}
@@ -459,6 +548,34 @@ packages:
       '@monotykamary/dsh-session': ^0.1.7
       '@monotykamary/dsh-session-projection': ^0.1.7
 
+  '@monotykamary/dsh-settings@0.1.6':
+    resolution: {integrity: sha512-fNAMvFES4l03MN3qo9W9G6xoAShmpqCH6yZpTsfX5lsXWuUDHI2IbDWs2t33PWCPXpZ20kIjEeB292UClR4Zdg==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-brand': ^0.1.6
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/schemastery': ^3.18.1
+
+  '@monotykamary/dsh-subagent-in-process-driver@0.1.6':
+    resolution: {integrity: sha512-zTzi3d47ky6u7XcCXTK2LBtlcnGLDpy7taVr3MgF2BM7EpiVF0T9ssRHtja3cs2MOJXgGg3JdkZ2fzttAgKPIw==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-agent': ^0.1.6
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/dsh-llm': ^0.1.6
+      '@monotykamary/dsh-session': ^0.1.6
+      '@monotykamary/dsh-subagent': ^0.1.6
+      '@monotykamary/dsh-system-prompt': ^0.1.6
+      '@monotykamary/dsh-tools': ^0.1.6
+
+  '@monotykamary/dsh-subagent-spawn-in-process@0.1.6':
+    resolution: {integrity: sha512-Mlq4wtzWQoNI+hc9rR7/FPVVXd7TYSIM3cC3zEKCtKrhFmcZ4xNq7JhrR2mKwqniFClMzlMNjc5UTtdP9l2/nw==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/dsh-subagent': ^0.1.6
+      '@monotykamary/dsh-subagent-in-process-driver': ^0.1.6
+
   '@monotykamary/dsh-timeout@0.1.7':
     resolution: {integrity: sha512-al801YWl5HnM3FnWTTuqzevncQyOGklHuF3xMr0Iv9xdDWrnx7apeSYB3fxHFc7NJussqt3yJz254KVrgiFiYQ==}
     peerDependencies:
@@ -476,6 +593,19 @@ packages:
       '@monotykamary/dsh-system-prompt': ^0.1.7
       '@monotykamary/dsh-timeout': ^0.1.7
       '@monotykamary/dsh-tools': ^0.1.7
+
+  '@monotykamary/dsh-workflow-worker-thread@0.1.6':
+    resolution: {integrity: sha512-EgnVdoXwCu9q30DgcKN2FA9chWVCvAq7C62skWBA8Ty+gL+yCSXAfHlb0CoTHcmarpEq49TpBQIS0uHJiqIidg==}
+    peerDependencies:
+      '@monotykamary/cordis': ^4.0.1
+      '@monotykamary/dsh-agent': ^0.1.6
+      '@monotykamary/dsh-brand': ^0.1.6
+      '@monotykamary/dsh-invariants': ^0.1.6
+      '@monotykamary/dsh-llm': ^0.1.6
+      '@monotykamary/dsh-session': ^0.1.6
+      '@monotykamary/dsh-subagent': ^0.1.6
+      '@monotykamary/dsh-tools': ^0.1.6
+      '@monotykamary/dsh-workflow': ^0.1.6
 
   '@oxc-project/types@0.144.0':
     resolution: {integrity: sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==}
@@ -1179,10 +1309,42 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
+  '@monotykamary/dsh-agent-loop-testkit@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent': link:../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-system-prompt': link:../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
+
+  '@monotykamary/dsh-agent-loop@0.1.6(85891f2aa4fbe0d074a60f086bd7a530)':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent': link:../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-scope': link:../deepseek-harness/packages/core/scope
+      '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-session-persistence': 0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-timeout@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))
+      '@monotykamary/dsh-settings': 0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/schemastery@deepseek-harness+vendor+schemastery)
+      '@monotykamary/dsh-system-prompt': link:../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
+      '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
+
   '@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)':
     dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
       '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+
+  '@monotykamary/dsh-session-persistence@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-timeout@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-brand': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-timeout': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
 
   ? '@monotykamary/dsh-session-query@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-title@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session))(@monotykamary/dsh-session@deepseek-harness+packages+core+session)'
   : dependencies:
@@ -1204,6 +1366,32 @@ snapshots:
       '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
       zod: 4.4.3
 
+  '@monotykamary/dsh-settings@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/schemastery@deepseek-harness+vendor+schemastery)':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-brand': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
+
+  '@monotykamary/dsh-subagent-in-process-driver@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent': link:../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-subagent': link:../deepseek-harness/packages/subagent/subagent
+      '@monotykamary/dsh-system-prompt': link:../deepseek-harness/packages/core/system-prompt
+      '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
+
+  '@monotykamary/dsh-subagent-spawn-in-process@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-subagent-in-process-driver@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools))(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-subagent': link:../deepseek-harness/packages/subagent/subagent
+      '@monotykamary/dsh-subagent-in-process-driver': 0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)
+      '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
+
   '@monotykamary/dsh-timeout@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)':
     dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
@@ -1219,6 +1407,19 @@ snapshots:
       '@monotykamary/dsh-system-prompt': link:../deepseek-harness/packages/core/system-prompt
       '@monotykamary/dsh-timeout': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
       '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
+      '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
+
+  '@monotykamary/dsh-workflow-worker-thread@0.1.6(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-agent@deepseek-harness+packages+core+agent)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-subagent@deepseek-harness+packages+subagent+subagent)(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)(@monotykamary/dsh-workflow@deepseek-harness+packages+workflow+workflow)':
+    dependencies:
+      '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
+      '@monotykamary/dsh-agent': link:../deepseek-harness/packages/core/agent
+      '@monotykamary/dsh-brand': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
+      '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
+      '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
+      '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
+      '@monotykamary/dsh-subagent': link:../deepseek-harness/packages/subagent/subagent
+      '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
+      '@monotykamary/dsh-workflow': link:../deepseek-harness/packages/workflow/workflow
       '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
 
   '@oxc-project/types@0.144.0': {}
