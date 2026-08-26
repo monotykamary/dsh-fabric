@@ -160,6 +160,14 @@ for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   }
 }
 
+for (const preset of ['standard', 'code', 'fabric', 'cordis']) {
+  const composition = await readFile(`packages/compaction/presets/${preset}/agent.cordis.yml`, 'utf8')
+  const commandRows = composition.match(/commandName:\s*delegate/g) ?? []
+  if (commandRows.length !== 1 || !/provider:\s*spawn[\s\S]{0,160}commandName:\s*delegate[\s\S]{0,80}commandForkProvider:\s*fork/.test(composition)) {
+    throw new Error(`Fabric preset ${preset} must expose one fresh-first /delegate command with fork support`)
+  }
+}
+
 for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   const composition = await readFile('packages/compaction/presets/' + preset + '/agent.cordis.yml', 'utf8')
   const todoMasked = composition.includes('- id: tool-todo' + nl + "  name: '@monotykamary/dsh-tool-todo'" + nl + '  disabled: true')

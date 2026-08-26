@@ -170,9 +170,6 @@ importers:
       '@monotykamary/dsh-tools':
         specifier: link:../../../deepseek-harness/packages/core/tools
         version: link:../../../deepseek-harness/packages/core/tools
-      dsh-fabric-system-prompt:
-        specifier: workspace:^
-        version: link:../system-prompt
 
   packages/compaction:
     dependencies:
@@ -251,9 +248,6 @@ importers:
       dsh-fabric-protocol:
         specifier: workspace:^
         version: link:../protocol
-      dsh-fabric-system-prompt:
-        specifier: workspace:^
-        version: link:../system-prompt
       zod:
         specifier: ^4.4.3
         version: 4.4.3

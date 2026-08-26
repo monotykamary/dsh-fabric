@@ -68,6 +68,8 @@ const DEFAULTS: ResolvedConfig = {
 const SCORE_QUANTUM = 1
 /** Path/URL/filename terms earn half a quantum (pi's path discount). */
 const PATH_DISCOUNT = SCORE_QUANTUM / 2
+/** Warmth below this floor is discarded after decay. */
+const WARM_FLOOR = 1e-3
 
 /** A word that names a file/URL artifact rather than capability intent. */
 const PATH_TERM = /(?:\.[A-Za-z0-9]+$)|(?:^\/)|(?:\/)/
@@ -161,6 +163,11 @@ export class AdvisoryEngine {
     return Math.max(0, this.config.maxFiresPerSession - this.state.fires)
   }
 
+  /** Render fired hints under this engine's complete-message byte budget. */
+  render(fires: readonly AdvisoryFire[]): string {
+    return renderAdvisoryHints(fires, this.config.budgetChars)
+  }
+
   /**
    * Score one user prompt and fire any hints it justifies. Strong evidence
    * (a phrase on one entry clearing the threshold) ignites instantly; weak
@@ -170,12 +177,19 @@ export class AdvisoryEngine {
    * @returns the fires this call produced, in descending score order.
    */
   scorePrompt(prompt: string): AdvisoryFire[] {
-    const words = this.scoredWords(prompt)
-    if (words.length === 0 || this.firesRemaining() === 0) return []
+    if (this.firesRemaining() === 0) return []
+    const retention = 1 - 1 / this.config.tau
+    for (const [name, warmth] of this.state.warmth) {
+      const decayed = warmth * retention
+      if (decayed < WARM_FLOOR) this.state.warmth.delete(name)
+      else this.state.warmth.set(name, decayed)
+    }
 
+    const words = this.scoredWords(prompt)
+    if (words.length === 0) return []
     const { terms, df } = this.index
     const eligible = this.entries.filter(entry => !this.state.ash.has(entry.name) && entry.disclosed !== true)
-    const fires: AdvisoryFire[] = []
+    const candidates: Array<{ fire: AdvisoryFire; warmth: number }> = []
 
     for (const entry of eligible) {
       const set = terms.get(entry.name) ?? new Set<string>()
@@ -183,35 +197,46 @@ export class AdvisoryEngine {
       let matched = 0
       for (const word of words) {
         if (!set.has(word.word)) continue
-        raw += word.weight * (df.get(word.word) ?? 1)
+        const frequency = df.get(word.word) ?? 0
+        if (frequency === 0) continue
+        raw += word.weight / frequency
         matched += 1
       }
       // pi's two-word gate: one written word supplies zero heat.
-      if (matched < 2) continue
+      if (matched < 2 || raw < this.config.threshold) continue
       const phrased = this.phrasedEvidence(words, set)
       const effective = phrased ? raw : Math.min(raw, SCORE_QUANTUM)
-      const warm = (this.state.warmth.get(entry.name) ?? 0) * (1 - 1 / this.config.tau) + effective * (1 / this.config.tau)
-
-      // Strong band (phrased evidence over the threshold) ignites instantly;
-      // weak/scatter evidence only fires once its warmth survives τ turns.
-      if ((phrased && effective >= this.config.threshold) || warm >= this.config.threshold) {
-        this.state.ash.add(entry.name)
-        this.state.fires += 1
-        this.state.warmth.delete(entry.name)
-        fires.push({
+      const warmth = (this.state.warmth.get(entry.name) ?? 0) + effective * (1 / this.config.tau)
+      const strong = phrased && effective >= this.config.threshold + SCORE_QUANTUM
+      if (!strong && warmth < this.config.threshold) {
+        this.state.warmth.set(entry.name, warmth)
+        continue
+      }
+      candidates.push({
+        warmth,
+        fire: {
           name: entry.name,
           kind: entry.kind,
           description: firstSentence(entry.description),
-          score: Math.max(effective, warm),
+          score: strong ? effective : warmth,
           matchedTerms: [...set].filter(term => words.some(word => word.word === term)),
-        })
-      } else {
-        this.state.warmth.set(entry.name, warm)
-      }
-      if (this.firesRemaining() === 0) break
+        },
+      })
     }
 
-    return fires.sort((a, b) => b.score - a.score)
+    candidates.sort((left, right) => right.fire.score - left.fire.score || left.fire.name.localeCompare(right.fire.name))
+    const selected = candidates.slice(0, this.firesRemaining())
+    const selectedNames = new Set(selected.map(candidate => candidate.fire.name))
+    for (const candidate of candidates) {
+      if (!selectedNames.has(candidate.fire.name)) {
+        this.state.warmth.set(candidate.fire.name, candidate.warmth)
+        continue
+      }
+      this.state.ash.add(candidate.fire.name)
+      this.state.warmth.delete(candidate.fire.name)
+      this.state.fires += 1
+    }
+    return selected.map(candidate => candidate.fire)
   }
 
   /** The prompt's unique written words with positions and discounted weights. */
@@ -261,13 +286,12 @@ export function renderAdvisoryHints(fires: readonly AdvisoryFire[], budgetChars:
     "\`tools.describe('<name>')\` inside run_code for its exact arguments, or the \`skill\` tool for a skill.",
     '',
   ].join('\n')
-  let used = header.length
   const lines: string[] = []
   for (const fire of fires) {
     const line = `- ${fire.name} (${fire.kind}) — ${fire.description}`
-    if (used + line.length > budgetChars) break
+    const candidate = [header, [...lines, line].join('\n'), '</system-reminder>'].join('\n')
+    if (candidate.length > budgetChars) break
     lines.push(line)
-    used += line.length
   }
   if (lines.length === 0) return ''
   return [header, lines.join('\n'), '</system-reminder>'].join('\n')

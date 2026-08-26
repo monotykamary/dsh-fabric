@@ -166,6 +166,8 @@
         provider: spawn
         toolName: subagent
         backgroundMode: continuable
+        commandName: delegate
+        commandForkProvider: fork
 
     - id: tool-subagent-fork
       name: '@monotykamary/dsh-tool-subagent'

@@ -36,7 +36,6 @@
   },
   "dependencies": {
     "dsh-fabric-protocol": "workspace:^",
-    "dsh-fabric-system-prompt": "workspace:^",
     "@monotykamary/schemastery": "^3.18.1",
     "zod": "^4.4.3"
   },

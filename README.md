@@ -100,10 +100,11 @@ Use the same `--profile` or `DSH_HOME` selection when uninstalling. Without its 
 
 Installing the bundle replaces the verbose native DSH prompt prose with a minimized Fabric operating prompt:
 
-- A `fabric:system-prompt` section (right after the persona) captures pi-fabric's well-tuned long-horizon disciplines — durable `fabric_mesh` coordination, deterministic compaction recovery, Code-Mode economy, delegation fan-out, and error recovery — adapted to DSH's `run_code`, `fabric_mesh`, subagent, and workflow surfaces.
-- A `system-prompt/assemble` waterfall listener drops the native per-tool guidance one-liners whose content the tool schemas already carry, while preserving the persona, plan policy, cordis toolset guidance, subagent reporting, the Code-Mode SDK/collapse sections, and the mesh guidance. Tool schemas and the runtime-context snapshot are never filtered.
+- A `fabric:system-prompt` section (right after the persona) captures pi-fabric's long-horizon disciplines and gives the model the exact one-off `tools.subagent({ description, prompt, provider, model })` recipe, background-first continuable lifecycle, and fresh-versus-fork choice.
+- A `system-prompt/assemble` waterfall listener drops redundant native per-tool guidance while preserving the persona, trusted `user:system-instructions`, plan policy, reporting, Code-Mode SDK/collapse sections, memory, and mesh guidance. DSH ToolRuntime supplies run-scoped `tools.describe`/`tools.call`; the minimized SDK retains those declarations while hiding optional tool entries.
 - DSH's todo ledger and goal system (`todo_write`, `create_goal`/`get_goal`/`update_goal`, `/goal`, the goal round driver, and the goal bar) are masked. Long-horizon objectives and progress belong in `fabric_mesh` instead of same-session todo/goal records.
 - Fabric memory/recall composes DSH's native session-query tools (`session_search`, `session_event_search`, and the `session_trace`/`session_event_trace`/`session_event_read` readers) over a durable SQLite FTS5 index, with `fabric:memory-guidance` prompt guidance for re-establishing dropped context after `/compact`.
+- The standard, code, fabric, and cordis presets expose `/delegate [--provider <id> --model <id>] [--fork] <task>` through the ordinary slash-command UI, starting one background child without a parent model turn.
 
 ## The `fabric_mesh` tool
 

@@ -35,6 +35,8 @@ describe('discloseSdkSection', () => {
     expect(originalNames).toContain('bash')
     expect(originalNames).toContain('subagent')
     expect(originalNames).toContain('fabric_mesh')
+    expect(section).toContain('provider?: string;')
+    expect(section).toContain('describe(name: string')
     expect(originalNames.length).toBeGreaterThan(20)
   })
 

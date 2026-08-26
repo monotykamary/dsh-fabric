@@ -3,7 +3,8 @@
 `run_code` takes two required arguments: `code` — the body of an async TypeScript function (erasable syntax only — no `enum` or namespaces; type annotations are advisory, the code runs type-stripped) — and `description`, a short summary of what the program does. Inside the program:
 
 - Call tools as `await tools.name(args)` — quoted access for exotic names: `tools["my-tool"](args)`. Every call resolves to the tool's typed canonical JSON value. Tool arguments must be lossless JSON.
-- A FAILED tool call rejects with `ToolCallError`, whose `toolName` identifies the failed tool and whose `message` is human-readable — `try/catch` it to handle and continue.
+- For a capability omitted from the declarations below, call `await tools.describe(name)` for its exact run-scoped schema, then `await tools.call({ name, args })`. Do not guess arguments.
+- A FAILED tool call rejects with `ToolCallError`, whose `toolName` identifies the failed tool or discovery helper and whose `message` is human-readable — `try/catch` it to handle and continue.
 - Independent read-only calls MAY overlap under `Promise.all` (safe calls run concurrently; mutating calls run alone, in submission order). Sequence dependent work with `await`.
 - Emit results with `return` and/or `console.log(...)`. ONLY what you print or return comes back to you — intermediate tool results never enter the conversation, so extract just what you need.
 
@@ -235,6 +236,10 @@ interface ToolArgsMap {
     description: string;
     /** The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs. */
     prompt: string;
+    /** LLM provider route for the child. Requires an explicit model; omit both fields to inherit the parent or configured agentOptions. */
+    provider?: string;
+    /** Provider-owned model id for the child. With provider omitted, overrides only the model on the inherited or configured provider. */
+    model?: string;
     /** Whether to run in the background and return a durable subagent id immediately. Defaults to true. Set false to wait for the result when your next action depends on it. */
     run_in_background?: boolean;
   } & Record<string, JsonValue>;
@@ -244,6 +249,10 @@ interface ToolArgsMap {
     description: string;
     /** The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new. */
     prompt: string;
+    /** LLM provider route for the child. Requires an explicit model; omit both fields to inherit the parent or configured agentOptions. */
+    provider?: string;
+    /** Provider-owned model id for the child. With provider omitted, overrides only the model on the inherited or configured provider. */
+    model?: string;
     /** Whether to run in the background and return a durable subagent id immediately. Defaults to true. Set false to wait for the result when your next action depends on it. */
     run_in_background?: boolean;
   } & Record<string, JsonValue>;
@@ -523,12 +532,23 @@ interface ToolOutputMap {
 
 type ToolName = keyof ToolOutputMap
 
+type CodeDiscoveryHelperName = "call" | "describe"
+
+interface ToolDescriptor {
+  name: string;
+  description: string;
+  parameters: JsonValue;
+}
+
 declare class ToolCallError extends Error {
   readonly name: "ToolCallError";
-  readonly toolName: ToolName;
+  readonly toolName: ToolName | CodeDiscoveryHelperName;
 }
 
 declare const tools: {
   [K in ToolName]: (args: ToolArgsMap[K]) => Promise<ToolOutputMap[K]>;
+} & {
+  describe(name: string | { name: string }): Promise<ToolDescriptor>;
+  call(request: { name: string; args?: JsonValue }): Promise<JsonValue>;
 }
 ```
