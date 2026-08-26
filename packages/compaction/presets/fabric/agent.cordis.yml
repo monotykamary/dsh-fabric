@@ -263,6 +263,17 @@
       config:
         provider: spawn
 
+    # Fabric's low-friction tier-aware Consumer composes this native workflow
+    # engine; it records only DSH's replayable tool-workflow event vocabulary.
+    - id: dsh-fabric-delegation
+      name: 'dsh-fabric-delegation'
+      config:
+        aliases: {}
+        autoPolicy: suggest
+        maxParallelWorkers: 6
+        maxWorkersPerDelegation: 20
+        maxDelegationDepth: 1
+
     - id: tool-workflow
       name: '@monotykamary/dsh-tool-workflow'
 

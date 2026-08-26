@@ -4,6 +4,8 @@ import type {
   FabricActivityEventData,
   FabricActivityProjection,
   FabricActivityRecord,
+  FabricDelegationRecord,
+  FabricDelegationWorkerRecord,
   FabricJsonValue,
   FabricNodeStatus,
   FabricProjectedEdge,
@@ -27,6 +29,9 @@ const MAX_ID_BYTES = 512
 const MAX_ACTION_BYTES = 256
 const MAX_LABEL_BYTES = 2048
 const MAX_DETAIL_BYTES = 4096
+const MAX_TASK_BYTES = 8192
+const MAX_OUTPUT_BYTES = 16384
+const MAX_DELEGATION_RUNS = 80
 
 const activitySchema = z.object({
   id: z.string(),
@@ -55,13 +60,29 @@ const edgeSchema = z.object({
   updatedAt: z.number().optional(),
 })
 
+const delegationWorkerSchema = z.object({
+  id: z.string(), index: z.number(), label: z.string(), task: z.string(), tier: z.enum(['cheap', 'default', 'strong']),
+  status: nodeStatusSchema, updatedAt: z.number(), childSessionId: z.string().optional(), parentSessionId: z.string().optional(), currentActivity: z.string().optional(),
+  requestedProvider: z.string().optional(), requestedModel: z.string().optional(), actualProvider: z.string().optional(), actualModel: z.string().optional(),
+  routingVerified: z.boolean().optional(), tokens: z.number().optional(), durationMs: z.number().optional(), output: z.string().optional(), error: z.string().optional(),
+})
+const delegationSchema = z.object({
+  id: z.string(), callId: z.string(), label: z.string(), status: nodeStatusSchema, parallel: z.boolean(),
+  maxParallel: z.number().optional(), tokenBudget: z.number().optional(), totalTokens: z.number().optional(),
+  createdAt: z.number(), updatedAt: z.number(), durationMs: z.number().optional(), validation: z.string().optional(),
+  workers: z.array(delegationWorkerSchema),
+})
+
 const projectionSchema = z.object({
+  route: z.object({ provider: z.string(), model: z.string() }).optional(),
   activities: z.array(activitySchema),
   nodes: z.array(nodeSchema),
   edges: z.array(edgeSchema),
+  delegations: z.array(delegationSchema),
 }) as z.ZodType<FabricActivityProjection>
 
 interface FabricProjectionState extends FabricActivityProjection {
+  delegationRuns: Record<string, { delegationId: string; offset: number; validator: boolean }>
   workflowMembers: Record<string, {
     runId: string
     nodeId: string
@@ -79,9 +100,12 @@ const workflowMemberSchema = z.object({
 
 /** The fold's full persisted state: the client view plus workflow-member bookkeeping. */
 const stateSchema = z.object({
+  route: z.object({ provider: z.string(), model: z.string() }).optional(),
   activities: z.array(activitySchema),
   nodes: z.array(nodeSchema),
   edges: z.array(edgeSchema),
+  delegations: z.array(delegationSchema),
+  delegationRuns: z.record(z.string(), z.object({ delegationId: z.string(), offset: z.number(), validator: z.boolean() })),
   workflowMembers: z.record(z.string(), workflowMemberSchema),
 }) as z.ZodType<FabricProjectionState>
 
@@ -107,13 +131,13 @@ export function createFabricActivityProjection(
 
   return {
     key: 'fabricActivity',
-    stateVersion: 4,
+    stateVersion: 6,
     stateSchema,
-    init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {} }),
+    init: () => ({ activities: [], nodes: [], edges: [], delegations: [], delegationRuns: {}, workflowMembers: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
     wire: {
       viewSchema: projectionSchema,
-      view: state => ({ activities: state.activities, nodes: state.nodes, edges: state.edges }),
+      view: state => ({ ...(state.route === undefined ? {} : { route: state.route }), activities: state.activities, nodes: state.nodes, edges: state.edges, delegations: state.delegations }),
     },
   }
 }
@@ -125,13 +149,38 @@ function applyEvent(
   topologyLimit: number,
 ): FabricProjectionState {
   switch (event.type) {
+    case 'request/context':
+      return { ...state, route: { provider: event.data.provider, model: event.data.model } }
+    case 'request/header': {
+      const { provider, model } = event.data.header.config
+      return provider === undefined || model === undefined ? state : { ...state, route: { provider, model } }
+    }
+    case 'tool/call': {
+      if (event.data.name !== 'delegate') return state
+      const args = jsonRecord(parseJson(event.data.arguments))
+      return args === undefined ? state : startDelegation(state, String(event.data.callId), args, event.time, activityLimit)
+    }
+    case 'tool/code-dispatch-start': {
+      if (event.data.name !== 'delegate') return state
+      const args = jsonRecord(event.data.arguments)
+      return args === undefined ? state : startDelegation(state, String(event.data.subCallId), args, event.time, activityLimit)
+    }
     case 'fabric/activity':
       return mergeActivity(state, event.data, activityLimit, topologyLimit)
     case 'tool/result': {
+      const delegation = readDelegationResult(event.data.meta)
+      if (delegation !== undefined) return settleDelegation(state, delegation, event.time, activityLimit)
+      if (event.data.message.content.some(block => block.type === 'tool-result' && block.isError)) return failDelegation(state, String(event.data.message.source.callId), 'failed', event.time, activityLimit)
       const activity = readFabricMeshResultMeta(event.data.meta)
       return activity === undefined ? state : mergeActivity(state, activity, activityLimit, topologyLimit)
     }
     case 'tool/code-dispatch': {
+      if (event.data.name === 'delegate') {
+        const result = renderedJson(event.data.content)
+        return result === undefined
+          ? failDelegation(state, String(event.data.subCallId), event.data.isError ? 'failed' : 'stopped', event.time, activityLimit)
+          : settleDelegation(state, result, event.time, activityLimit)
+      }
       if (event.data.name !== 'fabric_mesh' || event.data.isError) return state
       const args = jsonRecord(event.data.arguments)
       const result = renderedJson(event.data.content)
@@ -183,13 +232,17 @@ function applyEvent(
       }], activityLimit, topologyLimit)
     }
     case 'tool-workflow/run-start': {
-      const id = workflowNodeId(String(event.data.runId))
-      return merge(state, {
+      const runId = String(event.data.runId)
+      const id = workflowNodeId(runId)
+      const delegationRun = parseDelegationWorkflowName(event.data.name)
+      const next = merge(state, {
         id: `workflow:${String(event.data.runId)}:start`,
         kind: 'workflow', action: 'started', label: event.data.name, status: 'running', updatedAt: event.time, nodeId: id,
-      }, [{ id, kind: 'workflow', label: event.data.name, status: 'running', updatedAt: event.time }], [{
-        id: `workflow-owner:${String(event.data.runId)}`, source: '$session', target: id, kind: 'contains', updatedAt: event.time,
+      }, [{ id, kind: 'workflow', label: delegationRun === undefined ? event.data.name : delegationLabel(state, delegationRun.delegationId), status: 'running', updatedAt: event.time }], [{
+        id: `workflow-owner:${runId}`, source: '$session', target: id, kind: 'contains', updatedAt: event.time,
       }], activityLimit, topologyLimit)
+      if (delegationRun === undefined) return next
+      return { ...next, delegationRuns: putDelegationRun(next.delegationRuns, runId, delegationRun) }
     }
     case 'tool-workflow/agent-start': {
       const runId = String(event.data.runId)
@@ -210,7 +263,8 @@ function applyEvent(
           { id: `workflow-member:${runId}:${event.data.seq}`, source: phaseId, target: childId, kind: 'member', updatedAt: event.time },
         )
       }
-      const next = merge(state, {
+      const withWorker = correlateDelegationWorker(state, runId, event.data.seq, event.time, { status: 'running', childSessionId: String(event.data.childId) })
+      const next = merge(withWorker, {
         id: `workflow:${runId}:agent:${event.data.seq}:start`, kind: 'agent', action: 'started', label: event.data.label,
         status: 'running', updatedAt: event.time, nodeId: childId, ...(phase === undefined ? {} : { detail: phase }),
       }, nodes, edges, activityLimit, topologyLimit)
@@ -231,7 +285,8 @@ function applyEvent(
       const childId = member?.nodeId
       const existing = childId === undefined ? undefined : state.nodes.find(node => node.id === childId)
       const status = outcomeStatus(event.data.outcome)
-      const next = merge(state, {
+      const withWorker = correlateDelegationWorker(state, runId, event.data.seq, event.time, { status })
+      const next = merge(withWorker, {
         id: `workflow:${runId}:agent:${event.data.seq}:end`, kind: 'agent', action: event.data.outcome,
         label: existing?.label ?? member?.label ?? `Agent ${event.data.seq}`, status, updatedAt: event.time,
         ...(childId === undefined ? {} : { nodeId: childId }),
@@ -257,13 +312,125 @@ function applyEvent(
         label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time, nodeId: id,
       }, [...phaseNodes, { id, kind: 'workflow', label: existing?.label ?? String(event.data.runId), status, updatedAt: event.time }], [], activityLimit, topologyLimit)
       const boundedRunId = boundedIdentifier(String(event.data.runId))
+      const withWorkers = settleDelegationRun(next, String(event.data.runId), status, event.time)
       const workflowMembers = Object.fromEntries(Object.entries(next.workflowMembers)
         .filter(([, member]) => member.runId !== boundedRunId))
-      return { ...next, workflowMembers }
+      const { [String(event.data.runId)]: _run, ...delegationRuns } = withWorkers.delegationRuns
+      return { ...withWorkers, workflowMembers, delegationRuns }
     }
     default:
       return state
   }
+}
+
+function parseJson(value: string): unknown {
+  try { return JSON.parse(value) } catch { return undefined }
+}
+
+function startDelegation(state: FabricProjectionState, callId: string, args: Record<string, unknown>, time: number, limit: number): FabricProjectionState {
+  const inputs = Array.isArray(args.tasks) ? args.tasks : []
+  const workers: FabricDelegationWorkerRecord[] = inputs.flatMap((input, index) => {
+    const record = jsonRecord(input)
+    if (record === undefined || typeof record.label !== 'string' || typeof record.task !== 'string') return []
+    const tier = record.tier === 'default' || record.tier === 'strong' ? record.tier : 'cheap'
+    return [{ id: boundedIdentifier(callId + ':' + String(index)), index, label: boundedText(record.label, MAX_LABEL_BYTES), task: boundedText(record.task, MAX_TASK_BYTES), tier, status: 'pending', updatedAt: time }]
+  })
+  const id = boundedIdentifier('delegation:' + callId)
+  const label = typeof args.label === 'string' && args.label.trim() !== '' ? args.label.trim() : 'Delegation'
+  const delegation: FabricDelegationRecord = { id, callId: boundedIdentifier(callId), label: boundedText(label, MAX_LABEL_BYTES), status: 'running', parallel: args.parallel !== false, ...(typeof args.max_parallel === 'number' ? { maxParallel: args.max_parallel } : {}), ...(typeof args.token_budget === 'number' ? { tokenBudget: args.token_budget } : {}), createdAt: time, updatedAt: time, workers }
+  return { ...state, activities: [...state.activities, boundedActivity({ id: id + ':start', kind: 'workflow', action: 'delegated', label: delegation.label, status: 'running', updatedAt: time })].slice(-limit), delegations: upsert(state.delegations, delegation, limit) }
+}
+
+function readDelegationResult(value: unknown): FabricJsonValue | undefined {
+  const meta = jsonRecord(value)
+  if (meta?.kind !== 'fabric-delegation') return undefined
+  const snapshot = snapshotJsonValue(meta.result)
+  return snapshot as FabricJsonValue | undefined
+}
+
+function failDelegation(state: FabricProjectionState, callId: string, status: 'failed' | 'stopped', time: number, limit: number): FabricProjectionState {
+  const delegation = state.delegations.find(candidate => candidate.callId === callId)
+  if (delegation === undefined) return state
+  const workers = delegation.workers.map(worker => worker.status === 'pending' || worker.status === 'running' ? { ...worker, status, updatedAt: time } : worker)
+  const settled = { ...delegation, status, workers, updatedAt: time, durationMs: Math.max(0, time - delegation.createdAt) }
+  return { ...state, activities: [...state.activities, boundedActivity({ id: delegation.id + ':end', kind: 'workflow', action: status, label: delegation.label, status, updatedAt: time })].slice(-limit), delegations: upsert(state.delegations, settled, limit) }
+}
+
+function settleDelegation(state: FabricProjectionState, value: FabricJsonValue, time: number, limit: number): FabricProjectionState {
+  const result = jsonRecord(value)
+  if (result === undefined || typeof result.delegationId !== 'string') return state
+  const callId = result.delegationId
+  const existing = state.delegations.find(candidate => candidate.callId === callId)
+  const rows = Array.isArray(result.workers) ? result.workers : []
+  const returnedWorkers: FabricDelegationWorkerRecord[] = rows.flatMap((value, fallbackIndex) => {
+    const row = jsonRecord(value)
+    if (row === undefined) return []
+    const index = typeof row.index === 'number' ? row.index : fallbackIndex
+    const prior = existing?.workers.find(worker => worker.index === index)
+    const actual = jsonRecord(row.actual)
+    const requested = jsonRecord(row.requested)
+    const outcome = row.outcome === 'cancelled' ? 'stopped' : row.outcome === 'failed' ? 'failed' : 'completed'
+    const output = boundedOutput(row.output)
+    return [{ id: prior?.id ?? boundedIdentifier(callId + ':' + String(index)), index, label: typeof row.label === 'string' ? boundedText(row.label, MAX_LABEL_BYTES) : prior?.label ?? 'Worker ' + String(index + 1), task: typeof row.task === 'string' ? boundedText(row.task, MAX_TASK_BYTES) : prior?.task ?? '', tier: row.tier === 'default' || row.tier === 'strong' ? row.tier : prior?.tier ?? 'cheap', status: outcome, updatedAt: time, ...(typeof row.childId === 'string' ? { childSessionId: boundedIdentifier(row.childId) } : prior?.childSessionId === undefined ? {} : { childSessionId: prior.childSessionId }), ...(typeof requested?.provider === 'string' ? { requestedProvider: requested.provider } : {}), ...(typeof requested?.model === 'string' ? { requestedModel: requested.model } : {}), ...(typeof actual?.provider === 'string' ? { actualProvider: actual.provider } : {}), ...(typeof actual?.model === 'string' ? { actualModel: actual.model } : {}), ...(typeof row.routingVerified === 'boolean' ? { routingVerified: row.routingVerified } : {}), ...(typeof row.tokens === 'number' ? { tokens: row.tokens } : {}), ...(typeof row.durationMs === 'number' ? { durationMs: row.durationMs } : {}), ...(output === undefined ? {} : outcome === 'failed' ? { error: output } : { output }) }]
+  })
+  const returnedIndexes = new Set(returnedWorkers.map(worker => worker.index))
+  const terminalFallback: FabricNodeStatus = result.status === 'failed' ? 'failed' : result.status === 'completed' ? 'completed' : 'stopped'
+  const workers = [
+    ...returnedWorkers,
+    ...(existing?.workers ?? []).filter(worker => !returnedIndexes.has(worker.index)).map(worker => ({
+      ...worker,
+      status: worker.status === 'pending' || worker.status === 'running' ? terminalFallback : worker.status,
+      updatedAt: time,
+    })),
+  ].toSorted((left, right) => left.index - right.index)
+  const rawStatus = result.status
+  const status: FabricNodeStatus = rawStatus === 'failed' ? 'failed' : rawStatus === 'cancelled' || rawStatus === 'budget-exhausted' ? 'stopped' : 'completed'
+  const createdAt = existing?.createdAt ?? time
+  const label = typeof result.label === 'string' ? result.label : existing?.label ?? 'Delegation'
+  const validation = boundedOutput(result.validation)
+  const delegation: FabricDelegationRecord = { id: existing?.id ?? boundedIdentifier('delegation:' + callId), callId: boundedIdentifier(callId), label: boundedText(label, MAX_LABEL_BYTES), status, parallel: existing?.parallel ?? true, ...(existing?.maxParallel === undefined ? {} : { maxParallel: existing.maxParallel }), ...(typeof result.tokenBudget === 'number' ? { tokenBudget: result.tokenBudget } : existing?.tokenBudget === undefined ? {} : { tokenBudget: existing.tokenBudget }), ...(typeof result.totalTokens === 'number' ? { totalTokens: result.totalTokens } : {}), createdAt, updatedAt: time, ...(typeof result.durationMs === 'number' ? { durationMs: result.durationMs } : { durationMs: Math.max(0, time - createdAt) }), ...(validation === undefined ? {} : { validation }), workers }
+  return { ...state, activities: [...state.activities, boundedActivity({ id: delegation.id + ':end', kind: 'workflow', action: status, label: delegation.label, status, updatedAt: time, detail: String(workers.length) + ' workers' + (delegation.totalTokens === undefined ? '' : ' · ' + String(delegation.totalTokens) + ' tokens') })].slice(-limit), delegations: upsert(state.delegations, delegation, limit) }
+}
+
+function parseDelegationWorkflowName(name: string): { delegationId: string; offset: number; validator: boolean } | undefined {
+  const match = /^(fabric-delegate|fabric-validator)\/([^/]+)\/(\d+)$/.exec(name)
+  if (match === null) return undefined
+  try { return { delegationId: decodeURIComponent(match[2] ?? ''), offset: Number(match[3] ?? 0), validator: match[1] === 'fabric-validator' } } catch { return undefined }
+}
+
+function delegationLabel(state: FabricProjectionState, callId: string): string { return state.delegations.find(candidate => candidate.callId === callId)?.label ?? 'Delegation' }
+
+function putDelegationRun(
+  runs: FabricProjectionState['delegationRuns'],
+  runId: string,
+  value: FabricProjectionState['delegationRuns'][string],
+): FabricProjectionState['delegationRuns'] {
+  return Object.fromEntries(Object.entries({ ...runs, [runId]: value }).slice(-MAX_DELEGATION_RUNS))
+}
+
+function correlateDelegationWorker(state: FabricProjectionState, runId: string, seq: number, time: number, patch: Pick<FabricDelegationWorkerRecord, 'status'> & Partial<Pick<FabricDelegationWorkerRecord, 'childSessionId'>>): FabricProjectionState {
+  const run = state.delegationRuns[runId]
+  if (run === undefined || run.validator) return state
+  const delegation = state.delegations.find(candidate => candidate.callId === run.delegationId)
+  if (delegation === undefined) return state
+  const index = run.offset + seq - 1
+  const workers = delegation.workers.map(worker => worker.index === index ? { ...worker, ...patch, updatedAt: time } : worker)
+  return { ...state, delegations: state.delegations.map(value => value.id === delegation.id ? { ...delegation, workers, updatedAt: time } : value) }
+}
+
+function settleDelegationRun(state: FabricProjectionState, runId: string, status: FabricNodeStatus, time: number): FabricProjectionState {
+  const run = state.delegationRuns[runId]
+  if (run === undefined || run.validator || status === 'completed') return state
+  const delegation = state.delegations.find(candidate => candidate.callId === run.delegationId)
+  if (delegation === undefined) return state
+  const workers = delegation.workers.map(worker => worker.index >= run.offset && (worker.status === 'pending' || worker.status === 'running') ? { ...worker, status, updatedAt: time } : worker)
+  return { ...state, delegations: state.delegations.map(value => value.id === delegation.id ? { ...delegation, status, workers, updatedAt: time, durationMs: Math.max(0, time - delegation.createdAt) } : value) }
+}
+
+function boundedOutput(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined
+  const text = typeof value === 'string' ? value : JSON.stringify(value)
+  return boundedText(text, MAX_OUTPUT_BYTES)
 }
 
 function mergeActivity(
@@ -310,9 +477,12 @@ function merge(
     .filter(edge => edge.target === '$session' || nextNodes.some(node => node.id === edge.target))
   const reconciledNodes = nextNodes.map(node => reconcileActorStatus(node, nextNodes, nextEdges))
   return {
+    ...(state.route === undefined ? {} : { route: state.route }),
     activities: [...state.activities.map(boundedActivity).filter(item => item.id !== normalizedActivity.id), normalizedActivity].slice(-activityLimit),
     nodes: reconciledNodes,
     edges: nextEdges,
+    delegations: state.delegations,
+    delegationRuns: state.delegationRuns,
     workflowMembers: state.workflowMembers,
   }
 }

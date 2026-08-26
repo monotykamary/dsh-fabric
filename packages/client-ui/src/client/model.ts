@@ -3,6 +3,7 @@ import {
   buildFabricTopology,
   type FabricActivityProjection,
   type FabricActivityRecord,
+  type FabricDelegationRecord,
   type FabricGraph,
   type FabricGraphEdge,
   type FabricGraphNode,
@@ -46,6 +47,8 @@ export interface FabricClientModel {
   participants: readonly FabricParticipantRecord[]
   active: readonly FabricParticipantRecord[]
   resourceCount: number
+  delegations: readonly FabricDelegationRecord[]
+  activeWorkerCount: number
 }
 
 /** Build the renderer model from DSH's authoritative session mirror and host projections. */
@@ -63,6 +66,42 @@ export function buildFabricClientModel(
     .toSorted((left, right) => right.updatedAt - left.updatedAt || left.id.localeCompare(right.id))
     .slice(0, 80)
   const participants = topology.directory.participants
+  const summaries = orderedSummaries(state)
+  const telemetryBySession = new Map(summaries.map(summary => {
+    const projection = summary.projectionValues?.fabricActivity as FabricActivityProjection | undefined
+    const activity = projection?.activities.toSorted((left, right) => right.updatedAt - left.updatedAt)[0]
+    return [String(summary.id), {
+      route: projection?.route,
+      parentSessionId: summary.parentId === undefined ? undefined : String(summary.parentId),
+      currentActivity: activity === undefined ? undefined : activity.label + ' · ' + activity.action,
+    }] as const
+  }))
+  const delegations = summaries
+    .flatMap(summary => {
+      const projection = summary.projectionValues?.fabricActivity as FabricActivityProjection | undefined
+      return projection?.delegations ?? []
+    })
+    .reduce<FabricDelegationRecord[]>((values, delegation) => [
+      ...values.filter(candidate => candidate.id !== delegation.id),
+      delegation,
+    ], [])
+    .map(delegation => ({
+      ...delegation,
+      workers: delegation.workers.map(worker => {
+        const telemetry = worker.childSessionId === undefined ? undefined : telemetryBySession.get(worker.childSessionId)
+        if (telemetry === undefined) return worker
+        return {
+          ...worker,
+          ...(telemetry.route === undefined ? {} : { actualProvider: telemetry.route.provider, actualModel: telemetry.route.model }),
+          ...(telemetry.parentSessionId === undefined ? {} : { parentSessionId: telemetry.parentSessionId }),
+          ...(telemetry.currentActivity === undefined ? {} : { currentActivity: telemetry.currentActivity }),
+        }
+      }),
+    }))
+    .toSorted((left, right) => {
+      const status = delegationStatusOrder(left.status) - delegationStatusOrder(right.status)
+      return status === 0 ? right.updatedAt - left.updatedAt : status
+    })
   return {
     graph: topology.graph,
     directory: topology.directory,
@@ -75,6 +114,8 @@ export function buildFabricClientModel(
       || participant.status === 'blocked'),
     resourceCount: topology.graph.nodes.filter(node =>
       node.kind === 'topic' || node.kind === 'state').length,
+    delegations,
+    activeWorkerCount: delegations.flatMap(delegation => delegation.workers).filter(worker => worker.status === 'pending' || worker.status === 'running').length,
   }
 }
 
@@ -194,6 +235,12 @@ export function navigateFabricTopology(
   if (index < 0) return current.node.id
   if (direction === 'previous') return siblings[Math.max(0, index - 1)] ?? current.node.id
   return siblings[Math.min(siblings.length - 1, index + 1)] ?? current.node.id
+}
+
+function delegationStatusOrder(status: string): number {
+  if (status === 'running' || status === 'pending') return 0
+  if (status === 'failed' || status === 'blocked') return 1
+  return 2
 }
 
 function orderedSummaries(state: SessionListState): SessionSummary[] {

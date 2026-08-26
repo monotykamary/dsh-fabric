@@ -3,6 +3,7 @@ import type {} from '@monotykamary/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsRuntime, TranslateNS } from '@monotykamary/dsh-client-ui-slots'
 import type { FabricActivityRecord, FabricGraphNode, FabricParticipantRecord } from 'dsh-fabric-protocol'
 import { buildFabricClientModel, navigateFabricTopology, type FabricNavigationDirection } from './model.ts'
+import { DelegationView } from './DelegationView.tsx'
 import { actionLabel, activityKindLabel, formatDuration, kindLabel, statusLabel, topologyNodeLabel } from './labels.ts'
 import type { FabricControls } from './types.ts'
 import css from './fabric.module.css'
@@ -16,13 +17,13 @@ const VIEWPORT_INSET = 24
 /** Props supplied by the conversation-view registry and Fabric control injection. */
 export type FabricViewProps = PropsRuntime<'conversation.view'> & InjectFace<FabricControls> & PropsLocale<'fabric'>
 
-type FabricTab = 'activity' | 'topology'
+type FabricTab = 'delegations' | 'activity' | 'topology'
 
 /** Render Activity and Topology tabs for the selected session's Fabric family. */
-export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, t }: FabricViewProps) {
+export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, cancelWorker, messageWorker, t }: FabricViewProps) {
   const sessions = useSessions(value => value)
   const model = useMemo(() => buildFabricClientModel(sessions, sessionId, Date.now()), [sessionId, sessions])
-  const [tab, setTab] = useState<FabricTab>('topology')
+  const [tab, setTab] = useState<FabricTab>('delegations')
   const [selectedId, setSelectedId] = useState<string>()
   const nodeRefs = useRef(new Map<string, SVGGElement>())
   const canvasRef = useRef<HTMLDivElement | null>(null)
@@ -346,13 +347,16 @@ export function FabricView({ useSessions, sessionId, openNode, refreshCatalogs, 
         <div className={css.toolbarAside}>
           <span className={css.keyboardHint}>{t('view.keyboardHint')}</span>
           <div className={css.tabs} role="tablist" aria-label={t('tabs.aria')}>
+            <button type="button" role="tab" aria-selected={tab === 'delegations'} onClick={() => { setTab('delegations') }}>{t('tabs.delegations')} {model.activeWorkerCount === 0 ? '' : `(${model.activeWorkerCount})`}</button>
             <button type="button" role="tab" aria-selected={tab === 'activity'} onClick={() => { setTab('activity') }}>{t('tabs.activity')}</button>
             <button type="button" role="tab" aria-selected={tab === 'topology'} onClick={() => { setTab('topology') }}>{t('tabs.topology')}</button>
           </div>
         </div>
       </header>
-      {tab === 'activity'
-        ? <ActivityList records={model.activity} selectableNodeIds={graphNodeIds} onSelectNode={(id) => { setSelectedId(id); setTab('topology') }} t={t} />
+      {tab === 'delegations'
+        ? <DelegationView delegations={model.delegations} openNode={openNode} cancelWorker={cancelWorker} messageWorker={messageWorker} t={t} />
+        : tab === 'activity'
+          ? <ActivityList records={model.activity} selectableNodeIds={graphNodeIds} onSelectNode={(id) => { setSelectedId(id); setTab('topology') }} t={t} />
         : (
           <div className={css.topologyShell}>
             <div className={css.canvasColumn}>

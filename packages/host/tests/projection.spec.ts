@@ -123,4 +123,110 @@ describe('fabric activity projection', () => {
     expect(Object.keys(state.workflowMembers)).toHaveLength(2)
   })
 
+  it('projects the latest durable provider and model route', () => {
+    const definition = createFabricActivityProjection()
+    let state = definition.init()
+    state = definition.apply(state, event('request/header', {
+      reason: 'initial', header: { config: { provider: 'cursor', model: 'composer-2.5-fast' } },
+    }, 1))
+    state = definition.apply(state, event('request/context', {
+      provider: 'cursor', model: 'claude-fable-5',
+    }, 2))
+    expect(definition.wire.view(state).route).toEqual({ provider: 'cursor', model: 'claude-fable-5' })
+  })
+
+  it('replays parallel delegations with out-of-order child completion', () => {
+    const definition = createFabricActivityProjection()
+    let state = definition.init()
+    state = definition.apply(state, event('tool/call', {
+      callId: 'call-1', name: 'delegate', arguments: JSON.stringify({
+        label: 'parallel review', parallel: true, max_parallel: 2,
+        tasks: [
+          { label: 'slow', task: 'slow task', tier: 'cheap' },
+          { label: 'fast', task: 'fast task', tier: 'default' },
+        ],
+      }),
+    }, 1))
+    state = definition.apply(state, event('tool-workflow/run-start', { runId: 'run-1', name: 'fabric-delegate/call-1/0' }, 2))
+    state = definition.apply(state, event('tool-workflow/agent-start', { runId: 'run-1', seq: 1, label: 'slow', childId: 'child-slow' }, 3))
+    state = definition.apply(state, event('tool-workflow/agent-start', { runId: 'run-1', seq: 2, label: 'fast', childId: 'child-fast' }, 4))
+    state = definition.apply(state, event('tool-workflow/agent-end', { runId: 'run-1', seq: 2, outcome: 'completed' }, 5))
+    state = definition.apply(state, event('tool-workflow/agent-end', { runId: 'run-1', seq: 1, outcome: 'failed' }, 6))
+
+    expect(state.delegations).toEqual([expect.objectContaining({
+      callId: 'call-1', status: 'running', parallel: true, maxParallel: 2,
+      workers: [
+        expect.objectContaining({ index: 0, status: 'failed', childSessionId: 'child-slow' }),
+        expect.objectContaining({ index: 1, status: 'completed', childSessionId: 'child-fast' }),
+      ],
+    })])
+  })
+
+  it('settles cancellation and failure while interrupted runs remain visibly running', () => {
+    const definition = createFabricActivityProjection()
+    const start = (callId: string, seq: number) => event('tool/call', {
+      callId, name: 'delegate', arguments: JSON.stringify({ tasks: [{ label: callId, task: 'task' }] }),
+    }, seq)
+
+    let cancelled = definition.apply(definition.init(), start('cancelled', 1))
+    cancelled = definition.apply(cancelled, event('tool-workflow/run-start', { runId: 'run-c', name: 'fabric-delegate/cancelled/0' }, 2))
+    cancelled = definition.apply(cancelled, event('tool-workflow/agent-start', { runId: 'run-c', seq: 1, label: 'c', childId: 'child-c' }, 3))
+    cancelled = definition.apply(cancelled, event('tool-workflow/run-end', { runId: 'run-c', stopReason: 'cancelled' }, 4))
+    expect(cancelled.delegations[0]).toMatchObject({ status: 'stopped', workers: [{ status: 'stopped' }] })
+
+    let failed = definition.apply(definition.init(), start('failed', 10))
+    failed = definition.apply(failed, event('tool/result', {
+      message: { source: { callId: 'failed' }, content: [{ type: 'tool-result', isError: true }] },
+    }, 11))
+    expect(failed.delegations[0]).toMatchObject({ status: 'failed', workers: [{ status: 'failed' }] })
+
+    let interrupted = definition.apply(definition.init(), start('interrupted', 20))
+    interrupted = definition.apply(interrupted, event('tool-workflow/run-start', { runId: 'run-i', name: 'fabric-delegate/interrupted/0' }, 21))
+    interrupted = definition.apply(interrupted, event('tool-workflow/agent-start', { runId: 'run-i', seq: 1, label: 'i', childId: 'child-i' }, 22))
+    expect(definition.wire.view(interrupted).delegations[0]).toMatchObject({ status: 'running', workers: [{ status: 'running' }] })
+  })
+
+  it('retains queued workers when a terminal result contains only started batches', () => {
+    const definition = createFabricActivityProjection()
+    let state = definition.init()
+    state = definition.apply(state, event('tool/call', {
+      callId: 'budgeted', name: 'delegate', arguments: JSON.stringify({
+        tasks: [
+          { label: 'first', task: 'first task' },
+          { label: 'second', task: 'second task' },
+          { label: 'third', task: 'third task' },
+        ],
+      }),
+    }, 1))
+    state = definition.apply(state, event('tool/result', {
+      message: { source: { callId: 'budgeted' }, content: [{ type: 'tool-result', isError: false }] },
+      meta: { kind: 'fabric-delegation', result: {
+        delegationId: 'budgeted', status: 'budget-exhausted', label: 'Budgeted', totalTokens: 10,
+        workers: [{ index: 0, label: 'first', task: 'first task', tier: 'cheap', outcome: 'completed', output: 'done' }],
+      } },
+    }, 2))
+
+    expect(state.delegations[0]).toMatchObject({
+      status: 'stopped',
+      workers: [
+        { index: 0, status: 'completed' },
+        { index: 1, status: 'stopped' },
+        { index: 2, status: 'stopped' },
+      ],
+    })
+  })
+
+  it('bounds abandoned delegation run correlations', () => {
+    const definition = createFabricActivityProjection(200, 200)
+    let state = definition.init()
+    for (let index = 0; index < 100; index += 1) {
+      state = definition.apply(state, event('tool-workflow/run-start', {
+        runId: `run-${index}`, name: `fabric-delegate/call-${index}/0`,
+      }, index))
+    }
+    expect(Object.keys(state.delegationRuns)).toHaveLength(80)
+    expect(state.delegationRuns['run-0']).toBeUndefined()
+    expect(state.delegationRuns['run-99']).toBeDefined()
+  })
+
 })

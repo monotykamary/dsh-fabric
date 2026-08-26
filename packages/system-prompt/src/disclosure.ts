@@ -25,6 +25,7 @@ export const DISCLOSURE_CORE_TOOLS: ReadonlySet<string> = new Set([
   'glob',
   'edit',
   'write',
+  'delegate',
   'ask_user_question',
   'job_list',
   'job_output',
