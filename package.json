@@ -25,7 +25,7 @@
     }
   },
   "dependencies": {
-    "@monotykamary/dsh-agent-presets": "^0.1.0-rc.7",
+    "@monotykamary/dsh-agent-presets": "^0.1.7",
     "dsh-fabric-client-ui": "workspace:^",
     "dsh-fabric-code-runtime-quickjs": "workspace:^",
     "dsh-fabric-compaction": "workspace:^",

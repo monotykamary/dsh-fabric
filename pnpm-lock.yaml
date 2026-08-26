@@ -210,8 +210,8 @@ importers:
         specifier: link:../../../deepseek-harness/packages/llm/token-meter
         version: link:../../../deepseek-harness/packages/llm/token-meter
       '@monotykamary/dsh-tool-session-query':
-        specifier: ^0.1.0-rc.7
-        version: 0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-query@0.1.0-rc.8(f20a3fea0d4796d40c8424ab84a5bc16))(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-timeout@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)
+        specifier: ^0.1.7
+        version: 0.1.7(8eefdc37b28d6828e068149a7becc0ce)
       '@monotykamary/dsh-tools':
         specifier: link:../../../deepseek-harness/packages/core/tools
         version: link:../../../deepseek-harness/packages/core/tools
@@ -429,53 +429,53 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
-  '@monotykamary/dsh-brand@0.1.0-rc.8':
-    resolution: {integrity: sha512-YIp8ffYyK+szxujuQvf0/eTos6eRKl46P9pikcRVLZEq1ep6QrfxgnPVjcZk5joMwPaybPPWqAn/ClD3G2dJFg==}
+  '@monotykamary/dsh-brand@0.1.7':
+    resolution: {integrity: sha512-LfuE3QHHN/S+ByLwCBgtPmg4DVvZopG0i21T5xiFFbp60TqUlXTdz/wN9JNDHSBa4gsQRG1C3RZDvSMhZ6m2VQ==}
     peerDependencies:
       '@monotykamary/cordis': ^4.0.1
-      '@monotykamary/dsh-invariants': ^0.1.0-rc.8
+      '@monotykamary/dsh-invariants': ^0.1.7
 
-  '@monotykamary/dsh-session-query@0.1.0-rc.8':
-    resolution: {integrity: sha512-NCwJzz8HVM2T7+xXY26BZhgAd1JsVSq16qXOUs4PgGnmfNnfZDA/NQzpCQjURDPJ1ncXNCKI9IrfIUYksA4RXA==}
+  '@monotykamary/dsh-session-query@0.1.7':
+    resolution: {integrity: sha512-vW1evgG2LSad+fCkAO5hkgCDhZwNRiC42VFAYQki0idP0HPKT/cZJsE37Ak5E50lYCP2gPQUZGWIDMMHxWyCgg==}
     peerDependencies:
       '@monotykamary/cordis': ^4.0.1
-      '@monotykamary/dsh-brand': ^0.1.0-rc.8
-      '@monotykamary/dsh-invariants': ^0.1.0-rc.8
-      '@monotykamary/dsh-llm': ^0.1.0-rc.8
-      '@monotykamary/dsh-session': ^0.1.0-rc.8
-      '@monotykamary/dsh-session-persistence': ^0.1.0-rc.8
-      '@monotykamary/dsh-session-title': ^0.1.0-rc.8
+      '@monotykamary/dsh-brand': ^0.1.7
+      '@monotykamary/dsh-invariants': ^0.1.7
+      '@monotykamary/dsh-llm': ^0.1.7
+      '@monotykamary/dsh-session': ^0.1.7
+      '@monotykamary/dsh-session-persistence': ^0.1.7
+      '@monotykamary/dsh-session-title': ^0.1.7
     peerDependenciesMeta:
       '@monotykamary/dsh-session-persistence':
         optional: true
 
-  '@monotykamary/dsh-session-title@0.1.0-rc.8':
-    resolution: {integrity: sha512-PjiFA4JQmaz4bk5hEW0hTxK7FAf7sqYFJ4JSxEoelhFum0vWIU8mdR+3jDmnNRgb/1Z35o9VR898wt1NNHDJ9A==}
+  '@monotykamary/dsh-session-title@0.1.7':
+    resolution: {integrity: sha512-aT3+uRZWX0Z5PUjyfseQwSTN1Ae7ynBclPw423PSQK98EO4towI11mdOS1karPtsy2dr+j/mDPpfy1Ia8Bhs0g==}
     peerDependencies:
       '@monotykamary/cordis': ^4.0.1
-      '@monotykamary/dsh-brand': ^0.1.0-rc.8
-      '@monotykamary/dsh-invariants': ^0.1.0-rc.8
-      '@monotykamary/dsh-llm': ^0.1.0-rc.8
-      '@monotykamary/dsh-session': ^0.1.0-rc.8
-      '@monotykamary/dsh-session-projection': ^0.1.0-rc.8
+      '@monotykamary/dsh-brand': ^0.1.7
+      '@monotykamary/dsh-invariants': ^0.1.7
+      '@monotykamary/dsh-llm': ^0.1.7
+      '@monotykamary/dsh-session': ^0.1.7
+      '@monotykamary/dsh-session-projection': ^0.1.7
 
-  '@monotykamary/dsh-timeout@0.1.0-rc.8':
-    resolution: {integrity: sha512-hvOcDqu4PQ4V09cXXSjQVDs8FJMQsZwF57GRw2HxQHI9p0KWHQognRpGtaAwk0d5upcjXSnqeBqxdU5yOyxmww==}
+  '@monotykamary/dsh-timeout@0.1.7':
+    resolution: {integrity: sha512-al801YWl5HnM3FnWTTuqzevncQyOGklHuF3xMr0Iv9xdDWrnx7apeSYB3fxHFc7NJussqt3yJz254KVrgiFiYQ==}
     peerDependencies:
       '@monotykamary/cordis': ^4.0.1
-      '@monotykamary/dsh-invariants': ^0.1.0-rc.8
+      '@monotykamary/dsh-invariants': ^0.1.7
 
-  '@monotykamary/dsh-tool-session-query@0.1.0-rc.8':
-    resolution: {integrity: sha512-XlV5SIoJ3lLsJEk7oBfYjx5AKrTZZkRtjPqFz345TnRGULIW3ZNEfWIeVbrZx+fpU202KF6CK+Wiij1yqui8kg==}
+  '@monotykamary/dsh-tool-session-query@0.1.7':
+    resolution: {integrity: sha512-w19jjgB2o4CPSw001k6xlp8TTg0VRXysznhThCl0ptYS0AwWMhuYdf2kZPFSKxrlgpNUgtw/V/AGhDEdpSVR3w==}
     peerDependencies:
       '@monotykamary/cordis': ^4.0.1
-      '@monotykamary/dsh-invariants': ^0.1.0-rc.8
-      '@monotykamary/dsh-llm': ^0.1.0-rc.8
-      '@monotykamary/dsh-session': ^0.1.0-rc.8
-      '@monotykamary/dsh-session-query': ^0.1.0-rc.8
-      '@monotykamary/dsh-system-prompt': ^0.1.0-rc.8
-      '@monotykamary/dsh-timeout': ^0.1.0-rc.8
-      '@monotykamary/dsh-tools': ^0.1.0-rc.8
+      '@monotykamary/dsh-invariants': ^0.1.7
+      '@monotykamary/dsh-llm': ^0.1.7
+      '@monotykamary/dsh-session': ^0.1.7
+      '@monotykamary/dsh-session-query': ^0.1.7
+      '@monotykamary/dsh-system-prompt': ^0.1.7
+      '@monotykamary/dsh-timeout': ^0.1.7
+      '@monotykamary/dsh-tools': ^0.1.7
 
   '@oxc-project/types@0.144.0':
     resolution: {integrity: sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==}
@@ -1179,24 +1179,24 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
-  '@monotykamary/dsh-brand@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)':
+  '@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)':
     dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
       '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
 
-  '@monotykamary/dsh-session-query@0.1.0-rc.8(f20a3fea0d4796d40c8424ab84a5bc16)':
-    dependencies:
+  ? '@monotykamary/dsh-session-query@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-title@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session))(@monotykamary/dsh-session@deepseek-harness+packages+core+session)'
+  : dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
-      '@monotykamary/dsh-brand': 0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
+      '@monotykamary/dsh-brand': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
       '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
       '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
       '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
-      '@monotykamary/dsh-session-title': 0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)
+      '@monotykamary/dsh-session-title': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)
 
-  '@monotykamary/dsh-session-title@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)':
+  '@monotykamary/dsh-session-title@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session)':
     dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
-      '@monotykamary/dsh-brand': 0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
+      '@monotykamary/dsh-brand': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
       '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
       '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
       '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
@@ -1204,20 +1204,20 @@ snapshots:
       '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
       zod: 4.4.3
 
-  '@monotykamary/dsh-timeout@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)':
+  '@monotykamary/dsh-timeout@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)':
     dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
       '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
 
-  '@monotykamary/dsh-tool-session-query@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-query@0.1.0-rc.8(f20a3fea0d4796d40c8424ab84a5bc16))(@monotykamary/dsh-session@deepseek-harness+packages+core+session)(@monotykamary/dsh-system-prompt@deepseek-harness+packages+core+system-prompt)(@monotykamary/dsh-timeout@0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-tools@deepseek-harness+packages+core+tools)':
+  '@monotykamary/dsh-tool-session-query@0.1.7(8eefdc37b28d6828e068149a7becc0ce)':
     dependencies:
       '@monotykamary/cordis': link:../deepseek-harness/vendor/cordis
       '@monotykamary/dsh-invariants': link:../deepseek-harness/packages/runtime-diagnostics/invariants
       '@monotykamary/dsh-llm': link:../deepseek-harness/packages/llm/llm
       '@monotykamary/dsh-session': link:../deepseek-harness/packages/core/session
-      '@monotykamary/dsh-session-query': 0.1.0-rc.8(f20a3fea0d4796d40c8424ab84a5bc16)
+      '@monotykamary/dsh-session-query': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-title@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-brand@0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants))(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)(@monotykamary/dsh-llm@deepseek-harness+packages+llm+llm)(@monotykamary/dsh-session-projection@deepseek-harness+packages+session+session-projection)(@monotykamary/dsh-session@deepseek-harness+packages+core+session))(@monotykamary/dsh-session@deepseek-harness+packages+core+session)
       '@monotykamary/dsh-system-prompt': link:../deepseek-harness/packages/core/system-prompt
-      '@monotykamary/dsh-timeout': 0.1.0-rc.8(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
+      '@monotykamary/dsh-timeout': 0.1.7(@monotykamary/cordis@deepseek-harness+vendor+cordis)(@monotykamary/dsh-invariants@deepseek-harness+packages+runtime-diagnostics+invariants)
       '@monotykamary/dsh-tools': link:../deepseek-harness/packages/core/tools
       '@monotykamary/schemastery': link:../deepseek-harness/vendor/schemastery
 

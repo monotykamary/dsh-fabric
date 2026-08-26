@@ -31,20 +31,20 @@
   },
   "peerDependencies": {
     "@monotykamary/cordis": "^4.0.1",
-    "@monotykamary/dsh-agent": "^0.1.0-rc.7",
-    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
-    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
-    "@monotykamary/dsh-system-prompt": "^0.1.0-rc.7",
-    "@monotykamary/dsh-tools": "^0.1.0-rc.7"
+    "@monotykamary/dsh-agent": "^0.1.7",
+    "@monotykamary/dsh-invariants": "^0.1.7",
+    "@monotykamary/dsh-llm": "^0.1.7",
+    "@monotykamary/dsh-system-prompt": "^0.1.7",
+    "@monotykamary/dsh-tools": "^0.1.7"
   },
   "devDependencies": {
     "@monotykamary/cordis": "^4.0.1",
-    "@monotykamary/dsh-agent": "^0.1.0-rc.7",
-    "@monotykamary/dsh-invariants": "^0.1.0-rc.7",
-    "@monotykamary/dsh-llm": "^0.1.0-rc.7",
-    "@monotykamary/dsh-scope": "^0.1.0-rc.7",
-    "@monotykamary/dsh-system-prompt": "^0.1.0-rc.7",
-    "@monotykamary/dsh-tools": "^0.1.0-rc.7",
+    "@monotykamary/dsh-agent": "^0.1.7",
+    "@monotykamary/dsh-invariants": "^0.1.7",
+    "@monotykamary/dsh-llm": "^0.1.7",
+    "@monotykamary/dsh-scope": "^0.1.7",
+    "@monotykamary/dsh-system-prompt": "^0.1.7",
+    "@monotykamary/dsh-tools": "^0.1.7",
     "typescript": "^6.0.3"
   },
   "repository": {
