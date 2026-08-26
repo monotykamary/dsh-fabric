@@ -38,14 +38,8 @@ import type {} from '@monotykamary/dsh-agent'
 import type {} from '@monotykamary/dsh-tools'
 import { createUserMessage } from '@monotykamary/dsh-llm'
 import type {} from '@monotykamary/dsh-llm'
-import { AdvisoryEngine, renderAdvisoryHints, type AdvisoryFire } from './advisory.ts'
-import { discloseSdkSection, DisclosureStore, DISCLOSURE_CORE_TOOLS, type DisclosureEntry } from './disclosure.ts'
-
-declare module '@monotykamary/cordis' {
-  interface Context {
-    fabricDisclosure: DisclosureStore
-  }
-}
+import { AdvisoryEngine, type AdvisoryFire } from './advisory.ts'
+import { discloseSdkSection, DISCLOSURE_CORE_TOOLS, type DisclosureEntry } from './disclosure.ts'
 
 /** Durable source record for one advisory hint message (replay-safe). */
 declare module '@monotykamary/dsh-llm' {
@@ -64,7 +58,7 @@ export const name = 'dsh-fabric-system-prompt'
 /** The prompt registry this override contributes to; the advisory's runtime seams (tool registry, agent pre-step) are resolved lazily so the minimization still mounts where they are absent. */
 export const inject = ['systemPrompt']
 
-export { DisclosureStore, discloseSdkSection, DISCLOSURE_CORE_TOOLS, SDK_CATALOG_MARKER, sdkBlockEntryNames, spliceSdkBlock } from './disclosure.ts'
+export { discloseSdkSection, DISCLOSURE_CORE_TOOLS, SDK_CATALOG_MARKER, sdkBlockEntryNames, spliceSdkBlock } from './disclosure.ts'
 export { AdvisoryEngine, renderAdvisoryHints } from './advisory.ts'
 export type { AdvisoryEntry, AdvisoryConfig, AdvisoryFire } from './advisory.ts'
 export type { DisclosureEntry } from './disclosure.ts'
@@ -103,9 +97,9 @@ export const FABRIC_SYSTEM_PROMPT = [
   "Tool contracts are progressively disclosed: 'tools.describe(name)' returns the exact arguments of a tool the prompt does not list. Match its shape before calling; retry from validation errors, never guess.",
   '',
   '## Delegation',
-  "Delegate self-contained work to subagents in the background by default and start independent delegations together.",
-  "Use 'workflow' only for large multi-agent orchestration the user asks for; prefer plain subagents for one or two delegations.",
-  "Track background jobs; collect still-relevant results before finishing and kill jobs that stop mattering.",
+  "For one independent task, call 'await tools.subagent({ description, prompt, provider, model })' inside 'run_code'. Omit provider/model to inherit the current route; when provider is set, model is required.",
+  "'subagent' runs in the background by default, returns a durable child id, and sends a settlement notice automatically. It is not a 'job_*' task; continue useful work instead of polling or collecting it.",
+  "Use 'subagent_fork' only when the child needs completed parent turns. Start independent delegations together; reserve 'workflow' for explicit multi-agent orchestration.",
   '',
   '## Discipline',
   "Check the '[exit code: N]' marker on every bash result and investigate before moving on.",
@@ -128,6 +122,7 @@ export const PRESERVED_SECTIONS = new Set([
   'harness:source',
   'app:web-surface',
   'deployment:persona',
+  'user:system-instructions',
   'fabric:system-prompt',
   'plan:policy',
   'tool:cordis',
@@ -158,8 +153,8 @@ export const MEMORY_GUIDANCE = [
   "- After '/compact', re-establish dropped context by recalling from memory before resuming — never trust prior checkpoint prose.",
 ].join('\n')
 
-/** Advisory hint budget, mirroring pi's default (≈512 tokens at chars/4). */
-const ADVISORY_BUDGET_CHARS = 2048
+/** Ambient orchestration affordances that never spend advisory fuel. */
+export const ADVISORY_AMBIENT_TOOLS = new Set([...DISCLOSURE_CORE_TOOLS, 'subagent', 'subagent_fork'])
 
 /**
  * Resolve the DSH tool registry lazily, tolerating compositions without it
@@ -168,19 +163,6 @@ const ADVISORY_BUDGET_CHARS = 2048
 function resolveTools(ctx: Context): { schemas(scope?: unknown): readonly { name: string; description: string; parameters?: unknown }[] } | undefined {
   try {
     return ctx.get('tools') as unknown as { schemas(scope?: unknown): readonly { name: string; description: string; parameters?: unknown }[] }
-  } catch {
-    return undefined
-  }
-}
-
-/**
- * Resolve the host-provided disclosure catalog, tolerating compositions
- * without it (the advisory degrades to dormant and `tools.describe()`
- * reports unavailable, matching the code runtime's contract).
- */
-function resolveDisclosureStore(ctx: Context): DisclosureStore | undefined {
-  try {
-    return ctx.get('fabricDisclosure')
   } catch {
     return undefined
   }
@@ -228,18 +210,13 @@ const MAX_ENGINES = 64
  * flag on purpose — a global listener would receive every preset's
  * assemblies and minimize their prompts too.
  *
- * The agent pre-step listener publishes the agent-scoped tool catalog
- * for `tools.describe()` and runs the combustion advisory on each
- * user turn, injecting bounded capability hints as plugin-source
+ * The agent pre-step listener reads the agent-scoped tool catalog and
+ * runs the combustion advisory on each user turn, injecting bounded
+ * capability hints as plugin-source
  * user messages (the same seam the skill catalog uses).
  * @param ctx - host context carrying the prompt registry.
  */
 export function apply(ctx: Context): void {
-  // The disclosure catalog is provided by the host-plane dsh-fabric-host
-  // row so the host code runtime can resolve it; this preset-scoped plugin
-  // consumes it and publishes per-agent catalogs.
-  const store = resolveDisclosureStore(ctx)
-
   ctx.systemPrompt.section({
     name: 'fabric:system-prompt',
     order: 10,
@@ -283,13 +260,11 @@ export function apply(ctx: Context): void {
     if (decision.kind === 'reject') return decision
     signal.throwIfAborted()
 
-    // Publish the agent-scoped catalog so tools.describe() resolves
-    // contracts for tools the disclosed prompt no longer lists. The
-    // registry is read lazily: in compositions without the tools service
-    // the advisory stays dormant instead of blocking the prompt override.
+    // The registry is read lazily: compositions without the tools service
+    // keep the advisory dormant while DSH Code Mode still owns discovery.
     let entries: DisclosureEntry[] = []
     const registry = resolveTools(ctx)
-    if (store !== undefined && registry !== undefined) {
+    if (registry !== undefined) {
       entries = registry.schemas(agent)
         .filter(schema => schema.name !== 'run_code')
         .map(schema => ({
@@ -297,7 +272,6 @@ export function apply(ctx: Context): void {
           description: schema.description,
           parameters: schema.parameters as Record<string, unknown> | undefined,
         }))
-      store.update(agent.id, entries)
     }
 
     // Score the current user turn and fire bounded capability hints.
@@ -313,12 +287,12 @@ export function apply(ctx: Context): void {
       name: entry.name,
       description: entry.description,
       kind: 'tool',
-      disclosed: DISCLOSURE_CORE_TOOLS.has(entry.name),
+      disclosed: ADVISORY_AMBIENT_TOOLS.has(entry.name),
     })))
     const fires = engine.scorePrompt(text)
     if (fires.length === 0) return decision
 
-    const rendered = renderAdvisoryHints(fires, ADVISORY_BUDGET_CHARS)
+    const rendered = engine.render(fires)
     if (rendered.length === 0) return decision
     return {
       kind: 'enter',

@@ -18,6 +18,42 @@ describe('AdvisoryEngine', () => {
     expect(engine.firesRemaining()).toBe(2)
   })
 
+  it('uses the strong band for immediate fire and warms a shared two-term phrase for four turns', () => {
+    const engine = new AdvisoryEngine()
+    engine.setCatalog([
+      { name: 'alpha', description: 'Durable task alpha.', kind: 'tool' },
+      { name: 'beta', description: 'Durable task beta.', kind: 'tool' },
+    ])
+
+    expect(engine.scorePrompt('durable task')).toEqual([])
+    expect(engine.scorePrompt('durable task')).toEqual([])
+    expect(engine.scorePrompt('durable task')).toEqual([])
+    expect(engine.scorePrompt('durable task').map(fire => fire.name).sort()).toEqual(['alpha', 'beta'])
+  })
+
+  it('decays warmth on unrelated turns instead of retaining stale heat', () => {
+    const engine = new AdvisoryEngine({ maxFiresPerSession: 1 })
+    engine.setCatalog([
+      { name: 'alpha', description: 'Durable task alpha.', kind: 'tool' },
+      { name: 'beta', description: 'Durable task beta.', kind: 'tool' },
+    ])
+
+    for (let turn = 0; turn < 3; turn += 1) expect(engine.scorePrompt('durable task')).toEqual([])
+    expect(engine.scorePrompt('unrelated conversation')).toEqual([])
+    expect(engine.scorePrompt('durable task')).toEqual([])
+  })
+
+  it('ranks inverse-frequency evidence before spending the fire budget', () => {
+    const engine = new AdvisoryEngine({ maxFiresPerSession: 1 })
+    engine.setCatalog([
+      { name: 'early_a', description: 'Handle durable task records.', kind: 'tool' },
+      { name: 'early_b', description: 'Handle durable task records.', kind: 'tool' },
+      { name: 'late', description: 'Handle durable task with quantum lattice.', kind: 'tool' },
+    ])
+
+    expect(engine.scorePrompt('handle durable task quantum lattice').map(fire => fire.name)).toEqual(['late'])
+  })
+
   it('accumulates weak scatter evidence across turns before firing', () => {
     const engine = new AdvisoryEngine()
     engine.setCatalog(catalog)
@@ -75,6 +111,9 @@ describe('AdvisoryEngine', () => {
     const generous = renderAdvisoryHints(fires, 10_000)
     expect(generous).toContain('web_search')
     expect(generous).toContain('tools.describe')
+    expect(renderAdvisoryHints(fires, generous.length)).toBe(generous)
+    expect(renderAdvisoryHints(fires, generous.length - 1).length).toBeLessThanOrEqual(generous.length - 1)
     expect(renderAdvisoryHints([], 1000)).toBe('')
+    expect(new AdvisoryEngine({ budgetChars: 60 }).render(fires)).toBe('')
   })
 })

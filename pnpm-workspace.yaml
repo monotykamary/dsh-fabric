@@ -41,3 +41,10 @@ overrides:
   '@monotykamary/dsh-workflow': 'link:../deepseek-harness/packages/workflow/workflow'
   '@monotykamary/dsh-workspace': 'link:../deepseek-harness/packages/workspace/workspace'
   '@monotykamary/schemastery': 'link:../deepseek-harness/vendor/schemastery'
+
+minimumReleaseAgeExclude:
+  - '@monotykamary/dsh-brand@0.1.7'
+  - '@monotykamary/dsh-session-query@0.1.7'
+  - '@monotykamary/dsh-session-title@0.1.7'
+  - '@monotykamary/dsh-timeout@0.1.7'
+  - '@monotykamary/dsh-tool-session-query@0.1.7'

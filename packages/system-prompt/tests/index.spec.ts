@@ -41,6 +41,11 @@ describe('dsh-fabric-system-prompt', () => {
     expect(fabric?.text).toContain('TOOL_OUTCOME_UNKNOWN')
     expect(fabric?.text).toContain('## Memory')
     expect(fabric?.text).toContain('session_search')
+    expect(fabric?.text).toContain('await tools.subagent({ description, prompt, provider, model })')
+    expect(fabric?.text).toContain("It is not a 'job_*' task")
+    expect(fabric?.text).not.toContain('Track background jobs')
+    expect(FabricSystemPrompt.ADVISORY_AMBIENT_TOOLS.has('subagent')).toBe(true)
+    expect(FabricSystemPrompt.ADVISORY_AMBIENT_TOOLS.has('subagent_fork')).toBe(true)
   })
 
   it('minimizes native per-tool prose while preserving structural and dynamic sections', async () => {
@@ -54,6 +59,7 @@ describe('dsh-fabric-system-prompt', () => {
     ctx.systemPrompt.section({ name: 'tool:read', order: 100, text: 'read guidance' })
     ctx.systemPrompt.section({ name: 'tool:report', order: 130, text: 'report guidance' })
     ctx.systemPrompt.section({ name: 'plan:policy', order: 110, text: 'plan policy' })
+    ctx.systemPrompt.section({ name: 'user:system-instructions', order: 1, text: 'trusted user policy' })
     ctx.systemPrompt.section({ name: 'tools:sdk', order: 150, text: 'sdk body' })
     ctx.systemPrompt.section({ name: 'tools:code-only', order: 140, text: 'code only' })
     ctx.systemPrompt.section({ name: 'fabric:mesh-guidance', order: 120, text: 'mesh guidance' })
@@ -67,6 +73,8 @@ describe('dsh-fabric-system-prompt', () => {
     expect(names).not.toContain('tool:read')
     expect(names).toContain('tool:report')
     expect(names).toContain('plan:policy')
+    expect(names).toContain('user:system-instructions')
+    expect(assembly.sections.find(section => section.name === 'user:system-instructions')?.text).toBe('trusted user policy')
     expect(names).toContain('tools:sdk')
     expect(names).toContain('tools:code-only')
     expect(names).toContain('fabric:mesh-guidance')
@@ -100,6 +108,8 @@ describe('progressive disclosure wiring', () => {
     const sdk = assembly.sections.find(entry => entry.name === 'tools:sdk')
     expect(sdk?.text).toContain('The available tools:')
     expect(sdk?.text).toContain('ask_user_question')
+    expect(sdk?.text).toContain('describe(name: string')
+    expect(sdk?.text).toContain('call(request: { name: string')
     expect(sdk?.text).not.toContain('subagent')
     expect(sdk?.text).not.toContain('fabric_mesh')
     expect(sdk?.text).not.toContain('workflow')
@@ -114,10 +124,6 @@ describe('fabric-scoped overlay', () => {
 
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    // The host-plane dsh-fabric-host row provides the catalog in production;
-    // the test stands in for it so the plugin's consume path resolves.
-    ctx.provide('fabricDisclosure', new FabricSystemPrompt.DisclosureStore())
-
     const fabric = await mintScope(ctx, 'fabric')
     const foreign = await mintScope(ctx, 'foreign')
 

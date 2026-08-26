@@ -1,10 +1,19 @@
 import { access, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { satisfies } from 'semver'
 
 const nl = '\n'
 
 const root = JSON.parse(await readFile('package.json', 'utf8'))
+const workspaceConfig = await readFile('pnpm-workspace.yaml', 'utf8')
+const linkedVersions = new Map()
+for (const match of workspaceConfig.matchAll(/^  '([^']+)': 'link:([^']+)'$/gm)) {
+  const [, packageName, target] = match
+  const manifest = JSON.parse(await readFile(resolve(target, 'package.json'), 'utf8'))
+  linkedVersions.set(packageName, manifest.version)
+}
+verifyLinkedDependencyRanges(root, 'package.json')
 if (root.scripts?.['install:local'] !== 'node scripts/install-local.mjs') {
   throw new Error('package.json does not expose the local installer')
 }
@@ -86,6 +95,7 @@ const packageDirs = ['protocol', 'compaction', 'host', 'mesh', 'models', 'delega
 for (const directory of packageDirs) {
   const manifestPath = `packages/${directory}/package.json`
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+  verifyLinkedDependencyRanges(manifest, manifestPath)
   if (manifest.private === true) throw new Error(`${manifest.name} is still private`)
   if (manifest.name.startsWith('@') && manifest.publishConfig?.access !== 'public') {
     throw new Error(`${manifest.name} must publish with public access`)
@@ -166,6 +176,14 @@ for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   }
 }
 
+for (const preset of ['standard', 'code', 'fabric', 'cordis']) {
+  const composition = await readFile(`packages/compaction/presets/${preset}/agent.cordis.yml`, 'utf8')
+  const commandRows = composition.match(/commandName:\s*delegate/g) ?? []
+  if (commandRows.length !== 1 || !/provider:\s*spawn[\s\S]{0,160}commandName:\s*delegate[\s\S]{0,80}commandForkProvider:\s*fork/.test(composition)) {
+    throw new Error(`Fabric preset ${preset} must expose one fresh-first /delegate command with fork support`)
+  }
+}
+
 for (const preset of ['standard', 'code', 'fabric', 'cordis', 'minimal']) {
   const composition = await readFile('packages/compaction/presets/' + preset + '/agent.cordis.yml', 'utf8')
   const todoMasked = composition.includes('- id: tool-todo' + nl + "  name: '@monotykamary/dsh-tool-todo'" + nl + '  disabled: true')
@@ -220,4 +238,16 @@ console.log(`verified ${references.length} composition rows, ${packageDirs.lengt
 function packageNameFromSpecifier(specifier) {
   if (specifier.startsWith('@')) return specifier.split('/').slice(0, 2).join('/')
   return specifier.split('/')[0]
+}
+
+function verifyLinkedDependencyRanges(manifest, manifestPath) {
+  for (const section of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    for (const [packageName, range] of Object.entries(manifest[section] ?? {})) {
+      const linkedVersion = linkedVersions.get(packageName)
+      if (linkedVersion === undefined || range.startsWith('workspace:')) continue
+      if (!satisfies(linkedVersion, range, { includePrerelease: true })) {
+        throw new Error(`${manifestPath} ${section} range ${packageName}@${range} rejects linked ${linkedVersion}`)
+      }
+    }
+  }
 }
