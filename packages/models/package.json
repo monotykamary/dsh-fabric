@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@monotykamary/schemastery": "^0.1.0"
+    "@monotykamary/schemastery": "^3.18.1"
   },
   "peerDependencies": {
     "@monotykamary/cordis": "^4.0.1",
