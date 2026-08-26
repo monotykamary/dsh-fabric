@@ -162,6 +162,33 @@ describe('fabric activity projection', () => {
     })])
   })
 
+  it('replays observed worker routes from nested delegate dispatch results', () => {
+    const definition = createFabricActivityProjection()
+    let state = definition.init()
+    state = definition.apply(state, event('tool/code-dispatch-start', {
+      rootCallId: 'root', parentCallId: 'root', subCallId: 'root:code:1', name: 'delegate',
+      arguments: { label: 'route audit', tasks: [{ label: 'reviewer', task: 'inspect', tier: 'cheap' }] },
+      location: { turn: 1, step: 1 },
+    }, 1))
+    state = definition.apply(state, event('tool/code-dispatch', {
+      rootCallId: 'root', parentCallId: 'root', subCallId: 'root:code:1', name: 'delegate', arguments: {},
+      isError: false, location: { turn: 1, step: 1 }, content: [{ type: 'text', text: JSON.stringify({
+        delegationId: 'root:code:1', label: 'route audit', status: 'completed',
+        workers: [{
+          index: 0, label: 'reviewer', task: 'inspect', tier: 'cheap', outcome: 'completed', output: 'done',
+          childId: 'child-route', actual: { provider: 'codex-oauth', model: 'gpt-5.6-sol' }, routingVerified: true,
+        }],
+      }) }],
+    }, 2))
+
+    expect(definition.wire.view(state).delegations[0]).toMatchObject({
+      status: 'completed',
+      workers: [{
+        childSessionId: 'child-route', actualProvider: 'codex-oauth', actualModel: 'gpt-5.6-sol', routingVerified: true,
+      }],
+    })
+  })
+
   it('settles cancellation and failure while interrupted runs remain visibly running', () => {
     const definition = createFabricActivityProjection()
     const start = (callId: string, seq: number) => event('tool/call', {

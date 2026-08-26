@@ -90,9 +90,13 @@ export function buildFabricClientModel(
       workers: delegation.workers.map(worker => {
         const telemetry = worker.childSessionId === undefined ? undefined : telemetryBySession.get(worker.childSessionId)
         if (telemetry === undefined) return worker
+        const active = worker.status === 'pending' || worker.status === 'running' || worker.status === 'blocked'
+        const actualProvider = active ? telemetry.route?.provider : worker.actualProvider ?? telemetry.route?.provider
+        const actualModel = active ? telemetry.route?.model : worker.actualModel ?? telemetry.route?.model
         return {
           ...worker,
-          ...(telemetry.route === undefined ? {} : { actualProvider: telemetry.route.provider, actualModel: telemetry.route.model }),
+          ...(actualProvider === undefined ? {} : { actualProvider }),
+          ...(actualModel === undefined ? {} : { actualModel }),
           ...(telemetry.parentSessionId === undefined ? {} : { parentSessionId: telemetry.parentSessionId }),
           ...(telemetry.currentActivity === undefined ? {} : { currentActivity: telemetry.currentActivity }),
         }

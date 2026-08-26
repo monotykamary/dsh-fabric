@@ -131,7 +131,7 @@ export function createFabricActivityProjection(
 
   return {
     key: 'fabricActivity',
-    stateVersion: 6,
+    stateVersion: 7,
     stateSchema,
     init: () => ({ activities: [], nodes: [], edges: [], delegations: [], delegationRuns: {}, workflowMembers: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
