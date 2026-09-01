@@ -1,6 +1,6 @@
 {
   "name": "dsh-fabric",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Fabric-style deterministic compaction, activity, topology, code runtime, mesh, and actor capabilities for DeepSeek Harness",
   "type": "module",
   "license": "MIT",

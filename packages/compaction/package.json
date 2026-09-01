@@ -1,6 +1,6 @@
 {
   "name": "dsh-fabric-compaction",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "publishConfig": {
     "access": "public"
   },

@@ -27,7 +27,7 @@
     },
     "packages/client-ui": {
       "name": "dsh-fabric-client-ui",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "dsh-fabric-protocol": "workspace:^",
         "react": "^18.2.0",
@@ -66,7 +66,7 @@
     },
     "packages/code-runtime-quickjs": {
       "name": "dsh-fabric-code-runtime-quickjs",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "@jitl/quickjs-singlefile-mjs-release-sync": "^0.32.0",
         "@monotykamary/schemastery": "^3.18.1",
@@ -90,7 +90,7 @@
     },
     "packages/compaction": {
       "name": "dsh-fabric-compaction",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "dsh-fabric-protocol": "workspace:^",
       },
@@ -126,7 +126,7 @@
     },
     "packages/host": {
       "name": "dsh-fabric-host",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "@monotykamary/schemastery": "^3.18.1",
         "dsh-fabric-protocol": "workspace:^",
@@ -156,7 +156,7 @@
     },
     "packages/mesh": {
       "name": "dsh-fabric-mesh",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "dsh-fabric-protocol": "workspace:^",
         "zod": "4.4.3",
@@ -190,7 +190,7 @@
     },
     "packages/models": {
       "name": "dsh-fabric-models",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "@monotykamary/schemastery": "^3.18.1",
       },
@@ -213,11 +213,11 @@
     },
     "packages/protocol": {
       "name": "dsh-fabric-protocol",
-      "version": "0.1.11",
+      "version": "0.1.12",
     },
     "packages/schema": {
       "name": "dsh-fabric-schema",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "dsh-fabric-mesh": "workspace:^",
         "dsh-fabric-protocol": "workspace:^",
@@ -254,7 +254,7 @@
     },
     "packages/system-prompt": {
       "name": "dsh-fabric-system-prompt",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "devDependencies": {
         "@monotykamary/cordis": "^4.0.1",
         "@monotykamary/dsh-invariants": "^0.1.7",
