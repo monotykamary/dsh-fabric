@@ -133,27 +133,57 @@ const atomicJsonWrite = (filePath: string, value: unknown): void => {
 }
 
 const allowedEnforceRefs = new Set([
+  // Inert Code Mode transports. Their nested end-capability calls traverse the
+  // same ToolRuntime waterfall independently.
+  'run_code',
+  'call',
+  'describe',
+  // Workspace and code observations.
   'read',
+  'read_image',
   'grep',
   'glob',
+  'lsp',
+  'changes_read',
+  'skill',
+  // Durable semantic-memory reads.
   'session_search',
   'session_event_search',
   'session_trace',
   'session_event_trace',
   'session_event_read',
+  // Read-only host projections. Process/job control and cursor-consuming output
+  // reads remain blocked.
+  'get_goal',
+  'job_list',
+  'schedule_list',
+  'terminal_list',
+  'terminal_read',
+  'list_agents',
+  'team_task_get',
+  'team_task_list',
+  'cordis_inspect_list',
+  'cordis_inspect_query',
+  'cordis_inspect_self',
+  'factory_list',
+  // Read-only world-model projections. Transition, verification, and goal
+  // execution stay blocked; schema_commit advances state through its audited path.
   'state_get',
-  'state_transition',
   'state_history',
   'state_complexity',
-  'state_verify',
-  'state_goal',
-  'state_check_goal',
+  // The certified transaction channel.
   'schema_status',
   'schema_hypothesize',
   'schema_verify',
   'schema_commit',
   'schema_abort',
-  'fabric_mesh',
+  // Observation actions from multiplexed Fabric tools.
+  'fabric_mesh.snapshot',
+  'fabric_mesh.read_topic',
+  'fabric_mesh.get_state',
+  'fabric_mesh.read_mailbox',
+  'fabric_models.current',
+  'fabric_models.list',
 ])
 
 const operationPath = (operation: SchemaFileOperation): string => operation.path
@@ -185,7 +215,7 @@ export class SchemaController {
     this.#recoverJournals()
   }
 
-  /** Enforce/audit gate for model-facing mutation tools; called by the tool plugin's pre-execute listener. */
+  /** Enforce/audit gate for every model-facing resolved action; unknown refs fail closed in enforce mode. */
   async authorize(ref: string, parentToolCallId: string): Promise<void> {
     if (this.config.mode === 'off' || allowedEnforceRefs.has(ref)) return
     const message = `Schema ${this.config.mode} policy would block ${ref}: protected workspace mutations and external effects must use schema_commit`

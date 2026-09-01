@@ -50,7 +50,7 @@ export type FabricTopologyGroupKind =
   | 'namespace'
 
 /** Kinds of timeline facts retained in a compact activity projection. */
-export type FabricActivityKind = 'session' | 'workflow' | 'phase' | 'agent' | 'mesh' | 'topic' | 'state' | 'actor' | 'message' | 'compaction'
+export type FabricActivityKind = 'session' | 'workflow' | 'phase' | 'agent' | 'execution' | 'mesh' | 'topic' | 'state' | 'actor' | 'message' | 'compaction'
 
 /** One timeline fact associated with a node when applicable. */
 export interface FabricActivityRecord {

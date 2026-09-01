@@ -3,11 +3,14 @@
  *
  * The full SDK block (intro + "The available tools:" + the generated
  * TypeScript type block) is the single largest system-prompt cost in Code
- * Mode. This module keeps the always-on block to the core tool set and lets
- * the remaining tools stay registered but out of the prompt: they remain
- * callable through the binding map and discoverable through
- * `tools.describe()` / the capability advisory (see `advisory.ts`), the same
- * split pi-fabric uses between ambient guidance and on-demand references.
+ * Mode. This module keeps full declarations for the core tool set and replaces
+ * every optional declaration with a compact names-only roster. All tools stay
+ * registered and callable through the binding map; unfamiliar names resolve
+ * deterministically through `tools.describe()` before `tools.call()`.
+ *
+ * This follows current pi-fabric: its names-only roster replaced the retired
+ * prompt-matched capability combustion channel, letting the model discover
+ * proactively without heuristic, turn-varying prompt injections.
  *
  * The splice operates on the RENDERED section text, never on DSH internals:
  * DSH's renderer output is deterministic and entry-terminated, and the
@@ -34,13 +37,15 @@ export const DISCLOSURE_CORE_TOOLS: ReadonlySet<string> = new Set([
 
 /**
  * Everything else (subagent, workflow, ralph, fabric_mesh, web_search,
- * imagegen, skill, fovea_*, …) is progressively disclosed: omitted from the
- * block, still registered, discoverable via `tools.describe()` and the
- * capability advisory.
+ * imagegen, skill, fovea_*, …) is progressively disclosed: its detailed
+ * declaration is omitted, but its name stays visible in the compact roster.
  */
 
 /** Marker that opens the generated tool-catalog block inside the SDK section. */
 export const SDK_CATALOG_MARKER = 'The available tools:'
+
+/** Marker opening the compact index of registered tools whose schemas were removed. */
+export const SDK_ROSTER_MARKER = 'Additional registered tools (names only):'
 
 /** One top-level catalog entry: `  <name>: {` at two-space indent (quoted or bare). */
 const ENTRY_START = /^  ([A-Za-z_$][A-Za-z0-9_$]*|"[^"]*"): \{$/
@@ -69,13 +74,28 @@ function entryName(raw: string): string {
   return raw
 }
 
-/** Enumerate the catalog entry names present in a rendered SDK block. */
+/** Boundaries of the two generated maps that contain tool entries. */
+const TOOL_MAP_START = /^interface Tool(?:Args|Output)Map \{$/
+const TOOL_MAP_END = /^}$/
+
+/** Enumerate the unique catalog entry names present in a rendered SDK block. */
 export function sdkBlockEntryNames(block: string): string[] {
-  return block.split('\n').flatMap(line => {
-    const braced = ENTRY_START.exec(line)
-    const name = braced?.[1] ?? ENTRY_INLINE.exec(line)?.[1]
-    return name === undefined ? [] : [entryName(name)]
-  })
+  const names = new Set<string>()
+  let inToolMap = false
+  for (const line of block.split('\n')) {
+    if (TOOL_MAP_START.test(line)) {
+      inToolMap = true
+      continue
+    }
+    if (inToolMap && TOOL_MAP_END.test(line)) {
+      inToolMap = false
+      continue
+    }
+    if (!inToolMap) continue
+    const name = ENTRY_START.exec(line)?.[1] ?? ENTRY_INLINE.exec(line)?.[1]
+    if (name !== undefined) names.add(entryName(name))
+  }
+  return [...names]
 }
 
 /**
@@ -92,10 +112,23 @@ export function spliceSdkBlock(block: string, remove: ReadonlySet<string>): stri
   const lines = block.split('\n')
   const out: string[] = []
   let index = 0
+  let inToolMap = false
   while (index < lines.length) {
     const line = lines[index] ?? ''
-    const braced = ENTRY_START.exec(line)
-    const name = braced?.[1] ?? ENTRY_INLINE.exec(line)?.[1]
+    if (TOOL_MAP_START.test(line)) {
+      inToolMap = true
+      out.push(line)
+      index += 1
+      continue
+    }
+    if (inToolMap && TOOL_MAP_END.test(line)) {
+      inToolMap = false
+      out.push(line)
+      index += 1
+      continue
+    }
+    const braced = inToolMap ? ENTRY_START.exec(line) : null
+    const name = braced?.[1] ?? (inToolMap ? ENTRY_INLINE.exec(line)?.[1] : undefined)
     if (name !== undefined && remove.has(entryName(name))) {
       // Drop the renderer's one-line JSDoc that precedes this entry, so no
       // orphaned comment survives a removed tool.
@@ -115,11 +148,22 @@ export function spliceSdkBlock(block: string, remove: ReadonlySet<string>): stri
   return out.join('\n')
 }
 
+/** Render a deterministic, injection-safe index of omitted tool names. */
+export function renderSdkRoster(names: readonly string[]): string {
+  const sorted = [...new Set(names)].sort()
+  if (sorted.length === 0) return ''
+  return [
+    SDK_ROSTER_MARKER,
+    JSON.stringify(sorted),
+    "Resolve an unfamiliar name with `await tools.describe('<name>')`, then call it with `await tools.call({ name, args })`; do not guess arguments.",
+  ].join('\n')
+}
+
 /**
  * Apply disclosure to a rendered `tools:sdk` section: keep the intro and the
- * code fences byte-identical and splice the catalog block down to `keep`.
- * Sections without the catalog marker (or with no removable entries) pass
- * through untouched.
+ * code fences byte-identical, splice the catalog block down to `keep`, and
+ * append the removed names as a compact deterministic roster. Sections without
+ * the catalog marker (or with no removable entries) pass through untouched.
  * @param text - the section text as assembled (intro + fenced TS block).
  * @param keep - the entry names that remain in the block.
  * @returns the disclosed section text.
@@ -134,12 +178,7 @@ export function discloseSdkSection(text: string, keep: ReadonlySet<string>): str
   const block = text.slice(blockStart + 1, fenceClose)
   const remove = new Set(sdkBlockEntryNames(block).filter(name => !keep.has(name)))
   if (remove.size === 0) return text
-  return text.slice(0, blockStart + 1) + spliceSdkBlock(block, remove) + text.slice(fenceClose)
-}
-
-/** One disclosed tool entry: the canonical schema surface DSH projects. */
-export interface DisclosureEntry {
-  readonly name: string
-  readonly description: string
-  readonly parameters: Record<string, unknown> | undefined
+  const disclosed = text.slice(0, blockStart + 1) + spliceSdkBlock(block, remove) + text.slice(fenceClose)
+  const roster = renderSdkRoster([...remove])
+  return `${disclosed}${disclosed.endsWith('\n') ? '' : '\n'}\n${roster}\n`
 }

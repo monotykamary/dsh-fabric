@@ -3,7 +3,7 @@ import { isCompactCheckpointSource } from '@monotykamary/dsh-compaction'
 import { projectFabricMeshActivity, readFabricMeshResultMeta } from 'dsh-fabric-protocol'
 import type { FabricActivityRecord, FabricJsonValue } from 'dsh-fabric-protocol'
 import type { ContentBlock, Message } from '@monotykamary/dsh-llm'
-import { resolveRunCodeTitle } from '@monotykamary/dsh-tools'
+import { resolveRunCodeDisplay } from '@monotykamary/dsh-tools'
 import { clipUtf8 } from './bounds.ts'
 
 export type FabricTraceJsonValue = null | boolean | number | string | FabricTraceJsonValue[] | { [key: string]: FabricTraceJsonValue }
@@ -126,13 +126,14 @@ export function normalizeMessages(
   const output: CompactionEvent[] = prior.map(event => ({ ...event }))
   appendSessionActivities(output, activityEvents, new Set(output.map(event => event.entryId)))
   const calls = new Map<string, ToolCallEvent>()
-  const runTitles = new Map<string, string>()
+  const runDisplays = new Map<string, { name: string; description?: string }>()
   for (const event of output) {
     if (event.kind !== 'toolCall') continue
     calls.set(event.toolCallId, event)
     if (event.name === 'run_code' && typeof event.args.code === 'string') {
-      runTitles.set(event.toolCallId, resolveRunCodeTitle({
+      runDisplays.set(event.toolCallId, resolveRunCodeDisplay({
         code: event.args.code,
+        display: event.args.display,
         ...(typeof event.args.description === 'string' ? { description: event.args.description } : {}),
       }))
     }
@@ -173,8 +174,9 @@ export function normalizeMessages(
         output.push(event)
         calls.set(event.toolCallId, event)
         if (block.name === 'run_code' && typeof rawArgs.code === 'string') {
-          runTitles.set(event.toolCallId, resolveRunCodeTitle({
+          runDisplays.set(event.toolCallId, resolveRunCodeDisplay({
             code: rawArgs.code,
+            display: rawArgs.display,
             ...(typeof rawArgs.description === 'string' ? { description: rawArgs.description } : {}),
           }))
         }
@@ -201,15 +203,18 @@ export function normalizeMessages(
             kind: 'toolResult', toolCallId, toolName, isError, text,
             ...(result === undefined ? {} : { result }),
           }, entryId, sourceEntryId))
-          const runTitle = toolName === 'run_code' ? runTitles.get(toolCallId) : undefined
-          if (runTitle !== undefined && call !== undefined) {
+          const runDisplay = toolName === 'run_code' ? runDisplays.get(toolCallId) : undefined
+          if (runDisplay !== undefined && call !== undefined) {
             const subordinal = `call:${toolCallId}`
             output.push(base({
               kind: 'fabricRun',
               toolCallId,
               subordinal,
               address: `${call.entryId}/${subordinal}`,
-              name: clipUtf8(runTitle, MAX_EVENT_TEXT_BYTES),
+              name: clipUtf8(runDisplay.name, MAX_EVENT_TEXT_BYTES),
+              ...(runDisplay.description === undefined
+                ? {}
+                : { description: clipUtf8(runDisplay.description, MAX_EVENT_TEXT_BYTES) }),
               outcome: isError ? 'failed' : 'succeeded',
               source: 'result',
             }, call.entryId, sourceEntryId))

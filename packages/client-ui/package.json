@@ -40,7 +40,9 @@
       "inject": [
         "@monotykamary/dsh-client-runtime",
         "@monotykamary/dsh-client-locale",
-        "@monotykamary/dsh-client-ui-conversation"
+        "@monotykamary/dsh-client-ui-conversation",
+        "@monotykamary/dsh-client-ui-settings",
+        "@monotykamary/dsh-client-ui-settings-plugins"
       ]
     }
   },
@@ -63,7 +65,9 @@
     "@monotykamary/dsh-client-ui-slots": "^0.1.7",
     "@monotykamary/dsh-invariants": "^0.1.7",
     "@monotykamary/dsh-subagent": "^0.1.7",
-    "@monotykamary/dsh-token-meter": "^0.1.7"
+    "@monotykamary/dsh-token-meter": "^0.1.7",
+    "@monotykamary/dsh-client-ui-settings": "^0.1.7",
+    "@monotykamary/dsh-client-ui-settings-plugins": "^0.1.7"
   },
   "devDependencies": {
     "dsh-fabric-host": "workspace:^",
@@ -78,7 +82,9 @@
     "@monotykamary/dsh-invariants": "^0.1.7",
     "@monotykamary/dsh-subagent": "^0.1.7",
     "@monotykamary/dsh-token-meter": "^0.1.7",
-    "@types/react": "~18.3.0"
+    "@types/react": "~18.3.0",
+    "@monotykamary/dsh-client-ui-settings": "^0.1.7",
+    "@monotykamary/dsh-client-ui-settings-plugins": "^0.1.7"
   },
   "repository": {
     "type": "git",

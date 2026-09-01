@@ -15,7 +15,7 @@ export type FabricLocaleKey =
   | 'kind.actor' | 'kind.topic' | 'kind.message' | 'kind.state' | 'kind.component' | 'kind.compaction'
   | 'group.main' | 'group.participants' | 'group.sessions' | 'group.agents' | 'group.actors' | 'group.mesh' | 'group.topics'
   | 'group.topicFabric' | 'group.topicProject' | 'group.state' | 'group.stateWorld' | 'group.stateSchema' | 'group.stateProject' | 'group.components'
-  | 'activity.kind.session' | 'activity.kind.workflow' | 'activity.kind.phase' | 'activity.kind.agent' | 'activity.kind.mesh'
+  | 'activity.kind.session' | 'activity.kind.workflow' | 'activity.kind.phase' | 'activity.kind.agent' | 'activity.kind.execution' | 'activity.kind.mesh'
   | 'activity.kind.topic' | 'activity.kind.state' | 'activity.kind.actor' | 'activity.kind.message' | 'activity.kind.compaction'
   | 'action.created' | 'action.published' | 'action.compareAndSwap' | 'action.sent' | 'action.claimed'
   | 'action.failed' | 'action.completed' | 'action.started' | 'action.summarized' | 'action.pruned'
@@ -96,6 +96,7 @@ export const en: LocaleDictOf<'fabric'> = {
   'activity.kind.workflow': 'Workflow',
   'activity.kind.phase': 'Phase',
   'activity.kind.agent': 'Agent',
+  'activity.kind.execution': 'Execution',
   'activity.kind.mesh': 'Mesh',
   'activity.kind.topic': 'Topic',
   'activity.kind.state': 'State',
@@ -191,6 +192,7 @@ export const zh: LocaleDictOf<'fabric'> = {
   'activity.kind.workflow': '工作流',
   'activity.kind.phase': '阶段',
   'activity.kind.agent': '代理',
+  'activity.kind.execution': '执行',
   'activity.kind.mesh': '网格',
   'activity.kind.topic': '主题',
   'activity.kind.state': '状态',

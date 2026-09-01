@@ -14,21 +14,23 @@ verification → certified transaction), adapted from pi-fabric's proven
   token fold), the executable goal predicate (`state/goal`), and
   fail-closed re-verification that certifies or revokes.
 - **Schema transactions** (`schema_*` tools): `schema_hypothesize` binds
-  a falsifiable hypothesis plus nonempty typed evidence to the current state
-  and a git-aware workspace fingerprint; `schema_verify` fail-closed
-  confirms every evidence item against the unchanged fingerprint and may
-  issue one fresh session-bound single-use certificate; `schema_commit`
-  consumes the certificate and atomically applies declared write/edit/delete
-  operations with SHA-256 preconditions, postconditions, before-image
-  journals, rollback/quarantine, and crash recovery, then records net committed
-  text changes and complete-content SHA-1/SHA-256 transitions through the Harness mutation receipt API; `schema_abort`
-  discards uncommitted artifacts.
-- **Enforcement** (`mode: off | audit | enforce`): in `enforce` mode the
-  `tools/pre-execute` gate denies direct `edit`/`write` calls with the
-  Schema route; `audit` publishes `would_block` events without denying.
-  Shell-produced mutations are outside this gate (pi-fabric's prewalk
-  shell-mutation interception is a separate deferred surface); evidence
-  commands run through the controller's own bounded runner.
+  a falsifiable hypothesis plus nonempty typed evidence to the current state,
+  a git-aware workspace fingerprint, and one ToolRuntime root invocation;
+  `schema_verify` fail-closed confirms every evidence item against the unchanged
+  fingerprint and may issue one fresh same-run single-use certificate;
+  `schema_commit` consumes it in that run and atomically applies declared
+  write/edit/delete operations with SHA-256 preconditions, postconditions,
+  before-image journals, rollback/quarantine, and crash recovery, then records
+  net committed text changes and complete-content SHA-1/SHA-256 transitions
+  through the Harness mutation receipt API. `schema_abort` discards
+  uncommitted artifacts, and outer `run_code` settlement abandons any remainder.
+- **Enforcement** (`mode: off | audit | enforce`): every resolved ToolRuntime
+  call crosses one fail-closed `tools/pre-execute` gate. `enforce` admits only
+  exact observation refs, inert Code Mode transports, metadata-only mesh/model
+  actions, and the certified `schema_*` channel. Shell/terminal execution,
+  direct workspace or state writes, agent/workflow control, compaction, model
+  switching, network/interaction, mesh writes, and unknown tools are denied.
+  `audit` publishes action-level `would_block` records without denying.
 - **Guidance**: a visibility-gated `fabric:schema-guidance` prompt section
   plus a `## Schema` block in the Fabric operating prompt.
 
@@ -79,7 +81,8 @@ temp directory, keyed by the workspace identity hash.
   failed transition's absent-before ledger writes are retained (harmless —
   they only feed future delta measurements), while present-before writes are
   restored.
-- Artifacts bind to the DSH session id (per-session invocation) instead of a
-  per-run `fabric_exec` call id; certificates remain single-use and TTL-bounded.
-- `mode: enforce` covers `edit`/`write`; bash and other tools are not
-  gated (pi's prewalk handoff is a separate deferred surface).
+- DSH propagates the outer `run_code` `rootCallId` instead of pi-fabric's
+  `fabric_exec` tool-call id; both identify one execution tree. Certificates
+  are single-use, TTL-bounded, and abandoned when that outer call settles.
+- Transaction journals live under the OS temporary directory keyed by the
+  workspace identity hash rather than below pi-fabric's mesh root.

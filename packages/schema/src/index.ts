@@ -38,6 +38,19 @@ export { StateStore, STATE_TOPIC, CURRENT_KEY, GOAL_KEY, COMPLEXITY_KEY_PREFIX }
 export type { SchemaMeshEvent } from './state-store.ts'
 export { SchemaController, DEFAULT_SCHEMA_CONFIG } from './controller.ts'
 export type { FabricSchemaConfig, FabricSchemaMode, FabricSchemaTrustedCommand } from './controller.ts'
+export {
+  Config as FabricSchemaSettingsConfigSchema,
+  FABRIC_SCHEMA_MODES,
+  FABRIC_SCHEMA_SETTINGS_NAMESPACE,
+  MAX_CERTIFICATE_TTL_MS,
+  MAX_SCHEMA_BYTES,
+  MAX_SCHEMA_FILES,
+  MIN_CERTIFICATE_TTL_MS,
+  MIN_SCHEMA_BYTES,
+  resolveFabricSchemaConfig,
+} from './config.ts'
+export type { Config as FabricSchemaSettingsConfig } from './config.ts'
+export { FabricSchemaSettings } from './settings.ts'
 export { snapshotWorkspace, resolveWorkspaceFile, sha256File } from './workspace.ts'
 export type { WorkspaceSnapshot } from './workspace.ts'
 export { countFileComplexity, typeScriptJavaScriptComplexity } from './complexity.ts'

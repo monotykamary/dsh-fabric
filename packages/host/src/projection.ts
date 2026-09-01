@@ -15,13 +15,13 @@ import type { SessionEvent } from '@monotykamary/dsh-session'
 import type { WorkflowAgentOutcome, WorkflowStopReason } from '@monotykamary/dsh-workflow'
 import type {} from '@monotykamary/dsh-compaction'
 import type {} from '@monotykamary/dsh-tool-workflow/types'
-import type {} from '@monotykamary/dsh-tools'
+import { resolveRunCodeDisplay } from '@monotykamary/dsh-tools'
 import type {} from './types.ts'
 
 const nodeStatusSchema = z.enum(['pending', 'running', 'idle', 'completed', 'failed', 'blocked', 'stopped'])
 const nodeKindSchema = z.enum(['main', 'group', 'session', 'agent', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction'])
 const edgeKindSchema = z.enum(['parent', 'contains', 'member', 'publish', 'message', 'state', 'route'])
-const activityKindSchema = z.enum(['session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction'])
+const activityKindSchema = z.enum(['session', 'workflow', 'phase', 'agent', 'execution', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction'])
 
 const MAX_ID_BYTES = 512
 const MAX_ACTION_BYTES = 256
@@ -68,6 +68,10 @@ interface FabricProjectionState extends FabricActivityProjection {
     sessionId: string
     label: string
   }>
+  codeRuns: Record<string, {
+    name: string
+    description?: string
+  }>
 }
 
 const workflowMemberSchema = z.object({
@@ -77,12 +81,18 @@ const workflowMemberSchema = z.object({
   label: z.string(),
 })
 
+const codeRunSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+})
+
 /** The fold's full persisted state: the client view plus workflow-member bookkeeping. */
 const stateSchema = z.object({
   activities: z.array(activitySchema),
   nodes: z.array(nodeSchema),
   edges: z.array(edgeSchema),
   workflowMembers: z.record(z.string(), workflowMemberSchema),
+  codeRuns: z.record(z.string(), codeRunSchema),
 }) as z.ZodType<FabricProjectionState>
 
 declare module '@monotykamary/dsh-session-projection/types' {
@@ -107,9 +117,9 @@ export function createFabricActivityProjection(
 
   return {
     key: 'fabricActivity',
-    stateVersion: 4,
+    stateVersion: 5,
     stateSchema,
-    init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {} }),
+    init: () => ({ activities: [], nodes: [], edges: [], workflowMembers: {}, codeRuns: {} }),
     apply: (state, event) => applyEvent(state, event, activityLimit, topologyLimit),
     wire: {
       viewSchema: projectionSchema,
@@ -127,7 +137,45 @@ function applyEvent(
   switch (event.type) {
     case 'fabric/activity':
       return mergeActivity(state, event.data, activityLimit, topologyLimit)
+    case 'tool/call': {
+      if (event.data.name !== 'run_code') return state
+      const display = runCodeDisplay(event.data.arguments)
+      if (display === undefined) return state
+      const callId = String(event.data.callId)
+      const next = merge(state, {
+        id: codeRunActivityId(callId),
+        kind: 'execution',
+        action: 'started',
+        label: display.name,
+        status: 'running',
+        updatedAt: event.time,
+        ...(display.description === undefined ? {} : { detail: display.description }),
+      }, [], [], activityLimit, topologyLimit)
+      return {
+        ...next,
+        codeRuns: putCodeRun(next.codeRuns, codeRunKey(callId), display, activityLimit),
+      }
+    }
     case 'tool/result': {
+      const callId = String(event.data.message.source.callId)
+      const key = codeRunKey(callId)
+      const display = Object.hasOwn(state.codeRuns, key) ? state.codeRuns[key] : undefined
+      if (display !== undefined) {
+        const failed = event.data.error !== undefined
+          || event.data.message.content.some(block => block.type === 'tool-result' && block.isError)
+        const status = failed ? 'failed' : 'completed'
+        const next = merge(state, {
+          id: codeRunActivityId(callId),
+          kind: 'execution',
+          action: status,
+          label: display.name,
+          status,
+          updatedAt: event.time,
+          ...(display.description === undefined ? {} : { detail: display.description }),
+        }, [], [], activityLimit, topologyLimit)
+        const { [key]: _settled, ...codeRuns } = next.codeRuns
+        return { ...next, codeRuns }
+      }
       const activity = readFabricMeshResultMeta(event.data.meta)
       return activity === undefined ? state : mergeActivity(state, activity, activityLimit, topologyLimit)
     }
@@ -266,6 +314,43 @@ function applyEvent(
   }
 }
 
+function runCodeDisplay(argumentsText: string): { name: string; description?: string } | undefined {
+  try {
+    const args = jsonRecord(JSON.parse(argumentsText))
+    if (args === undefined || typeof args.code !== 'string') return undefined
+    return resolveRunCodeDisplay({
+      code: args.code,
+      display: args.display,
+      ...(typeof args.description === 'string' ? { description: args.description } : {}),
+    })
+  } catch {
+    return undefined
+  }
+}
+
+function codeRunKey(callId: string): string {
+  return boundedIdentifier(`call:${callId}`)
+}
+
+function codeRunActivityId(callId: string): string {
+  return `execution:${callId}`
+}
+
+function putCodeRun(
+  runs: FabricProjectionState['codeRuns'],
+  key: string,
+  run: FabricProjectionState['codeRuns'][string],
+  limit: number,
+): FabricProjectionState['codeRuns'] {
+  return Object.fromEntries(Object.entries({
+    ...runs,
+    [key]: {
+      name: boundedText(run.name, MAX_LABEL_BYTES),
+      ...(run.description === undefined ? {} : { description: boundedText(run.description, MAX_DETAIL_BYTES) }),
+    },
+  }).slice(-limit))
+}
+
 function mergeActivity(
   state: FabricProjectionState,
   data: FabricActivityEventData,
@@ -314,6 +399,7 @@ function merge(
     nodes: reconciledNodes,
     edges: nextEdges,
     workflowMembers: state.workflowMembers,
+    codeRuns: state.codeRuns,
   }
 }
 

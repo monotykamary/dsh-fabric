@@ -44,8 +44,6 @@ describe('dsh-fabric-system-prompt', () => {
     expect(fabric?.text).toContain('await tools.subagent({ description, prompt, provider, model })')
     expect(fabric?.text).toContain("It is not a 'job_*' task")
     expect(fabric?.text).not.toContain('Track background jobs')
-    expect(FabricSystemPrompt.ADVISORY_AMBIENT_TOOLS.has('subagent')).toBe(true)
-    expect(FabricSystemPrompt.ADVISORY_AMBIENT_TOOLS.has('subagent_fork')).toBe(true)
   })
 
   it('minimizes native per-tool prose while preserving structural and dynamic sections', async () => {
@@ -106,13 +104,18 @@ describe('progressive disclosure wiring', () => {
 
     const assembly = await ctx.systemPrompt.assemble({})
     const sdk = assembly.sections.find(entry => entry.name === 'tools:sdk')
-    expect(sdk?.text).toContain('The available tools:')
-    expect(sdk?.text).toContain('ask_user_question')
-    expect(sdk?.text).toContain('describe(name: string')
-    expect(sdk?.text).toContain('call(request: { name: string')
-    expect(sdk?.text).not.toContain('subagent')
-    expect(sdk?.text).not.toContain('fabric_mesh')
-    expect(sdk?.text).not.toContain('workflow')
+    const text = sdk?.text ?? ''
+    expect(text).toContain('The available tools:')
+    expect(text).toContain('ask_user_question')
+    expect(text).toContain('describe(name: string')
+    expect(text).toContain('call(request: { name: string')
+    expect(text).toContain(FabricSystemPrompt.SDK_ROSTER_MARKER)
+    expect(text).toContain('"subagent"')
+    expect(text).toContain('"fabric_mesh"')
+    expect(text).toContain('"workflow"')
+    expect(text).not.toMatch(/^  subagent: \{$/mu)
+    expect(text).not.toMatch(/^  fabric_mesh:/mu)
+    expect(text).not.toMatch(/^  workflow: \{$/mu)
   })
 })
 
@@ -141,8 +144,9 @@ describe('fabric-scoped overlay', () => {
     expect(foreignNames).toContain('tool:bash')
     expect(foreignNames).not.toContain('fabric:system-prompt')
     const foreignSdk = foreignAssembly.sections.find(entry => entry.name === 'tools:sdk')
-    expect(foreignSdk?.text).toContain('subagent')
-    expect(foreignSdk?.text).toContain('fabric_mesh')
+    expect(foreignSdk?.text).toMatch(/^  subagent: \{$/mu)
+    expect(foreignSdk?.text).toMatch(/^  fabric_mesh:/mu)
+    expect(foreignSdk?.text).not.toContain(FabricSystemPrompt.SDK_ROSTER_MARKER)
 
     // Fabric scope: per-tool guidance dropped, fabric section present, SDK spliced.
     const fabricAssembly = await ctx.systemPrompt.assemble({ scope: scopeKeyOf(fabric) })
@@ -151,8 +155,11 @@ describe('fabric-scoped overlay', () => {
     expect(fabricNames).toContain('fabric:system-prompt')
     const fabricSdk = fabricAssembly.sections.find(entry => entry.name === 'tools:sdk')
     expect(fabricSdk?.text).toContain('The available tools:')
-    expect(fabricSdk?.text).not.toContain('subagent')
-    expect(fabricSdk?.text).not.toContain('fabric_mesh')
+    expect(fabricSdk?.text).toContain(FabricSystemPrompt.SDK_ROSTER_MARKER)
+    expect(fabricSdk?.text).toContain('"subagent"')
+    expect(fabricSdk?.text).toContain('"fabric_mesh"')
+    expect(fabricSdk?.text).not.toMatch(/^  subagent: \{$/mu)
+    expect(fabricSdk?.text).not.toMatch(/^  fabric_mesh:/mu)
   })
 })
 describe('fabric memory guidance', () => {

@@ -38,7 +38,15 @@
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./config": {
+      "types": "./lib/types/config.d.ts",
+      "default": "./lib/config.js"
+    },
+    "./settings": {
+      "types": "./lib/types/settings.d.ts",
+      "default": "./lib/settings.js"
+    }
   },
   "files": [
     "lib",
@@ -60,9 +68,12 @@
     "@monotykamary/dsh-session": "^0.1.7",
     "@monotykamary/dsh-system-prompt": "^0.1.7",
     "@monotykamary/dsh-tools": "^0.1.7",
-    "@monotykamary/schemastery": "^3.18.1"
+    "@monotykamary/schemastery": "^3.18.1",
+    "@monotykamary/dsh-commands": "^0.1.7",
+    "@monotykamary/dsh-settings": "^0.1.7"
   },
   "devDependencies": {
+    "dsh-fabric-code-runtime-quickjs": "workspace:^",
     "dsh-fabric-host": "workspace:^",
     "@monotykamary/cordis": "^4.0.1",
     "@monotykamary/dsh-agent": "^0.1.7",
@@ -75,7 +86,9 @@
     "@monotykamary/dsh-storage-json": "^0.1.7",
     "@monotykamary/dsh-system-prompt": "^0.1.7",
     "@monotykamary/dsh-tools": "^0.1.7",
-    "@monotykamary/schemastery": "^3.18.1"
+    "@monotykamary/schemastery": "^3.18.1",
+    "@monotykamary/dsh-commands": "^0.1.7",
+    "@monotykamary/dsh-settings": "^0.1.7"
   },
   "repository": {
     "type": "git",

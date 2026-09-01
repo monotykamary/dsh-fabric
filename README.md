@@ -23,6 +23,7 @@ _Deterministic compaction, checked code execution, durable coordination, and liv
 | :-: | --- | --- |
 | 🧠 | **Deterministic compaction** | Structured, bounded summaries without a second model request. |
 | ⚡ | **Checked Code Mode** | TypeScript validation followed by isolated QuickJS execution with strict budgets. |
+| 🏎️ | **Speculative PTC** | Literal read, glob, and grep calls start while `run_code` is still streaming, then commit only at the natural policy gate. |
 | 🕸️ | **Durable mesh** | Topics, compare-and-swap state, and crash-conservative actor mailboxes. |
 | 📡 | **Unified activity** | Fabric, workflow, and compaction events projected into one chronological surface. |
 | 🗺️ | **Live topology** | Portable participants and mesh resources in a grouped tree, with message flow kept as traffic overlays. |
@@ -43,7 +44,7 @@ flowchart LR
   DSH --> Compiler
 ```
 
-The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh provider, host projection, and client surfaces under seven composed rows. The Fabric mesh Consumer, the `fabric_models` Consumer, and the Fabric system-prompt overlay are NOT host rows: they mount inside the `fabric` preset itself, so their prompt surfaces stay fabric-scoped and no other preset's system prompt is touched. The Fabric-owned roster keeps the four pinned DSH modes and adds a fifth, `fabric`: Fabric mode uses the Code Mode SDK under its own preset identity and selects `runCodeLabel: inferred`, so `code` is the only required outer argument, an explicit description still wins, and otherwise one deterministic title derived from the logged program serves the call card and compaction. Fabric sessions record and display as Fabric mode instead of reusing PTC mode.
+The installable workspace bundle masks the inherited code runtime, stock compactor/pruner, and shipped preset roster. It then mounts Fabric's QuickJS provider, deterministic compaction engine, Fabric-owned presets, mesh provider, host projection, and client surfaces under eight composed rows. The Fabric mesh Consumer, the `fabric_models` Consumer, and the Fabric system-prompt overlay are NOT host rows: they mount inside the `fabric` preset itself, so their prompt surfaces stay fabric-scoped and no other preset's system prompt is touched. The Fabric-owned roster keeps the four pinned DSH modes and adds a fifth, `fabric`: Fabric mode uses the Code Mode SDK under its own preset identity and selects `runCodeLabel: inferred`, so `code` is the only required outer argument, an explicit description still wins, and otherwise one deterministic title derived from the logged program serves the call card and compaction. Fabric sessions record and display as Fabric mode instead of reusing PTC mode.
 
 ## Packages
 
@@ -56,40 +57,40 @@ The installable workspace bundle masks the inherited code runtime, stock compact
 
 | [`dsh-fabric-mesh`](packages/mesh) | Topics, CAS state, actor mailboxes, and the `fabric_mesh` Consumer. |
 | [`dsh-fabric-models`](packages/models) | Session model inspection and alias-aware switching through the `fabric_models` Consumer. |
-| [`dsh-fabric-schema`](packages/schema) | Schema-enforced world state, evidence digests, and fail-closed certification: `state_*` Timeline/CAS head, complexity ledger, goal predicate, and `schema_*` hypothesis → certificate → commit workspace transactions with enforce/audit modes. |
+| [`dsh-fabric-schema`](packages/schema) | Schema-enforced world state and root-scoped certification: exact observation allowlist, fail-closed containment of all ToolRuntime effects, and same-`run_code` hypothesis → certificate → atomic commit transactions with enforce/audit modes. |
 | [`dsh-fabric-code-runtime-quickjs`](packages/code-runtime-quickjs) | Checked QuickJS `CodeRuntime` provider with execution budgets. |
-| [`dsh-fabric-client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, and subagent navigation. |
+| [`dsh-fabric-client-ui`](packages/client-ui) | Browser Activity, Topology, popup metrics, subagent navigation, and persistent Schema/speculation settings cards. |
 
 ## Install
 
-Requirements: Node.js `^22.19.0 || >=24`, pnpm 11, and DSH `0.1.0-rc.7`.
+Requirements: Node.js `^22.19.0 || >=24`, Bun 1.4+, and DSH `0.1.0-rc.7`.
 
 Clone the repository and install it into your local DSH `web` profile:
 
 ```bash
 git clone https://github.com/monotykamary/dsh-fabric.git
 cd dsh-fabric
-pnpm install
-pnpm run install:local
+bun install
+bun run install:local
 ```
 
-The installer builds all packages, links the bundle and its six packages, and validates the composed plugin graph. It **does not** start or restart DSH. The plugin graph takes effect on the next profile load.
+The installer builds all packages, links the bundle and its nine packages, and validates the composed plugin graph. It **does not** start or restart DSH. The plugin graph takes effect on the next profile load.
 
 <details>
 <summary><strong>Profiles, custom DSH homes, and uninstalling</strong></summary>
 
 ```bash
 # Target another profile
-pnpm run install:local -- --profile tui
+bun run install:local -- --profile tui
 
 # Target another DSH home
-DSH_HOME=/path/to/dsh-home pnpm run install:local -- --profile web
+DSH_HOME=/path/to/dsh-home bun run install:local -- --profile web
 
 # Reuse existing build output
-pnpm run install:local -- --skip-build
+bun run install:local -- --skip-build
 
 # Restore the exact dependency specifications that existed before install
-pnpm run uninstall:local
+bun run uninstall:local
 ```
 
 Use the same `--profile` or `DSH_HOME` selection when uninstalling. Without its ownership-state file, the uninstaller refuses to remove packages unless this checkout's exact local links prove ownership.
@@ -101,10 +102,18 @@ Use the same `--profile` or `DSH_HOME` selection when uninstalling. Without its 
 Installing the bundle replaces the verbose native DSH prompt prose with a minimized Fabric operating prompt:
 
 - A `fabric:system-prompt` section (right after the persona) captures pi-fabric's long-horizon disciplines and gives the model the exact one-off `tools.subagent({ description, prompt, provider, model })` recipe, background-first continuable lifecycle, and fresh-versus-fork choice.
-- A `system-prompt/assemble` waterfall listener drops redundant native per-tool guidance while preserving the persona, trusted `user:system-instructions`, plan policy, reporting, Code-Mode SDK/collapse sections, memory, and mesh guidance. DSH ToolRuntime supplies run-scoped `tools.describe`/`tools.call`; the minimized SDK retains those declarations while hiding optional tool entries.
+- A `system-prompt/assemble` waterfall listener drops redundant native per-tool guidance while preserving the persona, trusted `user:system-instructions`, plan policy, reporting, Code-Mode SDK/collapse sections, memory, and mesh guidance. The minimized SDK keeps full core contracts, replaces optional schemas with a names-only JSON roster, and retains DSH ToolRuntime's run-scoped `tools.describe`/`tools.call` declarations for exact discovery.
 - DSH's todo ledger and goal system (`todo_write`, `create_goal`/`get_goal`/`update_goal`, `/goal`, the goal round driver, and the goal bar) are masked. Long-horizon objectives and progress belong in `fabric_mesh` instead of same-session todo/goal records.
 - Fabric memory/recall composes DSH's native session-query tools (`session_search`, `session_event_search`, and the `session_trace`/`session_event_trace`/`session_event_read` readers) over a durable SQLite FTS5 index, with `fabric:memory-guidance` prompt guidance for re-establishing dropped context after `/compact`.
 - The standard, code, fabric, and cordis presets expose `/delegate [--provider <id> --model <id>] [--fork] <task>` through the ordinary slash-command UI, starting one background child without a parent model turn.
+
+## Speculative Code Mode
+
+Fabric enables DSH ToolRuntime's speculative Code Mode path while the Harness-wide default remains off. During streamed TypeScript `run_code` arguments, a lazy literal scanner recognizes complete `tools.read(...)`, `tools.glob(...)`, and `tools.grep(...)` calls whose arguments are static JSON and launches their definition-owned `speculate` callbacks early. Dynamic expressions and Python programs stay on the authoritative natural path.
+
+The prefetched work never bypasses policy or writes duplicate lifecycle records. Definitions must opt in with `risk: "read"`, `effectKind: "none"`, and a `speculate` callback. An unforgeable streamed-root owner prevents reused provider call IDs from crossing sessions/steps, and final arguments must contain exactly one top-level `code` string identical to the streamed program. The eventual SDK call still traverses DSH's pre-execute, guards, around-dispatch, post-execute, finalization, and durable event pipeline. Definition identity, per-owner mutation epoch, freshness, cancellation, and take-once consumption remain authoritative. Hidden filesystem acquisitions are confined to the canonical session workspace; outside targets fall back to the naturally policy-authorized call. `read` validates the observed file version and replays `fs/observed` only after admission. `glob` and `grep` rerun their complete acquisition at serve time and reuse output only when the canonical result is unchanged, without running direct-call spill projection early. Any miss or invalidation performs the ordinary tool body.
+
+The **Speculative Code Mode** card under Settings → Plugins edits the live `tool-speculation` namespace: enablement, concurrent work, retained entries, stream-buffer bytes, aggregate retained-result bytes, and entry TTL. Saving new bounds cancels unserved hidden work before applying them. The adjacent **Fabric Schema** card remains the persistent authority for new-session Schema defaults.
 
 ## The `fabric_mesh` tool
 
@@ -136,7 +145,7 @@ See [`ADAPTATION_SWEEP.md`](ADAPTATION_SWEEP.md) for the reuse matrix, acceptanc
 
 ## Client surfaces
 
-Fabric adds a conversation tab with:
+Fabric contributes two bilingual cards under Settings → Plugins — **Fabric Schema** and **Speculative Code Mode** — and adds a conversation tab with:
 
 - a chronological **Activity** view for agent, workflow, mesh, and compaction events;
 - a left-to-right **Topology** tree: `Main → Participants → {Sessions, Agents, Actors}` and `Main → Mesh → {Topics, State}`;
@@ -152,19 +161,21 @@ Business state remains in DSH and storage-domain. Client-local state is limited 
 
 Hot reload requires both watchers:
 
-1. The DeepSeek Harness checkout serving the GUI runs `pnpm run dev:web`.
-2. This workspace runs `pnpm run watch:client` to rebuild `packages/client-ui/lib/client.js`.
+1. The DeepSeek Harness checkout serving the GUI runs `bun run dev:web`.
+2. This workspace runs `bun run watch:client` to rebuild `packages/client-ui/lib/client.js`.
 
 A running server alone does not compile this repository, and the first installation of a new profile row requires a later profile load.
 
 ## Development
 
 ```bash
-pnpm install
-pnpm run check
+bun install
+# Optional when co-developing against a sibling ../deepseek-harness checkout
+bun run link:harness
+bun run check
 ```
 
-`pnpm run check` type-checks, builds, tests, and verifies the complete workspace. The QuickJS provider enforces fresh contexts, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal.
+`bun run check` type-checks, builds, tests, and verifies the complete workspace. The QuickJS provider enforces fresh contexts, JSON bridge validation, deadlines, cancellation, memory/stack/output budgets, and quiescent disposal.
 
 ## Current scope
 

@@ -54,7 +54,7 @@
     "@monotykamary/dsh-llm": "^0.1.7",
     "@monotykamary/dsh-session": "^0.1.7",
     "@monotykamary/dsh-token-meter": "^0.1.7",
-    "@monotykamary/dsh-tools": "^0.1.7",
+    "@monotykamary/dsh-tools": "^0.1.8",
     "@monotykamary/dsh-tool-session-query": "^0.1.7"
   },
   "devDependencies": {
@@ -69,7 +69,7 @@
     "@monotykamary/dsh-llm": "^0.1.7",
     "@monotykamary/dsh-session": "^0.1.7",
     "@monotykamary/dsh-token-meter": "^0.1.7",
-    "@monotykamary/dsh-tools": "^0.1.7"
+    "@monotykamary/dsh-tools": "^0.1.8"
   },
   "repository": {
     "type": "git",

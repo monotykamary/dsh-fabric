@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { CallId, createToolResultMessage } from '@monotykamary/dsh-llm'
 import type { SessionEvent } from '@monotykamary/dsh-session'
 import { createFabricActivityProjection } from '../src/projection.ts'
 import type {} from '../src/types.ts'
@@ -28,6 +29,70 @@ describe('fabric activity projection', () => {
     ]))
     expect(state.edges.map(edge => edge.kind)).toEqual(expect.arrayContaining(['contains', 'member']))
     expect(state.activities).toHaveLength(4)
+  })
+
+  it('projects run_code display metadata from native call through settlement', () => {
+    const definition = createFabricActivityProjection(20, 20)
+    const callId = CallId('displayed-run')
+    let state = definition.init()
+    state = definition.apply(state, event('tool/call', {
+      turn: 1,
+      step: 1,
+      callId,
+      name: 'run_code',
+      arguments: JSON.stringify({
+        code: 'return 1',
+        display: { name: 'Verify release', description: 'Confirm artifacts before publishing.' },
+      }),
+    }, 0))
+
+    expect(definition.wire.view(state).activities).toEqual([expect.objectContaining({
+      id: 'execution:displayed-run',
+      kind: 'execution',
+      action: 'started',
+      label: 'Verify release',
+      detail: 'Confirm artifacts before publishing.',
+      status: 'running',
+    })])
+    expect(Object.keys(state.codeRuns)).toEqual(['call:displayed-run'])
+
+    state = definition.apply(state, event('tool/result', {
+      turn: 1,
+      step: 1,
+      message: createToolResultMessage({
+        callId,
+        content: [{ type: 'text', text: 'done' }],
+        isError: false,
+      }),
+    }, 1))
+
+    expect(definition.wire.view(state).activities).toEqual([expect.objectContaining({
+      id: 'execution:displayed-run',
+      action: 'completed',
+      label: 'Verify release',
+      detail: 'Confirm artifacts before publishing.',
+      status: 'completed',
+    })])
+    expect(state.codeRuns).toEqual({})
+
+    const failedId = CallId('failed-run')
+    state = definition.apply(state, event('tool/call', {
+      turn: 1, step: 2, callId: failedId, name: 'run_code',
+      arguments: JSON.stringify({ code: 'return 2', display: 'Run focused tests' }),
+    }, 2))
+    state = definition.apply(state, event('tool/result', {
+      turn: 1,
+      step: 2,
+      message: createToolResultMessage({ callId: failedId, content: [{ type: 'text', text: 'failed' }], isError: true }),
+    }, 3))
+    expect(definition.wire.view(state).activities.at(-1)).toMatchObject({
+      kind: 'execution', action: 'failed', label: 'Run focused tests', status: 'failed',
+    })
+
+    const unchanged = definition.apply(state, event('tool/call', {
+      turn: 1, step: 3, callId: CallId('malformed'), name: 'run_code', arguments: '{',
+    }, 4))
+    expect(unchanged).toBe(state)
   })
 
   it('bounds custom activity and upserts topology records', () => {

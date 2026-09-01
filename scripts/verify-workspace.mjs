@@ -6,11 +6,14 @@ import { satisfies } from 'semver'
 const nl = '\n'
 
 const root = JSON.parse(await readFile('package.json', 'utf8'))
-const workspaceConfig = await readFile('pnpm-workspace.yaml', 'utf8')
+if (root.packageManager !== 'bun@1.4.0') throw new Error('package.json must pin Bun 1.4.0')
+await access(resolve('bun.lock'))
+const harnessLinks = JSON.parse(await readFile('scripts/harness-links.json', 'utf8'))
 const linkedVersions = new Map()
-for (const match of workspaceConfig.matchAll(/^  '([^']+)': 'link:([^']+)'$/gm)) {
-  const [, packageName, target] = match
+for (const [packageName, target] of Object.entries(harnessLinks)) {
+  if (typeof target !== 'string') throw new Error(`scripts/harness-links.json has an invalid path for ${packageName}`)
   const manifest = JSON.parse(await readFile(resolve(target, 'package.json'), 'utf8'))
+  if (manifest.name !== packageName) throw new Error(`${target}/package.json does not name ${packageName}`)
   linkedVersions.set(packageName, manifest.version)
 }
 verifyLinkedDependencyRanges(root, 'package.json')
@@ -21,6 +24,7 @@ if (root.scripts?.['uninstall:local'] !== 'node scripts/install-local.mjs --unin
   throw new Error('package.json does not expose the local uninstaller')
 }
 await access(resolve('scripts/install-local.mjs'))
+await access(resolve('scripts/link-harness.mjs'))
 
 const patch = await readFile('cordis.patch.yml', 'utf8')
 const references = [...patch.matchAll(/^\s+name:\s+['"]([^'"]+)['"]\s*$/gm)].map(match => match[1])
@@ -31,6 +35,7 @@ const expectedReferences = [
   'dsh-fabric-compaction/presets',
   'dsh-fabric-host',
   'dsh-fabric-mesh/provider',
+  'dsh-fabric-schema/settings',
   '@monotykamary/dsh-agent-presets',
 ]
 if (references.toSorted().join('\n') !== expectedReferences.toSorted().join('\n')) {
@@ -39,8 +44,8 @@ if (references.toSorted().join('\n') !== expectedReferences.toSorted().join('\n'
 if (!/^- id: code-runtime\r?\n  disabled: true$/m.test(patch)) {
   throw new Error('cordis.patch.yml must disable the inherited code-runtime row')
 }
-if (!/^- id: tools\r?\n  config:\r?\n    maxParallelSubCalls: !!js Number\.MAX_SAFE_INTEGER$/m.test(patch)) {
-  throw new Error('cordis.patch.yml must remove the default Code Mode parallel sub-call throttle')
+if (!/^- id: tools\r?\n  config:\r?\n    maxParallelSubCalls: !!js Number\.MAX_SAFE_INTEGER\r?\n    speculation:\r?\n      enabled: true$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must enable speculative PTC and remove the default Code Mode parallel sub-call throttle')
 }
 for (const id of ['compaction-basic', 'tool-result-pruner', 'agent-presets']) {
   if (!new RegExp(`^- id: ${id}\\r?\\n  disabled: true$`, 'm').test(patch)) {
@@ -67,6 +72,12 @@ if (!fabricPreset.includes('- id: tool-session-query' + nl + "  name: '@monotyka
 }
 if (!fabricPreset.includes('- id: dsh-fabric-schema-tool' + nl + "  name: 'dsh-fabric-schema/tool'")) {
   throw new Error('fabric preset must mount the Fabric schema/state toolset')
+}
+if (/^- id: dsh-fabric-schema-tool\r?\n  name: ['"]dsh-fabric-schema\/tool['"]\r?\n  config:/m.test(fabricPreset)) {
+  throw new Error('fabric preset must snapshot the host Schema settings authority instead of owning duplicate inline config')
+}
+if (!/^    - id: dsh-fabric-schema-settings\r?\n      name: ['"]dsh-fabric-schema\/settings['"]\r?\n      config:\r?\n        mode: off$/m.test(patch)) {
+  throw new Error('cordis.patch.yml must mount persistent Fabric Schema defaults host-plane')
 }
 if (!/^    - id: dsh-fabric-compaction\r?\n      name: ['"]dsh-fabric-compaction['"]$/m.test(patch)) {
   throw new Error('cordis.patch.yml must insert the Fabric compaction engine')

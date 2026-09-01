@@ -6,7 +6,7 @@ This repository implements Fabric-style capabilities as external DeepSeek Harnes
 
 ## Runtime safety
 
-Never start, stop, or restart the user's DSH server unless explicitly requested. Client HMR requires both a loaded plugin and the matching DeepSeek Harness checkout's `pnpm run dev:web` watcher. This repository's `pnpm run watch:client` only rebuilds `lib/client.js`.
+Never start, stop, or restart the user's DSH server unless explicitly requested. Client HMR requires both a loaded plugin and the matching DeepSeek Harness checkout's `bun run dev:web` watcher. This repository's `bun run watch:client` only rebuilds `lib/client.js`.
 
 ## Package roles
 
@@ -23,4 +23,4 @@ Do not introduce a second tool registry or component lifecycle. DSH ToolRuntime 
 
 ## Verification
 
-Run `pnpm run check` after changes. Build the client bundle before testing it against DSH because the host serves `lib/client.js`, not source files.
+Run `bun run check` after changes. Build the client bundle before testing it against DSH because the host serves `lib/client.js`, not source files.

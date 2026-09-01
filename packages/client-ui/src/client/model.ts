@@ -205,18 +205,18 @@ function orderedSummaries(state: SessionListState): SessionSummary[] {
     ordered.push(summary)
     seen.add(id)
   }
-  for (const id of Object.keys(state.byId).toSorted()) {
-    if (seen.has(id)) continue
-    const summary = state.byId[id]
-    if (summary !== undefined) ordered.push(summary)
+  for (const summary of Object.values(state.byId).toSorted((left, right) => String(left.id).localeCompare(String(right.id)))) {
+    if (seen.has(summary.id)) continue
+    ordered.push(summary)
   }
   return ordered
 }
 
 function sessionInput(state: SessionListState, summary: SessionSummary, now: number): FabricSessionInput {
-  const tokens = tokenTotal(summary.projectionValues?.tokenUsage)
-  const durationMs = subagentDuration(summary.projectionValues?.subagentTiming, summary.running, now)
-  const projection = summary.projectionValues?.fabricActivity as FabricActivityProjection | undefined
+  const projections = summary.projectionValues as Readonly<Record<string, unknown>> | undefined
+  const tokens = tokenTotal(projections?.tokenUsage)
+  const durationMs = subagentDuration(projections?.subagentTiming, summary.running, now)
+  const projection = projections?.fabricActivity as FabricActivityProjection | undefined
   return {
     id: summary.id,
     label: summary.displayTitle,

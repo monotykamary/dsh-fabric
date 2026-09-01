@@ -30,6 +30,7 @@ const EXPECTED_ROWS = [
   'dsh-fabric-compaction/presets',
   'dsh-fabric-host',
   'dsh-fabric-mesh/provider',
+  'dsh-fabric-schema/settings',
   'dsh-fabric-client-ui',
 ]
 const REQUIRED_ARTIFACTS = [
@@ -40,6 +41,8 @@ const REQUIRED_ARTIFACTS = [
   'packages/host/lib/index.js',
   'packages/mesh/lib/provider.js',
   'packages/mesh/lib/tool.js',
+  'packages/schema/lib/settings.js',
+  'packages/schema/lib/tool.js',
   'packages/system-prompt/lib/index.js',
   'packages/code-runtime-quickjs/lib/index.js',
   'packages/client-ui/lib/client.js',
@@ -68,13 +71,13 @@ async function main() {
   if (options.skipBuild) {
     await verifyArtifacts()
   } else {
-    await runPnpm(['install', '--frozen-lockfile'])
-    await runPnpm(['run', 'build'])
+    await runBun(['install', '--frozen-lockfile'])
+    await runBun(['run', 'build'])
   }
 
   await captureInstallState(options.profile, packages)
-  await runPnpm([
-    'dlx', DSH_PACKAGE,
+  await runBun([
+    'x', DSH_PACKAGE,
     'plugin', '--profile', options.profile,
     'add', ...packages.map(entry => entry.link),
   ])
@@ -89,8 +92,8 @@ async function main() {
 
 async function uninstall(profile, packages) {
   const state = await localInstallState(profile, packages)
-  await runPnpm([
-    'dlx', DSH_PACKAGE,
+  await runBun([
+    'x', DSH_PACKAGE,
     'plugin', '--profile', profile,
     'remove', ...packages.map(entry => entry.name),
   ])
@@ -100,7 +103,7 @@ async function uninstall(profile, packages) {
     return spec === null ? [] : [`${entry.name}@${spec}`]
   })
   if (restore.length > 0) {
-    await runPnpm(['dlx', DSH_PACKAGE, 'plugin', '--profile', profile, 'add', ...restore])
+    await runBun(['x', DSH_PACKAGE, 'plugin', '--profile', profile, 'add', ...restore])
   }
 
   await verifyRestoredDependencies(profile, packages, state)
@@ -160,7 +163,7 @@ async function localPackages() {
     if (typeof manifest.name !== 'string' || manifest.name === '') {
       throw new Error(`${path}/package.json has no package name`)
     }
-    return { name: manifest.name, link: `link:${directory}` }
+    return { name: manifest.name, link: `file:${directory}` }
   }))
   if (new Set(entries.map(entry => entry.name)).size !== entries.length) {
     throw new Error('local package names are not unique')
@@ -272,8 +275,8 @@ async function verifyArtifacts() {
 }
 
 async function dumpConfig(profile) {
-  return await runPnpm([
-    'dlx', DSH_PACKAGE,
+  return await runBun([
+    'x', DSH_PACKAGE,
     '--profile', profile,
     '--dump-config',
   ], true)
@@ -411,8 +414,8 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function runPnpm(args, capture = false) {
-  const invocation = pnpmInvocation(args)
+function runBun(args, capture = false) {
+  const invocation = { command: 'bun', args }
   return new Promise((resolvePromise, rejectPromise) => {
     const child = spawn(invocation.command, invocation.args, {
       cwd: ROOT,
@@ -424,24 +427,16 @@ function runPnpm(args, capture = false) {
     child.once('error', rejectPromise)
     child.once('close', (code, signal) => {
       if (code === 0) resolvePromise(stdout)
-      else rejectPromise(new Error(`pnpm ${args.join(' ')} failed${signal === null ? ` with exit code ${code}` : ` from signal ${signal}`}`))
+      else rejectPromise(new Error(`bun ${args.join(' ')} failed${signal === null ? ` with exit code ${code}` : ` from signal ${signal}`}`))
     })
   })
 }
 
-function pnpmInvocation(args) {
-  if (process.platform !== 'win32') return { command: 'pnpm', args }
-  const entry = process.env.npm_execpath
-  if (entry === undefined || !/\.[cm]?js$/i.test(entry)) {
-    throw new Error('on Windows, invoke this installer through pnpm run so npm_execpath identifies pnpm without a shell')
-  }
-  return { command: process.execPath, args: [entry, ...args] }
-}
 
 function printHelp() {
   console.log(`Usage:
-  pnpm run install:local -- [options]
-  pnpm run uninstall:local -- [options]
+  bun run install:local -- [options]
+  bun run uninstall:local -- [options]
 
 Link or remove this source checkout in a DSH profile without starting it.
 

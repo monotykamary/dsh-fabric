@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest'
 import {
   discloseSdkSection,
   DISCLOSURE_CORE_TOOLS,
+  renderSdkRoster,
   SDK_CATALOG_MARKER,
+  SDK_ROSTER_MARKER,
   sdkBlockEntryNames,
   spliceSdkBlock,
 } from '../src/disclosure.ts'
@@ -40,14 +42,19 @@ describe('discloseSdkSection', () => {
     expect(originalNames.length).toBeGreaterThan(20)
   })
 
-  it('keeps only core tools and preserves the intro and fences byte-identically', () => {
+  it('keeps only core schemas and appends every removed name in deterministic order', () => {
     const disclosed = discloseSdkSection(section, DISCLOSURE_CORE_TOOLS)
     const intro = section.slice(0, section.indexOf(SDK_CATALOG_MARKER))
     expect(disclosed.startsWith(intro)).toBe(true)
     expect((disclosed.match(/```/g) ?? []).length).toBe(2)
     expect(disclosed).toContain(SDK_CATALOG_MARKER)
+    expect(disclosed).toContain(SDK_ROSTER_MARKER)
+    expect(disclosed).toContain('interface ToolDescriptor {\n  name: string;\n  description: string;\n  parameters: JsonValue;\n}')
 
     const names = sdkBlockEntryNames(fencedBlock(disclosed))
+    const removed = originalNames.filter(name => !DISCLOSURE_CORE_TOOLS.has(name)).sort()
+    const rosterLine = disclosed.slice(disclosed.indexOf(SDK_ROSTER_MARKER)).split('\n')[1]
+    expect(JSON.parse(rosterLine ?? 'null')).toEqual(removed)
     expect(names.length).toBeLessThan(originalNames.length)
     for (const name of names) expect(DISCLOSURE_CORE_TOOLS.has(name)).toBe(true)
     for (const name of originalNames) {
@@ -56,12 +63,15 @@ describe('discloseSdkSection', () => {
     }
   })
 
-  it('removes exactly the non-core tools', () => {
+  it('removes optional schemas while retaining their bare names and discovery instructions', () => {
     const disclosed = discloseSdkSection(section, DISCLOSURE_CORE_TOOLS)
     const names = sdkBlockEntryNames(fencedBlock(disclosed))
     for (const removed of ['subagent', 'subagent_fork', 'workflow', 'ralph', 'fabric_mesh', 'web_search', 'imagegen', 'skill', 'read_image', 'fovea_focus', 'fovea_sketch', 'send_message', 'list_agents', 'interrupt_agent']) {
       expect(names).not.toContain(removed)
+      expect(disclosed).toContain(`"${removed}"`)
     }
+    expect(disclosed).toContain("await tools.describe('<name>')")
+    expect(disclosed).toContain('await tools.call({ name, args })')
   })
 
   it('produces a block that still parses as TypeScript', () => {
@@ -82,5 +92,12 @@ describe('discloseSdkSection', () => {
     expect(sdkBlockEntryNames(spliced)).toContain('workflow')
     expect(parses(spliced)).toBe(true)
     expect(spliceSdkBlock(block, new Set())).toBe(block)
+  })
+
+  it('renders unique names as compact JSON so hostile punctuation cannot inject prose', () => {
+    const roster = renderSdkRoster(['zeta', 'alpha', 'alpha', 'line\\nbreak'])
+    const encoded = roster.split('\n')[1]
+    expect(JSON.parse(encoded ?? 'null')).toEqual(['alpha', 'line\\nbreak', 'zeta'])
+    expect(roster.split('\n')).toHaveLength(3)
   })
 })

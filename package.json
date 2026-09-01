@@ -7,7 +7,7 @@
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
   },
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "bun@1.4.0",
   "files": [
     "cordis.patch.yml",
     "README.md",
@@ -38,14 +38,15 @@
   },
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "build": "pnpm run clean && pnpm --filter dsh-fabric-protocol run build && pnpm --filter dsh-fabric-compaction run build && pnpm --filter dsh-fabric-system-prompt run build && pnpm --filter dsh-fabric-host run build && pnpm --filter dsh-fabric-mesh run build && pnpm --filter dsh-fabric-models run build && pnpm --filter dsh-fabric-schema run build && pnpm --filter dsh-fabric-code-runtime-quickjs run build && pnpm --filter dsh-fabric-client-ui run build",
-    "watch:client": "pnpm --filter dsh-fabric-client-ui run watch",
+    "build": "bun run clean && bun run --filter dsh-fabric-protocol build && bun run --filter dsh-fabric-compaction build && bun run --filter dsh-fabric-system-prompt build && bun run --filter dsh-fabric-host build && bun run --filter dsh-fabric-mesh build && bun run --filter dsh-fabric-models build && bun run --filter dsh-fabric-schema build && bun run --filter dsh-fabric-code-runtime-quickjs build && bun run --filter dsh-fabric-client-ui build",
+    "watch:client": "bun run --filter dsh-fabric-client-ui watch",
     "install:local": "node scripts/install-local.mjs",
     "uninstall:local": "node scripts/install-local.mjs --uninstall",
-    "typecheck": "pnpm --filter dsh-fabric-protocol run typecheck && pnpm --filter dsh-fabric-protocol run build && pnpm --filter dsh-fabric-compaction run typecheck && pnpm --filter dsh-fabric-compaction run build && pnpm --filter dsh-fabric-system-prompt run typecheck && pnpm --filter dsh-fabric-system-prompt run build && pnpm --filter dsh-fabric-host run typecheck && pnpm --filter dsh-fabric-host run build && pnpm --filter dsh-fabric-mesh run typecheck && pnpm --filter dsh-fabric-mesh run build && pnpm --filter dsh-fabric-models run typecheck && pnpm --filter dsh-fabric-models run build && pnpm --filter dsh-fabric-schema run typecheck && pnpm --filter dsh-fabric-code-runtime-quickjs run typecheck && pnpm --filter dsh-fabric-client-ui run typecheck",
+    "typecheck": "bun run --filter dsh-fabric-protocol typecheck && bun run --filter dsh-fabric-protocol build && bun run --filter dsh-fabric-compaction typecheck && bun run --filter dsh-fabric-compaction build && bun run --filter dsh-fabric-system-prompt typecheck && bun run --filter dsh-fabric-system-prompt build && bun run --filter dsh-fabric-host typecheck && bun run --filter dsh-fabric-host build && bun run --filter dsh-fabric-mesh typecheck && bun run --filter dsh-fabric-mesh build && bun run --filter dsh-fabric-models typecheck && bun run --filter dsh-fabric-models build && bun run --filter dsh-fabric-schema typecheck && bun run --filter dsh-fabric-code-runtime-quickjs typecheck && bun run --filter dsh-fabric-client-ui typecheck",
     "test": "vitest run",
     "verify": "node scripts/verify-workspace.mjs",
-    "check": "pnpm run typecheck && pnpm run build && pnpm run test && pnpm run verify"
+    "check": "bun run typecheck && bun run build && bun run test && bun run verify",
+    "link:harness": "node scripts/link-harness.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
@@ -58,5 +59,11 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/monotykamary/dsh-fabric.git"
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "trustedDependencies": [
+    "esbuild"
+  ]
 }

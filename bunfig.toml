@@ -1,0 +1,9 @@
+[install]
+linker = "hoisted"
+minimumReleaseAgeExcludes = [
+  "@monotykamary/dsh-brand",
+  "@monotykamary/dsh-session-query",
+  "@monotykamary/dsh-session-title",
+  "@monotykamary/dsh-timeout",
+  "@monotykamary/dsh-tool-session-query",
+]

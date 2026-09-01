@@ -32,6 +32,8 @@
 - id: tools
   config:
     maxParallelSubCalls: !!js Number.MAX_SAFE_INTEGER
+    speculation:
+      enabled: true
 
 # Full-text session search backs Fabric memory/recall. The base and web-app
 # bundle layers mount this row with openAt: never (exact reads and lineage
@@ -56,6 +58,14 @@
 
     - id: dsh-fabric-preset-root
       name: 'dsh-fabric-compaction/presets'
+
+    # Host-plane authority for persistent Schema defaults. Each Fabric agent
+    # snapshots this namespace when its preset mounts; /fabric schema changes
+    # only that live session.
+    - id: dsh-fabric-schema-settings
+      name: 'dsh-fabric-schema/settings'
+      config:
+        mode: off
 
     - id: dsh-fabric-agent-presets
       name: '@monotykamary/dsh-agent-presets'

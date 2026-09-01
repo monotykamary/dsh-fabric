@@ -28,7 +28,7 @@ function sourceMessages() {
     }),
     createToolResultMessage({ callId: edit, content: [{ type: 'text', text: 'updated src/main.ts' }], isError: false }),
     createAssistantMessage({
-      content: [{ type: 'tool-call', id: bash, name: 'bash', arguments: '{"command":"pnpm test"}' }],
+      content: [{ type: 'tool-call', id: bash, name: 'bash', arguments: '{"command":"bun test"}' }],
       source: { provider: 'test', model: 'test' },
     }),
     createToolResultMessage({ callId: bash, content: [{ type: 'text', text: 'tests failed at assertion 7' }], isError: true }),
@@ -47,7 +47,7 @@ describe('compileFabricSummary', () => {
     expect(first.summary).toContain('[Files And Changes]')
     expect(first.summary).toContain('src/main.ts')
     expect(first.summary).toContain('[Outstanding Context]')
-    expect(first.summary).toContain('pnpm test')
+    expect(first.summary).toContain('bun test')
     expect(first.summary).not.toContain('PRIVATE_REASONING_MUST_NOT_SURVIVE')
     expect(first.snapshot.reasoningBlocks).toBe(1)
     expect(first.rawOutput[1]?.type).toBe('text')
@@ -91,9 +91,10 @@ describe('compileFabricSummary', () => {
     ]))
   })
 
-  it('projects declared and inferred run_code titles from recorded arguments', () => {
+  it('projects display objectives, inferred names, and legacy run_code titles', () => {
     const inferredId = CallId('run-inferred')
-    const declaredId = CallId('run-declared')
+    const displayedId = CallId('run-displayed')
+    const legacyId = CallId('run-legacy')
     const messages = [
       createUserMessage({ content: [{ type: 'text', text: GOAL }], source: { kind: 'user' } }),
       createAssistantMessage({
@@ -102,7 +103,7 @@ describe('compileFabricSummary', () => {
           id: inferredId,
           name: 'run_code',
           arguments: JSON.stringify({
-            code: 'return await tools.bash({ command: "pnpm pack", description: "Inspect packed release" })',
+            code: 'return await tools.bash({ command: "bun pm pack", description: "Inspect packed release" })',
           }),
         }],
         source: { provider: 'test', model: 'test' },
@@ -111,24 +112,67 @@ describe('compileFabricSummary', () => {
       createAssistantMessage({
         content: [{
           type: 'tool-call',
-          id: declaredId,
+          id: displayedId,
           name: 'run_code',
-          arguments: JSON.stringify({ code: 'return 1', description: 'Use the declared title' }),
+          arguments: JSON.stringify({
+            code: 'return 1',
+            display: { name: 'Verify release', description: 'Confirm artifacts before publishing.' },
+          }),
         }],
         source: { provider: 'test', model: 'test' },
       }),
-      createToolResultMessage({ callId: declaredId, content: [{ type: 'text', text: 'failed' }], isError: true }),
+      createToolResultMessage({ callId: displayedId, content: [{ type: 'text', text: 'failed' }], isError: true }),
+      createAssistantMessage({
+        content: [{
+          type: 'tool-call',
+          id: legacyId,
+          name: 'run_code',
+          arguments: JSON.stringify({ code: 'return 1', description: 'Legacy replay title' }),
+        }],
+        source: { provider: 'test', model: 'test' },
+      }),
+      createToolResultMessage({ callId: legacyId, content: [{ type: 'text', text: 'done' }], isError: false }),
     ]
 
     const compiled = compileFabricSummary(messages, { lastTimestamp: 'run-titles' })
 
     expect(compiled.summary).toContain('Inspect packed release → succeeded')
-    expect(compiled.summary).toContain('Use the declared title → failed')
+    expect(compiled.summary).toContain('Legacy replay title → succeeded')
     expect(compiled.summary).not.toContain('run_code(structured execution)')
     expect(compiled.snapshot.events).toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: 'fabricRun', toolCallId: 'run-inferred', name: 'Inspect packed release', outcome: 'succeeded' }),
-      expect.objectContaining({ kind: 'fabricRun', toolCallId: 'run-declared', name: 'Use the declared title', outcome: 'failed' }),
+      expect.objectContaining({
+        kind: 'fabricRun',
+        toolCallId: 'run-displayed',
+        name: 'Verify release',
+        description: 'Confirm artifacts before publishing.',
+        outcome: 'failed',
+      }),
+      expect.objectContaining({ kind: 'fabricRun', toolCallId: 'run-legacy', name: 'Legacy replay title', outcome: 'succeeded' }),
     ]))
+  })
+
+  it('renders a run_code display objective in Fabric Activity', () => {
+    const callId = CallId('run-objective')
+    const messages = [
+      createUserMessage({ content: [{ type: 'text', text: GOAL }], source: { kind: 'user' } }),
+      createAssistantMessage({
+        content: [{
+          type: 'tool-call',
+          id: callId,
+          name: 'run_code',
+          arguments: JSON.stringify({
+            code: 'return 1',
+            display: { name: 'Verify release', description: 'Confirm artifacts before publishing.' },
+          }),
+        }],
+        source: { provider: 'test', model: 'test' },
+      }),
+      createToolResultMessage({ callId, content: [{ type: 'text', text: 'done' }], isError: false }),
+    ]
+
+    const compiled = compileFabricSummary(messages, { lastTimestamp: 'run-objective' })
+    expect(compiled.summary).toContain('Verify release — Confirm artifacts before publishing. → succeeded')
   })
 
   it('projects native Code Mode sub-dispatches into files, failures, and transcript', () => {

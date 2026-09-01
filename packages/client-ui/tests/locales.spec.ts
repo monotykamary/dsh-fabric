@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { TranslateNS } from '@monotykamary/dsh-client-ui-slots'
 import { actionLabel, activityKindLabel, formatDuration, kindLabel, statusLabel } from '../src/client/labels.ts'
 import { en, zh } from '../src/client/locales.ts'
+import { settingsEn, settingsZh } from '../src/client/settings-locales.ts'
 
 function translator(bundle: typeof en): TranslateNS<'fabric'> {
   return ((key: keyof typeof en, params?: Record<string, unknown>) => {
@@ -28,12 +29,23 @@ describe('Fabric client locales', () => {
     }
   })
 
+  it('keeps Schema settings dictionaries key- and template-balanced', () => {
+    expect(Object.keys(settingsEn).toSorted()).toEqual(Object.keys(settingsZh).toSorted())
+    for (const key of Object.keys(settingsEn) as Array<keyof typeof settingsEn>) {
+      expect(settingsEn[key].trim(), key).not.toBe('')
+      expect(settingsZh[key].trim(), key).not.toBe('')
+      expect(placeholders(settingsEn[key]), key).toEqual(placeholders(settingsZh[key]))
+    }
+  })
+
   it('renders shared labels in the active language', () => {
     const english = translator(en)
     const chinese = translator(zh)
     expect(statusLabel('running', english)).toBe('Running')
     expect(kindLabel('compaction', english)).toBe('Context compaction')
     expect(activityKindLabel('workflow', chinese)).toBe('工作流')
+    expect(activityKindLabel('execution', english)).toBe('Execution')
+    expect(activityKindLabel('execution', chinese)).toBe('执行')
     expect(actionLabel('started', chinese)).toBe('已开始')
     expect(actionLabel('running', chinese)).toBe('运行中')
     expect(actionLabel('blocked', chinese)).toBe('已阻塞')

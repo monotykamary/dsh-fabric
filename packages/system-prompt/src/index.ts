@@ -14,54 +14,40 @@
  * toolset, subagent reporting, Code-Mode SDK/collapse rules, the mesh
  * guidance). Tool schemas and contexts are not filtered.
  *
- * Progressive disclosure: the generated `tools:sdk` catalog block is
- * spliced down to the core tool set (see disclosure.ts), the remaining
- * tools stay registered and callable, and the combustion advisory
- * (see advisory.ts) fires bounded capability hints when the user prompt
- * carries evidence — the pi-fabric capability pattern, ported.
+ * Progressive disclosure: the generated `tools:sdk` catalog block keeps full
+ * declarations for the core tool set (see disclosure.ts) and replaces every
+ * optional declaration with a names-only roster. The model resolves unfamiliar
+ * names on demand through run-scoped `tools.describe()` / `tools.call()`, matching
+ * current pi-fabric without heuristic, turn-varying advisory messages.
  *
  * Scoping: the plugin mounts inside the `fabric` agent preset (see
- * cordis.patch.yml / presets/fabric/agent.cordis.yml), so the section,
- * the assemble listener, and the pre-step listener are scope-filtered to
- * fabric agents and their subagents. Other presets' assemblies are never
- * minimized, spliced, or hinted. The disclosure catalog service itself is
- * provided by the host-plane dsh-fabric-host row (so the host code
- * runtime can resolve it) and consumed here.
+ * cordis.patch.yml / presets/fabric/agent.cordis.yml), so the sections and
+ * assemble listener apply only to fabric agents and their subagents. Other
+ * presets' assemblies are never minimized or spliced.
  * @module dsh-fabric-system-prompt
  */
 
 import type { Context } from '@monotykamary/cordis'
 import type { PromptAssembly } from '@monotykamary/dsh-system-prompt'
 import type {} from '@monotykamary/dsh-system-prompt'
-import type { PreStepDecision } from '@monotykamary/dsh-agent'
-import type {} from '@monotykamary/dsh-agent'
 import type {} from '@monotykamary/dsh-tools'
-import { createUserMessage } from '@monotykamary/dsh-llm'
-import type {} from '@monotykamary/dsh-llm'
-import { AdvisoryEngine, type AdvisoryFire } from './advisory.ts'
-import { discloseSdkSection, DISCLOSURE_CORE_TOOLS, type DisclosureEntry } from './disclosure.ts'
-
-/** Durable source record for one advisory hint message (replay-safe). */
-declare module '@monotykamary/dsh-llm' {
-  interface MessageSourceMap {
-    'fabric-advisory': {
-      kind: 'fabric-advisory'
-      form: 'capabilities'
-      entries: readonly AdvisoryFire[]
-    }
-  }
-}
+import { discloseSdkSection, DISCLOSURE_CORE_TOOLS } from './disclosure.ts'
 
 /** Cordis plugin name. */
 export const name = 'dsh-fabric-system-prompt'
 
-/** The prompt registry this override contributes to; the advisory's runtime seams (tool registry, agent pre-step) are resolved lazily so the minimization still mounts where they are absent. */
+/** The prompt registry this scoped override contributes to. */
 export const inject = ['systemPrompt']
 
-export { discloseSdkSection, DISCLOSURE_CORE_TOOLS, SDK_CATALOG_MARKER, sdkBlockEntryNames, spliceSdkBlock } from './disclosure.ts'
-export { AdvisoryEngine, renderAdvisoryHints } from './advisory.ts'
-export type { AdvisoryEntry, AdvisoryConfig, AdvisoryFire } from './advisory.ts'
-export type { DisclosureEntry } from './disclosure.ts'
+export {
+  discloseSdkSection,
+  DISCLOSURE_CORE_TOOLS,
+  renderSdkRoster,
+  SDK_CATALOG_MARKER,
+  SDK_ROSTER_MARKER,
+  sdkBlockEntryNames,
+  spliceSdkBlock,
+} from './disclosure.ts'
 
 /**
  * The Fabric operating prompt: the bare minimums of pi-fabric's
@@ -152,21 +138,6 @@ export const MEMORY_GUIDANCE = [
   "- After '/compact', re-establish dropped context by recalling from memory before resuming — never trust prior checkpoint prose.",
 ].join('\n')
 
-/** Ambient orchestration affordances that never spend advisory fuel. */
-export const ADVISORY_AMBIENT_TOOLS = new Set([...DISCLOSURE_CORE_TOOLS, 'subagent', 'subagent_fork'])
-
-/**
- * Resolve the DSH tool registry lazily, tolerating compositions without it
- * (the advisory degrades to dormant; the prompt override keeps working).
- */
-function resolveTools(ctx: Context): { schemas(scope?: unknown): readonly { name: string; description: string; parameters?: unknown }[] } | undefined {
-  try {
-    return ctx.get('tools') as unknown as { schemas(scope?: unknown): readonly { name: string; description: string; parameters?: unknown }[] }
-  } catch {
-    return undefined
-  }
-}
-
 /**
  * Whether the fabric scope exposes the DSH session-query toolset (the
  * memory/recall surface). Resolved lazily through the tool registry so the
@@ -191,9 +162,6 @@ function ctxTools(ctx: Context): { get(name: string, scope?: unknown): unknown }
   }
 }
 
-/** Cap on retained per-agent advisory engines (one per session agent). */
-const MAX_ENGINES = 64
-
 /**
  * Register the Fabric operating prompt and minimize the assembled
  * native prose, then apply progressive disclosure to the generated SDK
@@ -204,15 +172,9 @@ const MAX_ENGINES = 64
  * through untouched.
  *
  * Fabric-scoped: this plugin mounts inside the `fabric` agent preset,
- * so the section registration and both listeners resolve to that
- * preset's standing scope. The assemble listener omits the `global`
- * flag on purpose — a global listener would receive every preset's
- * assemblies and minimize their prompts too.
- *
- * The agent pre-step listener reads the agent-scoped tool catalog and
- * runs the combustion advisory on each user turn, injecting bounded
- * capability hints as plugin-source
- * user messages (the same seam the skill catalog uses).
+ * so the section registration and assemble listener resolve to that preset's
+ * standing scope. The listener omits the `global` flag on purpose — a global
+ * listener would receive every preset's assemblies and minimize them too.
  * @param ctx - host context carrying the prompt registry.
  */
 export function apply(ctx: Context): void {
@@ -240,65 +202,4 @@ export function apply(ctx: Context): void {
           : section),
     }
   }, { prepend: true })
-
-  const engines = new Map<string, AdvisoryEngine>()
-  const engineFor = (agentId: string): AdvisoryEngine => {
-    const existing = engines.get(agentId)
-    if (existing !== undefined) return existing
-    const engine = new AdvisoryEngine()
-    if (engines.size >= MAX_ENGINES) engines.delete(engines.keys().next().value as string)
-    engines.set(agentId, engine)
-    return engine
-  }
-
-  ctx.on('agent/pre-step', async (
-    { agent, messages, signal },
-    next,
-  ): Promise<PreStepDecision> => {
-    const decision = await next()
-    if (decision.kind === 'reject') return decision
-    signal.throwIfAborted()
-
-    // The registry is read lazily: compositions without the tools service
-    // keep the advisory dormant while DSH Code Mode still owns discovery.
-    let entries: DisclosureEntry[] = []
-    const registry = resolveTools(ctx)
-    if (registry !== undefined) {
-      entries = registry.schemas(agent)
-        .filter(schema => schema.name !== 'run_code')
-        .map(schema => ({
-          name: schema.name,
-          description: schema.description,
-          parameters: schema.parameters as Record<string, unknown> | undefined,
-        }))
-    }
-
-    // Score the current user turn and fire bounded capability hints.
-    const text = messages
-      .filter(message => message.source.kind === 'user')
-      .flatMap(message => message.content)
-      .map(block => block.type === 'text' ? block.text : '')
-      .join('\n')
-    if (text.trim().length === 0) return decision
-
-    const engine = engineFor(agent.id)
-    engine.setCatalog(entries.map(entry => ({
-      name: entry.name,
-      description: entry.description,
-      kind: 'tool',
-      disclosed: ADVISORY_AMBIENT_TOOLS.has(entry.name),
-    })))
-    const fires = engine.scorePrompt(text)
-    if (fires.length === 0) return decision
-
-    const rendered = engine.render(fires)
-    if (rendered.length === 0) return decision
-    return {
-      kind: 'enter',
-      messages: [...decision.messages, createUserMessage({
-        content: [{ type: 'text', text: rendered }],
-        source: { kind: 'fabric-advisory', form: 'capabilities', entries: fires },
-      })],
-    }
-  })
 }

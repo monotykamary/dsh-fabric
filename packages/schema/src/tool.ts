@@ -1,14 +1,16 @@
 import { realpathSync } from 'node:fs'
 import type { Context } from '@monotykamary/cordis'
+import type {} from '@monotykamary/dsh-commands'
 import type { AssembleContext } from '@monotykamary/dsh-system-prompt'
 import type { Agent } from '@monotykamary/dsh-agent'
 import type { PreToolDecision, ToolExecution, ToolRunContext } from '@monotykamary/dsh-tools'
 import { defineTool } from '@monotykamary/dsh-tools'
 import { snapshotJsonValue } from '@monotykamary/dsh-session'
 import type { JsonValue } from '@monotykamary/dsh-session'
-import z from '@monotykamary/schemastery'
 import { resolveWorkspaceIdentity } from 'dsh-fabric-mesh/tool'
-import { DEFAULT_SCHEMA_CONFIG, SchemaController, type FabricSchemaConfig, type FabricSchemaMode } from './controller.ts'
+import { SchemaController, type FabricSchemaConfig, type FabricSchemaMode } from './controller.ts'
+import { Config as ConfigSchema, resolveFabricSchemaConfig, type Config as FabricSchemaPluginConfig } from './config.ts'
+import type {} from './settings.ts'
 import { StateStore } from './state-store.ts'
 import type { SchemaEvidence, SchemaFileOperation } from './types.ts'
 
@@ -17,27 +19,8 @@ export const name = 'dsh-fabric-schema/tool'
 /** The tool registry, the durable mesh service, and the prompt registry are all required. */
 export const inject = ['tools', 'fabricMesh', 'systemPrompt']
 
-/** Schema plugin configuration; defaults match pi-fabric's schema defaults. */
-export interface Config {
-  mode?: FabricSchemaMode
-  certificateTtlMs?: number
-  maxFiles?: number
-  maxBytes?: number
-  trustedCommands?: Record<string, { command: string; args: string[]; shell: boolean; timeoutMs: number }>
-}
-
-export const Config: z<Config> = z.object({
-  mode: z.union([z.const('off'), z.const('audit'), z.const('enforce')]).default('off'),
-  certificateTtlMs: z.number().step(1).min(1).default(DEFAULT_SCHEMA_CONFIG.certificateTtlMs),
-  maxFiles: z.number().step(1).min(1).default(DEFAULT_SCHEMA_CONFIG.maxFiles),
-  maxBytes: z.number().step(1).min(1).default(DEFAULT_SCHEMA_CONFIG.maxBytes),
-  trustedCommands: z.dict(z.object({
-    command: z.string(),
-    args: z.array(z.string()),
-    shell: z.boolean(),
-    timeoutMs: z.number().step(1).min(1),
-  })).default({}),
-})
+export const Config = ConfigSchema
+export type Config = FabricSchemaPluginConfig
 
 const MAX_TEXT_BYTES = 8 * 1024
 
@@ -51,6 +34,16 @@ const SCHEMA_GUIDANCE = [
   "- Workspace transactions: 'schema_hypothesize' binds a falsifiable hypothesis plus nonempty typed evidence to the current state and workspace fingerprint; 'schema_verify' fail-closed confirms every evidence item against the unchanged fingerprint and may issue one single-use certificate; 'schema_commit' consumes the certificate and atomically applies declared write/edit/delete operations with SHA-256 preconditions, postconditions, and rollback/quarantine on failure.",
   "- Evidence is typed: 'file_exists', 'file_absent', 'file_contains', 'file_sha256', or 'trusted_command' (configured names only). Complexity reductions require replayable evidence, and 'representation' transitions archive earlier labels.",
 ].join('\n')
+
+function schemaModeGuidance(mode: FabricSchemaMode): string {
+  if (mode === 'enforce') {
+    return 'Schema enforce is active for this session. Read/search/session-memory and metadata-only mesh calls remain available, but protected-workspace changes must use schema_hypothesize → schema_verify → schema_commit in one run_code invocation. Direct edit/write/bash, state or mesh writes, agent/workflow control, compaction, model switching, network, and unknown external tools are blocked by ToolRuntime.'
+  }
+  if (mode === 'audit') {
+    return 'Schema audit records the actions enforce would block as durable would_block events, but preserves their current behavior.'
+  }
+  return ''
+}
 
 /** Resolve the per-workspace controller cache keyed by the stable DSH workspace identity. */
 export function resolveSchemaController(
@@ -79,14 +72,10 @@ export function resolveSchemaController(
 }
 
 /** Register the model-facing Schema/state tools, the guidance section, and the enforce-mode gate. */
-export function apply(ctx: Context, config: Config): void {
-  const schemaConfig: FabricSchemaConfig = {
-    mode: config.mode as FabricSchemaMode,
-    certificateTtlMs: config.certificateTtlMs as number,
-    maxFiles: config.maxFiles as number,
-    maxBytes: config.maxBytes as number,
-    trustedCommands: config.trustedCommands as FabricSchemaConfig['trustedCommands'],
-  }
+export function apply(ctx: Context, config: Config = {}): void {
+  const configured = ctx.get('fabricSchemaSettings')?.current() ?? resolveFabricSchemaConfig(config)
+  const schemaConfig: FabricSchemaConfig = structuredClone(configured)
+  const configuredMode = configured.mode
   const controllers = new Map<string, SchemaController>()
 
   const visible = (context: AssembleContext) =>
@@ -94,27 +83,87 @@ export function apply(ctx: Context, config: Config): void {
   ctx.systemPrompt.section({
     name: 'fabric:schema-guidance',
     order: 116,
-    text: context => visible(context) ? SCHEMA_GUIDANCE : '',
+    text: context => {
+      if (!visible(context)) return ''
+      const modeGuidance = schemaModeGuidance(schemaConfig.mode)
+      return modeGuidance === '' ? SCHEMA_GUIDANCE : `${SCHEMA_GUIDANCE}\n\n${modeGuidance}`
+    },
   })
 
-  const invocationOf = (agent: Agent | undefined): string =>
-    agent === undefined ? 'diagnostic' : 'session:' + agent.id
+  // ToolRuntime assigns one rootCallId to the outer run_code and propagates it
+  // to every nested dispatch. This is the DSH equivalent of pi-fabric's
+  // parentToolCallId; session identity would leak authority across model calls.
+  const invocationOf = (exec: Pick<ToolExecution, 'rootCallId'>): string => String(exec.rootCallId)
 
-  // Enforce/audit gate for the direct mutation tools. In enforce mode,
-  // edit/write are denied with the Schema route; in audit mode the
-  // would-block event is published without denying. Bash stays outside this
-  // gate (pi-fabric's prewalk shell-mutation interception is a separate
-  // deferred surface); evidence commands run through the controller.
+  const modeSource = (): 'configured default' | 'session override' =>
+    schemaConfig.mode === configuredMode ? 'configured default' : 'session override'
+
+  ctx.inject(['commands'], (commandCtx) => {
+    commandCtx.commands.register({
+      name: 'fabric',
+      description: 'Inspect or override Fabric session controls',
+      input: { hint: 'schema [off|audit|enforce]' },
+      handler: ({ rawInput }) => {
+        const words = rawInput.trim().split(/\s+/u).filter(Boolean)
+        if (words[0] !== 'schema' || words.length > 2) {
+          return { kind: 'error', text: 'Usage: /fabric schema [off|audit|enforce]' }
+        }
+        const requested = words[1]
+        if (requested === undefined) {
+          return {
+            kind: 'success',
+            text: `Schema mode ${schemaConfig.mode} (${modeSource()}); configured default ${configuredMode}; executor QuickJS`,
+          }
+        }
+        if (requested !== 'off' && requested !== 'audit' && requested !== 'enforce') {
+          return { kind: 'error', text: 'Usage: /fabric schema [off|audit|enforce]' }
+        }
+        schemaConfig.mode = requested as FabricSchemaMode
+        return {
+          kind: 'success',
+          text: `Schema mode set to ${requested} for this session; persistent settings are unchanged and the next session starts at ${configuredMode}`,
+        }
+      },
+    })
+  })
+
+  // Resolve multiplexed tools to action-level refs before the fail-closed
+  // allowlist. The outer run_code transport is allowed, but every nested call
+  // crosses this same scoped waterfall independently. Audit records the exact
+  // refs enforce would deny while preserving behavior.
+  const authorizationRef = (exec: ToolExecution): string => {
+    if (exec.name !== 'fabric_mesh' && exec.name !== 'fabric_models') return exec.name
+    const args = exec.arguments
+    if (typeof args !== 'object' || args === null || Array.isArray(args)) return exec.name
+    const action = (args as Record<string, unknown>).action
+    return typeof action === 'string' ? `${exec.name}.${action}` : exec.name
+  }
+
   ctx.on('tools/pre-execute', async (exec: ToolExecution, next: () => Promise<PreToolDecision>): Promise<PreToolDecision> => {
-    if (exec.name !== 'edit' && exec.name !== 'write') return next()
     const controller = resolveSchemaController(controllers, ctx, exec.agent, schemaConfig)
     if (controller === undefined) return next()
     try {
-      await controller.authorize(exec.name, invocationOf(exec.agent))
+      await controller.authorize(authorizationRef(exec), invocationOf(exec))
     } catch (error) {
       return { kind: 'deny', reason: error instanceof Error ? error.message : String(error) }
     }
     return next()
+  })
+
+  // run_code reaches this boundary only after its nested calls have quiesced.
+  // Unconsumed authority must not survive the outer invocation. Cleanup is
+  // best-effort: every record remains bound to the unreachable rootCallId if
+  // durable storage itself is unavailable.
+  ctx.on('tools/execute', async (exec, next) => {
+    try {
+      return await next()
+    } finally {
+      if (exec.name === 'run_code' && exec.parent === undefined) {
+        await resolveSchemaController(controllers, ctx, exec.agent, schemaConfig)
+          ?.endInvocation(invocationOf(exec))
+          .catch(() => undefined)
+      }
+    }
   })
 
   const register = (
@@ -244,9 +293,13 @@ export function apply(ctx: Context, config: Config): void {
     })
   })
 
-  // ── schema.* surface ─────────────────────────────────────────────────────
-  register('schema_status', 'Read the fixed session Schema mode, transaction bounds, generation, and invocation hypotheses', {}, async (_args, agent) => {
-    return controller(agent).status(invocationOf(agent))
+  register('schema_status', 'Read the session Schema mode, its persistent source, transaction bounds, generation, and invocation hypotheses', {}, async (_args, agent, exec) => {
+    return {
+      ...controller(agent).status(invocationOf(exec)),
+      source: modeSource(),
+      configuredMode,
+      executorRuntime: 'quickjs',
+    }
   }, true)
 
   register('schema_hypothesize', 'Durably bind a falsifiable hypothesis and nonempty typed evidence to the current state and workspace', {
@@ -254,22 +307,22 @@ export function apply(ctx: Context, config: Config): void {
     summary: { type: 'string', required: true },
     evidence: { type: 'json', required: true, description: 'Nonempty array of typed evidence items: {kind:"file_exists"|"file_absent"|"file_contains"|"file_sha256"|"trusted_command", ...}' },
     complexityReduction: { type: 'boolean', description: 'Mark this hypothesis as a certified complexity reduction.' },
-  }, async (args, agent) => {
+  }, async (args, agent, exec) => {
     return controller(agent).hypothesize({
       label: text(args.label, 'label'),
       summary: text(args.summary, 'summary'),
       evidence: evidenceArray(args.evidence, 'evidence'),
       ...(args.complexityReduction === true ? { complexityReduction: true } : {}),
-    }, invocationOf(agent))
+    }, invocationOf(exec))
   })
 
-  register('schema_verify', 'Fail-closed verification that may issue one fresh session-bound single-use certificate', {
+  register('schema_verify', 'Fail-closed verification that may issue one fresh same-run single-use certificate', {
     hypothesisId: { type: 'string', required: true },
-  }, async (args, agent) => {
-    return controller(agent).verify(text(args.hypothesisId, 'hypothesisId'), invocationOf(agent))
+  }, async (args, agent, exec) => {
+    return controller(agent).verify(text(args.hypothesisId, 'hypothesisId'), invocationOf(exec))
   })
 
-  register('schema_commit', 'Consume one same-session certificate and atomically attempt bounded declared-file operations with rollback and postconditions', {
+  register('schema_commit', 'Consume one same-run certificate and atomically attempt bounded declared-file operations with rollback and postconditions', {
     hypothesisId: { type: 'string', required: true },
     certificate: { type: 'string', required: true },
     operations: { type: 'json', required: true, description: 'Nonempty array of {kind:"write"|"edit"|"delete", path, ...} with SHA-256 preconditions.' },
@@ -281,19 +334,19 @@ export function apply(ctx: Context, config: Config): void {
       certificate: text(args.certificate, 'certificate'),
       operations,
       postconditions: evidenceArray(args.postconditions, 'postconditions'),
-    }, invocationOf(agent), (mutations) => {
+    }, invocationOf(exec), (mutations) => {
       for (const mutation of mutations) exec.recordFileMutation(mutation)
     })
   })
 
-  register('schema_abort', 'Abort an uncommitted same-session hypothesis and optionally its active certificate', {
+  register('schema_abort', 'Abort an uncommitted same-run hypothesis and optionally its active certificate', {
     hypothesisId: { type: 'string', required: true },
     certificate: { type: 'string' },
-  }, async (args, agent) => {
+  }, async (args, agent, exec) => {
     return controller(agent).abort({
       hypothesisId: text(args.hypothesisId, 'hypothesisId'),
       ...(args.certificate !== undefined ? { certificate: text(args.certificate, 'certificate') } : {}),
-    }, invocationOf(agent))
+    }, invocationOf(exec))
   })
 }
 

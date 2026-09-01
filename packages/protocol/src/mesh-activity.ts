@@ -198,7 +198,7 @@ function isActivityData(value: unknown): value is FabricActivityEventData {
 }
 
 const ACTIVITY_KINDS = new Set<FabricActivityKind>([
-  'session', 'workflow', 'phase', 'agent', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction',
+  'session', 'workflow', 'phase', 'agent', 'execution', 'mesh', 'topic', 'state', 'actor', 'message', 'compaction',
 ])
 const NODE_KINDS = new Set<FabricNodeKind>([
   'main', 'group', 'session', 'agent', 'subagent', 'workflow', 'phase', 'job', 'actor', 'topic', 'message', 'state', 'component', 'compaction',

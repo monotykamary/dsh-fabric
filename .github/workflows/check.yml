@@ -9,12 +9,11 @@ permissions:
   contents: read
 
 env:
-  # dsh-fabric resolves every @monotykamary/* import through live `link:`
+  # dsh-fabric resolves every @monotykamary/* import through live `file:`
   # entries into a sibling checkout of the DeepSeek Harness monorepo (see
-  # packages/*/package.json and tsconfig.base.json: declaration merging
-  # requires shared module identity, so the harness cannot come from npm).
-  # CI reproduces the local layout: check the harness out one level above
-  # this repo, install it, and build the two lib faces dsh-fabric links to.
+  # package.json and tsconfig.base.json: declaration merging requires shared
+  # module identity, so the harness cannot come from npm). CI reproduces the
+  # local layout by checking the harness out beside this repository.
   # Bump DSH_HARNESS_REF when the local harness checkout advances.
   DSH_HARNESS_REF: ffcbe75a32ee61521d8f690d5bc4346671361a72
 
@@ -23,18 +22,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          version: 11.20.0
+          bun-version: 1.4.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
-      - name: Checkout DeepSeek Harness (live link target)
-        # The link: specs resolve relative to this repo's root and each package
-        # (link:../deepseek-harness, link:../../../deepseek-harness), so the
-        # harness must sit beside the workspace, not inside it. actions/checkout
-        # refuses paths outside the workspace, so clone it directly at the ref.
+      - name: Checkout DeepSeek Harness (live file target)
+        # The file: specs resolve relative to this repository root, so the
+        # harness must sit beside the workspace. actions/checkout refuses paths
+        # outside the workspace, so clone it directly at the pinned ref.
         run: |
           git init --quiet ../deepseek-harness
           git -C ../deepseek-harness remote add origin https://github.com/monotykamary/deepseek-harness.git
@@ -43,9 +40,10 @@ jobs:
           git -C ../deepseek-harness log -1 --oneline
       - name: Install harness workspace
         working-directory: ../deepseek-harness
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
       - name: Build harness lib faces
         working-directory: ../deepseek-harness
-        run: pnpm run build:lib:host && pnpm run build:lib:client
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run check
+        run: bun run build:lib:host && bun run build:lib:client
+      - run: bun install --frozen-lockfile
+      - run: bun run link:harness
+      - run: bun run check

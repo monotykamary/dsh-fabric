@@ -1,0 +1,33 @@
+.card {
+  list-style: none;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-3);
+  overflow: hidden;
+}
+
+.cardOpen { border-color: var(--dsw-alias-label-dimmed); }
+.header { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: inherit; background: transparent; border: 0; text-align: left; cursor: pointer; }
+.headText { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.name { font-weight: 650; }
+.description { color: var(--dsw-alias-label-tertiary); font-size: 12px; }
+.pending, .badge { color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.chevron { color: var(--dsw-alias-label-tertiary); transition: transform 150ms ease; }
+.chevronOpen { transform: rotate(180deg); }
+.body { display: grid; gap: 16px; padding: 0 16px 16px; }
+.field { display: grid; gap: 7px; }
+.fieldHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.label { font-size: 13px; font-weight: 600; }
+.badges { display: inline-flex; align-items: center; gap: 8px; }
+.reset, .discard { color: var(--dsw-alias-label-tertiary); background: transparent; border: 0; cursor: pointer; }
+.input, .inputInvalid { width: 100%; box-sizing: border-box; padding: 8px 10px; color: inherit; background: var(--dsw-alias-bg-layer-3); border: 1px solid var(--dsw-alias-label-dimmed); border-radius: 7px; }
+.inputInvalid { border-color: var(--dsw-alias-label-error); }
+.toggleRow { display: inline-flex; align-items: center; gap: 8px; width: fit-content; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; }
+.toggle { width: 16px; height: 16px; accent-color: var(--dsw-alias-label-primary); }
+.toggleRow:has(.toggle:disabled) { cursor: default; opacity: 0.65; }
+.hint, .invalid, .sessionHint, .readOnly, .failed { margin: 0; font-size: 12px; line-height: 1.45; }
+.hint, .sessionHint, .readOnly { color: var(--dsw-alias-label-tertiary); }
+.invalid, .failed { color: var(--dsw-alias-label-error); }
+.footer { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.save { padding: 7px 14px; color: var(--dsw-alias-bg-layer-3); background: var(--dsw-alias-label-primary); border: 0; border-radius: 7px; cursor: pointer; }
+.save:disabled, .discard:disabled, .reset:disabled { opacity: 0.5; cursor: default; }
