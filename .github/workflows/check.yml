@@ -15,7 +15,7 @@ env:
   # module identity, so the harness cannot come from npm). CI reproduces the
   # local layout by checking the harness out beside this repository.
   # Bump DSH_HARNESS_REF when the local harness checkout advances.
-  DSH_HARNESS_REF: ffcbe75a32ee61521d8f690d5bc4346671361a72
+  DSH_HARNESS_REF: 2a7a6ba7a992873e8ce8067c40505637f8731e89
 
 jobs:
   check:
